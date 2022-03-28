@@ -35,9 +35,6 @@ public:
     const Symbol* getSymbol() const;
     void setSymbol(const Symbol* symbol);
 
-    Elf_Word getSpecialSymbol() const;
-    void setSpecialSymbol(Elf_Word specialSymbol);
-
 private:
     Relocation() = default;
 
