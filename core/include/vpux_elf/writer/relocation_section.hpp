@@ -28,9 +28,6 @@ public:
     const SymbolSection* getSymbolTable() const;
     void setSymbolTable(const SymbolSection* symTab);
 
-    Elf_Word getSpecialSymbolTable() const;
-    void setSpecialSymbolTable(Elf_Word specialSymbolTable);
-
     const Section* getSectionToPatch() const;
     void setSectionToPatch(const Section* sectionToPatch);
 

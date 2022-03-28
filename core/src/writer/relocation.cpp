@@ -51,11 +51,3 @@ void Relocation::setSymbol(const Symbol* symbol) {
 const Symbol* Relocation::getSymbol() const {
     return m_symbol;
 }
-
-void Relocation::setSpecialSymbol(Elf_Word specialSymbol) {
-    m_relocation.r_info = elf64RInfo(specialSymbol, elf64RType(m_relocation.r_info));
-}
-
-Elf_Word Relocation::getSpecialSymbol() const {
-    return elf64RSym(m_relocation.r_info);
-}
