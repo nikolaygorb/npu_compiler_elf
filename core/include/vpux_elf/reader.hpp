@@ -17,22 +17,34 @@
 #include <vpux_elf/types/section_header.hpp>
 #include <vpux_elf/types/program_header.hpp>
 #include <vpux_elf/types/elf_header.hpp>
+#include <vpux_elf/types/elf_structs.hpp>
+
 
 #include <string>
 #include <vector>
 
 namespace elf {
 
+template<ELF_Bitness B>
 class Reader {
 public:
     class Section {
     public:
         Section() = delete;
-        Section(const SectionHeader* sectionHeader, const uint8_t* data, const char* name);
+        Section(const typename ElfTypes<B>::SectionHeader* sectionHeader, const uint8_t* data, const char* name) :
+            m_sectionHeader(sectionHeader), m_data(data), m_name(name) {}
 
-        const SectionHeader* getHeader() const;
-        size_t getEntriesNum() const;
-        const char* getName() const;
+        const typename ElfTypes<B>::SectionHeader* getHeader() const {
+            return m_sectionHeader;
+        }
+
+        size_t getEntriesNum() const {
+            return static_cast<size_t>(m_sectionHeader->sh_size / m_sectionHeader->sh_entsize);
+        }
+
+        const char* getName() const {
+            return m_name;
+        }
 
         template<typename T>
         const T* getData() const {
@@ -40,7 +52,7 @@ public:
         }
 
     private:
-        const SectionHeader* m_sectionHeader;
+        const typename ElfTypes<B>::SectionHeader* m_sectionHeader;
         const uint8_t* m_data;
         const char* m_name;
     };
@@ -48,35 +60,71 @@ public:
     class Segment {
     public:
         Segment() = delete;
-        Segment(const ProgramHeader* programHeader, const uint8_t* data);
+        Segment(const typename ElfTypes<B>::ProgramHeader* programHeader, const uint8_t* data) : m_programHeader(programHeader), m_data(data) {}
 
-        const ProgramHeader* getHeader() const;
-        const uint8_t* getData() const;
+        const typename ElfTypes<B>::ProgramHeader* getHeader() const {
+            return m_programHeader;
+        }
+        
+        const uint8_t* getData() const {
+            return m_data;
+        }
 
     private:
         Reader* m_reader;
-        const ProgramHeader* m_programHeader;
+        const typename ElfTypes<B>::ProgramHeader* m_programHeader;
         const uint8_t* m_data;
     };
 
 public:
-    explicit Reader(const uint8_t* blob, size_t size);
+    Reader(const uint8_t* blob, size_t size) : m_blob(blob), m_size(size), m_elfHeader(reinterpret_cast<decltype(m_elfHeader)>(blob)) {
+        m_sectionHeadersStart = reinterpret_cast<const typename ElfTypes<B>::SectionHeader*>(m_blob + m_elfHeader->e_shoff);
+        m_programHeadersStart = reinterpret_cast<const typename ElfTypes<B>::ProgramHeader*>(m_blob + m_elfHeader->e_phoff);
+        m_sectionHeadersNames = reinterpret_cast<const char*>(m_blob + (m_sectionHeadersStart + m_elfHeader->e_shstrndx)->sh_offset);
+    }
 
-    const uint8_t* getBlob() const;
-    const ELFHeader* getHeader() const;
+    const uint8_t* getBlob() const {
+        return m_blob;
+    }
 
-    size_t getSectionsNum() const;
-    size_t getSegmentsNum() const;
+    size_t getSize() const {
+        return m_size;
+    }
 
-    Section getSection(size_t index);
-    Segment getSegment(size_t index);
+    const typename ElfTypes<B>::ELFHeader* getHeader() const {
+        return m_elfHeader;
+    }
+
+    size_t getSectionsNum() const {
+        return m_elfHeader->e_shnum;
+    }
+
+    size_t getSegmentsNum() const {
+        return m_elfHeader->e_phnum;
+    }
+
+    Section getSection(size_t index) {
+        const auto sectionHeader = m_sectionHeadersStart + index;
+        auto data = m_blob + sectionHeader->sh_offset;
+        const auto name = m_sectionHeadersNames + sectionHeader->sh_name;
+
+        return {sectionHeader, data, name};
+    }
+
+    Segment getSegment(size_t index) {
+        const auto programHeader = m_programHeadersStart + index;
+        auto data = m_blob + programHeader->p_offset;
+
+        return {programHeader, data};
+    }
 
 private:
     const uint8_t* m_blob = nullptr;
+    const size_t m_size;
 
-    const ELFHeader* m_elfHeader = nullptr;
-    const SectionHeader* m_sectionHeadersStart = nullptr;
-    const ProgramHeader* m_programHeadersStart = nullptr;
+    const typename ElfTypes<B>::ELFHeader* m_elfHeader = nullptr;
+    const typename ElfTypes<B>::SectionHeader* m_sectionHeadersStart = nullptr;
+    const typename ElfTypes<B>::ProgramHeader* m_programHeadersStart = nullptr;
     const char* m_sectionHeadersNames = nullptr;
 };
 

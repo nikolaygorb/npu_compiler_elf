@@ -210,7 +210,7 @@ private:
 
     void applyRelocations(details::ArrayRef<int> relocationSectionIndexes);
 
-    Reader m_reader;
+    Reader<ELF_Bitness::Elf64> m_reader;
     details::ArrayRef<SymbolEntry> m_runtimeSymTabs;
     BufferManager* m_bufferManager;
 

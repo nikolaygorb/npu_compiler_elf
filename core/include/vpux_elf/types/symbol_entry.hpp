@@ -63,7 +63,14 @@ struct Elf64_Sym {
     Elf_Xword     st_size;
 };
 
-using SymbolEntry = Elf64_Sym;
+struct Elf32_Sym {
+    Elf_Word      st_name;
+    Elf32_Addr    st_value;
+    Elf_Word      st_size;
+    unsigned char st_info;
+    unsigned char st_other;
+    Elf_Half      st_shndx;
+};
 
 //! Extract symbol binding attributes from info
 Elf_Xword elf64STBind(Elf_Xword info);
@@ -76,5 +83,7 @@ Elf_Xword elf64STInfo(Elf_Word bind, Elf_Word type);
 
 //! Performs a transformation over visibility to zero out all bits that have no defined meaning
 uint8_t elf64STVisibility(uint8_t visibility);
+
+using SymbolEntry = Elf64_Sym;
 
 } // namespace elf

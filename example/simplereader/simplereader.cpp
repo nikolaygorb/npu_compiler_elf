@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
     std::vector<uint8_t> elfBlob((std::istreambuf_iterator<char>(stream)), (std::istreambuf_iterator<char>()));
     stream.close();
 
-    elf::Reader reader(elfBlob.data(), elfBlob.size());
+    elf::Reader<elf::ELF_Bitness::Elf64> reader(elfBlob.data(), elfBlob.size());
 
     std::cout << "Number of sections: " << reader.getSectionsNum() << '\n';
     std::cout << "Number of segments: " << reader.getSegmentsNum() << '\n';
