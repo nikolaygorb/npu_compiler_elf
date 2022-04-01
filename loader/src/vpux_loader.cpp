@@ -403,7 +403,7 @@ void VPUXLoader::applyRelocations(details::ArrayRef<int> relocationSectionIndexe
             targetSectionIdx = relocSecHdr->sh_info;
         }
         else {
-            VPUX_ELF_THROW("Rela section with no target section");    // TODO(EISW-30067): Review if there is a case where we should accept rela sections w/o a target section?
+            VPUX_ELF_THROW("Rela section with no target section");    // TODO(E#30067): Review if there is a case where we should accept rela sections w/o a target section?
                                                             // This is generally used for executable files, but we would only generate relocatable files
             return;
         }
@@ -447,7 +447,7 @@ void VPUXLoader::applyRelocations(details::ArrayRef<int> relocationSectionIndexe
     return;
 };
 
-//TODO(EISW-30069) : a lot of shared logic with applyRelocations.... refactor to share code.... duplicate for WIP purposes
+//TODO(E#30069) : a lot of shared logic with applyRelocations.... refactor to share code.... duplicate for WIP purposes
 void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs) {
 
     vpuxElfLog(VPUX_ELF_TRACE,"apply JITrelocations");
@@ -499,7 +499,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
             targetSectionIdx = relocSecHdr->sh_info;
         }
         else {
-            VPUX_ELF_THROW("Rela section with no target section");    // TODO(EISW-30067) : Review if there is a case where we should accept rela sections w/o a target section?
+            VPUX_ELF_THROW("Rela section with no target section");    // TODO(E#30067) : Review if there is a case where we should accept rela sections w/o a target section?
                                                             // This is generally used for executable files, but we would only generate relocatable files
             return;
         }
