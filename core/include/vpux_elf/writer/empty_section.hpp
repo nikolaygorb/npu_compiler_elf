@@ -26,9 +26,6 @@ public:
     Elf_Xword getSize() const;
     void setSize(Elf_Xword size);
 
-    Elf_Word getType() const;
-    void setType(Elf_Word type);
-
 private:
     explicit EmptySection(const std::string& name);
 

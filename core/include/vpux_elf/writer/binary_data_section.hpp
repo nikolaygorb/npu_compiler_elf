@@ -40,9 +40,9 @@ public:
     }
 
 private:
-    explicit BinaryDataSection(const std::string& name) : Section(name) {
+    explicit BinaryDataSection(const std::string& name, const Elf_Word section_type = SHT_PROGBITS) : Section(name) {
         static_assert(std::is_standard_layout<T>::value, "Only POD types are supported");
-        m_header.sh_type = SHT_PROGBITS;
+        m_header.sh_type = section_type;
         m_header.sh_entsize = sizeof(T);
     }
 

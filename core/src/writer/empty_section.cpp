@@ -27,11 +27,3 @@ Elf_Xword EmptySection::getSize() const {
 void EmptySection::setSize(Elf_Xword size) {
     m_header.sh_size = size;
 }
-
-Elf_Word EmptySection::getType() const {
-    return m_header.sh_type;
-}
-
-void EmptySection::setType(Elf_Word type) {
-    m_header.sh_type = type;
-}

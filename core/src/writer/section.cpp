@@ -65,6 +65,14 @@ void Section::maskFlags(Elf_Xword flags) {
     m_header.sh_flags |= flags;
 }
 
+Elf_Word Section::getType() const {
+    return m_header.sh_type;
+}
+
+void Section::setType(Elf_Word type) {
+    m_header.sh_type = type;
+}
+
 size_t Section::getFileAlignRequirement() const {
     return m_fileAlignRequirement;
 }

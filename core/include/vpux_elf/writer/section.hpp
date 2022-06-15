@@ -41,11 +41,14 @@ public:
     void setFlags(Elf_Xword flags);
     void maskFlags(Elf_Xword flags);
 
+    Elf_Word getType() const;
+    void setType(Elf_Word type);
+
     size_t getFileAlignRequirement() const;
 
     size_t getIndex() const;
     size_t getDataSize() const;
-
+    
     virtual ~Section() = default;
 
 protected:

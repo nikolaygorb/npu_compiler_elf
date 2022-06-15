@@ -45,8 +45,8 @@ public:
     writer::EmptySection* addEmptySection(const std::string& name = {});
 
     template <typename T>
-    writer::BinaryDataSection<T>* addBinaryDataSection(const std::string& name = {}) {
-        m_sections.push_back(std::unique_ptr<writer::BinaryDataSection<T>>(new writer::BinaryDataSection<T>(name)));
+    writer::BinaryDataSection<T>* addBinaryDataSection(const std::string& name = {}, const Elf_Word section_type = SHT_PROGBITS) {
+        m_sections.push_back(std::unique_ptr<writer::BinaryDataSection<T>>(new writer::BinaryDataSection<T>(name, section_type)));
         m_sections.back()->setIndex(m_sections.size() - 1);
         return dynamic_cast<writer::BinaryDataSection<T>*>(m_sections.back().get());
     }
