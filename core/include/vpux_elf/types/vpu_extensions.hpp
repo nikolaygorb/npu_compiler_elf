@@ -129,4 +129,11 @@ constexpr Elf_Word VPU_NNRD_SYM_RTM_DMA1 = 4;
 constexpr Elf_Word VPU_NNRD_SYM_FIFO_BASE = 5;
 constexpr Elf_Word VPU_NNRD_SYM_BARRIERS_START = 6;
 
+// 
+// VPU constants
+// 
+
+const Elf_Word SH_INFO_FOR_VPU = 0;
+const Elf_Word SH_ADDR_ALIGN_FOR_VPU = 64;
+
 }
