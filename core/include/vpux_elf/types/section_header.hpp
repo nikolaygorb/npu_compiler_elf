@@ -23,29 +23,31 @@ namespace elf {
 ///
 
 //! Section types
-constexpr Elf_Word SHT_NULL     = 0;
-constexpr Elf_Word SHT_PROGBITS = 1;
-constexpr Elf_Word SHT_SYMTAB   = 2;
-constexpr Elf_Word SHT_STRTAB   = 3;
-constexpr Elf_Word SHT_RELA     = 4;
-constexpr Elf_Word SHT_HASH     = 5;
-constexpr Elf_Word SHT_DYNAMIC  = 6;
-constexpr Elf_Word SHT_NOTE     = 7;
-constexpr Elf_Word SHT_NOBITS   = 8;
-constexpr Elf_Word SHT_REL      = 9;
-constexpr Elf_Word SHT_SHLIB    = 10;
-constexpr Elf_Word SHT_DYNSYM   = 11;
-constexpr Elf_Word SHT_LOPROC   = 0x70000000;
-constexpr Elf_Word SHT_HIPROC   = 0x7fffffff;
-constexpr Elf_Word SHT_LOUSER   = 0x80000000;
-constexpr Elf_Word SHT_HIUSER   = 0xffffffff;
+constexpr Elf_Word SHT_NULL          = 0;
+constexpr Elf_Word SHT_PROGBITS      = 1;
+constexpr Elf_Word SHT_SYMTAB        = 2;
+constexpr Elf_Word SHT_STRTAB        = 3;
+constexpr Elf_Word SHT_RELA          = 4;
+constexpr Elf_Word SHT_HASH          = 5;
+constexpr Elf_Word SHT_DYNAMIC       = 6;
+constexpr Elf_Word SHT_NOTE          = 7;
+constexpr Elf_Word SHT_NOBITS        = 8;
+constexpr Elf_Word SHT_REL           = 9;
+constexpr Elf_Word SHT_SHLIB         = 10;
+constexpr Elf_Word SHT_DYNSYM        = 11;
+constexpr Elf_Word SHT_LOPROC        = 0x70000000;
+constexpr Elf_Word SHT_HIPROC        = 0x7fffffff;
+constexpr Elf_Word SHT_LOUSER        = 0x80000000;
+constexpr Elf_Word SHT_HIUSER        = 0xffffffff;
 
 //! Section flags
-constexpr Elf_Word SHF_WRITE     = 0x1;
-constexpr Elf_Word SHF_ALLOC     = 0x2;
-constexpr Elf_Word SHF_EXECINSTR = 0x4;
-constexpr Elf_Word SHF_INFO_LINK = 0x40;
-constexpr Elf_Word SHF_MASKPROC  = 0xf0000000;
+constexpr Elf_Xword SHF_NONE            = 0x0;
+constexpr Elf_Xword SHF_WRITE           = 0x1;
+constexpr Elf_Xword SHF_ALLOC           = 0x2;
+constexpr Elf_Xword SHF_EXECINSTR       = 0x4;
+constexpr Elf_Xword SHF_INFO_LINK       = 0x40;
+constexpr Elf_Xword SHF_MASKOS          = 0xff00000;
+constexpr Elf_Xword SHF_MASKPROC        = 0xf0000000;
 
 //! Special section indexes
 constexpr Elf_Word SHN_UNDEF     = 0;

@@ -164,9 +164,20 @@ private:
 
 };
 
+struct BufferSpecs {
+public:
+    uint64_t alignment;
+    uint64_t size;
+    Elf_Xword procFlags;
+    BufferSpecs(uint64_t alignment, uint64_t size, uint64_t procFlags)
+        : alignment(alignment)
+        , size(size)
+        , procFlags(procFlags) {}
+};
+
 class BufferManager {
 public:
-    virtual DeviceBuffer allocate(size_t alignment, size_t size) = 0;
+    virtual DeviceBuffer allocate(const BufferSpecs& buffSpecs) = 0;
     virtual void deallocate(DeviceBuffer& devAddress) = 0;
     virtual size_t copy(DeviceBuffer& to, const uint8_t* from, size_t count) = 0;
     virtual ~BufferManager() {};

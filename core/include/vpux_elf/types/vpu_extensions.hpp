@@ -97,19 +97,21 @@ constexpr Elf_Word R_VPU_DISP4_MULTICAST_OFFSET_CMP = 10;
 constexpr uint8_t VPU_STT_ENTRY = STT_LOOS;
 
 //
-// Relocation flags
-//
-
-const Elf_Xword VPU_SHF_JIT = 0x10000000;
-const Elf_Xword VPU_SHF_USERINPUT = 0x20000000;
-const Elf_Xword VPU_SHF_USEROUTPUT = 0x40000000;
-
-
-//
 // Section types
 //
 
-const Elf_Word VPU_SHT_TILES = SHT_LOPROC;
+constexpr Elf_Word VPU_SHT_NETDESC   = 0x8aaaaaaa;
+
+//
+// Section flags
+//
+
+constexpr Elf_Xword VPU_SHF_JIT             = 0x100000;
+constexpr Elf_Xword VPU_SHF_USERINPUT       = 0x200000;
+constexpr Elf_Xword VPU_SHF_USEROUTPUT      = 0x400000;
+constexpr Elf_Xword VPU_SHF_PROC_DPU        = 0x10000000;
+constexpr Elf_Xword VPU_SHF_PROC_DMA        = 0x20000000;
+constexpr Elf_Xword VPU_SHF_PROC_SHAVE      = 0x40000000;
 
 //
 // Special section indexes
@@ -129,11 +131,11 @@ constexpr Elf_Word VPU_NNRD_SYM_RTM_DMA1 = 4;
 constexpr Elf_Word VPU_NNRD_SYM_FIFO_BASE = 5;
 constexpr Elf_Word VPU_NNRD_SYM_BARRIERS_START = 6;
 
-// 
+//
 // VPU constants
-// 
+//
 
-const Elf_Word SH_INFO_FOR_VPU = 0;
-const Elf_Word SH_ADDR_ALIGN_FOR_VPU = 64;
+const Elf_Word VPU_SH_INFO_FOR_VPU = 0;
+const Elf_Word VPU_SH_ADDR_ALIGN_FOR_VPU = 64;
 
 }

@@ -165,20 +165,19 @@ const auto VPU_DISP4_MULTICAST_OFFSET_Relocation = [](void* targetAddr, const el
 }
 
 const std::map<Elf_Word,VPUXLoader::Action> VPUXLoader::actionMap = {
-    {SHT_NULL    , Action::None},
-    {SHT_PROGBITS, Action::AllocateAndLoad},
-    {SHT_SYMTAB  , Action::RegisterUserIO},
-    {SHT_STRTAB  , Action::None},
-    {SHT_RELA    , Action::Relocate},
-    {SHT_HASH    , Action::Error},
-    {SHT_DYNAMIC , Action::Error},
-    {SHT_NOTE    , Action::Error},
-    {SHT_NOBITS  , Action::Allocate},
-    {SHT_REL     , Action::Error},
-    {SHT_SHLIB   , Action::Error},
-    {SHT_DYNSYM  , Action::Error},
-    {SHT_LOPROC  , Action::None},
-    {SHT_LOPROC+1, Action::None}
+    {SHT_NULL       , Action::None},
+    {SHT_PROGBITS   , Action::AllocateAndLoad},
+    {SHT_SYMTAB     , Action::RegisterUserIO},
+    {SHT_STRTAB     , Action::None},
+    {SHT_RELA       , Action::Relocate},
+    {SHT_HASH       , Action::Error},
+    {SHT_DYNAMIC    , Action::Error},
+    {SHT_NOTE       , Action::Error},
+    {SHT_NOBITS     , Action::Allocate},
+    {SHT_REL        , Action::Error},
+    {SHT_SHLIB      , Action::Error},
+    {SHT_DYNSYM     , Action::Error},
+    {VPU_SHT_NETDESC, Action::None},
 };
 
 const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoader::relocationMap = {
@@ -253,12 +252,17 @@ void VPUXLoader::load() {
 
         const auto sectionHeader = section.getHeader();
         auto sectionType = sectionHeader->sh_type;
-        vpuxElfLog(VPUX_ELF_DEBUG,"secType %u",sectionType);
         auto searchAction = actionMap.find(sectionType);
 
         VPUX_ELF_THROW_WHEN(searchAction == actionMap.end(), "Unknown section type");
 
+        auto sectionFlags = sectionHeader->sh_flags;
         auto action = searchAction->second;
+
+        vpuxElfLog(VPUX_ELF_DEBUG,"    name  : %s",section.getName());
+        vpuxElfLog(VPUX_ELF_DEBUG,"    type  : %u",sectionType);
+        vpuxElfLog(VPUX_ELF_DEBUG,"    flags : 0x%lx",sectionFlags);
+        vpuxElfLog(VPUX_ELF_DEBUG,"    action: %u",(uint32_t)action);
 
         switch(action) {
 
@@ -268,7 +272,7 @@ void VPUXLoader::load() {
             auto sectionSize = sectionHeader->sh_size;
             auto sectionAlignment = sectionHeader->sh_addralign;
 
-            DeviceBuffer devBuf = m_bufferManager->allocate(sectionAlignment, sectionSize);
+            DeviceBuffer devBuf = m_bufferManager->allocate(BufferSpecs(sectionAlignment, sectionSize, sectionFlags));
 
             VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, "Failed to allocate for section");
 
@@ -287,7 +291,7 @@ void VPUXLoader::load() {
             auto sectionSize = sectionHeader->sh_size;
             auto sectionAlignment = sectionHeader->sh_addralign;
 
-            DeviceBuffer devBuf = m_bufferManager->allocate(sectionAlignment, sectionSize);
+            DeviceBuffer devBuf = m_bufferManager->allocate(BufferSpecs(sectionAlignment, sectionSize, sectionFlags));
             VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, "Failed to allocate for section");
 
             m_allocatedZones.push_back(devBuf);
@@ -298,7 +302,6 @@ void VPUXLoader::load() {
         }
 
         case Action::Relocate: {
-            auto sectionFlags = sectionHeader->sh_flags;
             if(sectionFlags & VPU_SHF_JIT) {
                 vpuxElfLog(VPUX_ELF_DEBUG,"Registering JIT Relocation %lu", sectionCtr);
                 m_jitRelocations.push_back(sectionCtr);
@@ -311,7 +314,6 @@ void VPUXLoader::load() {
         }
 
         case Action::RegisterUserIO: {
-            auto sectionFlags = sectionHeader->sh_flags;
             vpuxElfLog(VPUX_ELF_DEBUG,"Parsed symtab section with flags %lx", sectionFlags);
 
             if(sectionFlags & VPU_SHF_USERINPUT) {
