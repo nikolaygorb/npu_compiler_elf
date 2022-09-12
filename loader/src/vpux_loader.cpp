@@ -608,7 +608,7 @@ void VPUXLoader::clean() {
     }
 }
 
-elf::ResourceRequirements VPUXLoader::getResourceRequirements()
+const elf::ResourceRequirements VPUXLoader::getResourceRequirements() const
 {
     return this->m_resourceRequirements;
 }

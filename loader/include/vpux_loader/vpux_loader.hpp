@@ -213,7 +213,7 @@ public:
     details::ArrayRef<DeviceBuffer> getAllocatedBuffers();
     details::ArrayRef<DeviceBuffer> getInputBuffers();
     details::ArrayRef<DeviceBuffer> getOutputBuffers();
-    elf::ResourceRequirements getResourceRequirements();
+    const  elf::ResourceRequirements getResourceRequirements() const;
 
 private:
     bool checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const;
