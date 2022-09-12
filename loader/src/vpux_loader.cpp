@@ -177,7 +177,7 @@ const std::map<Elf_Word,VPUXLoader::Action> VPUXLoader::actionMap = {
     {SHT_REL        , Action::Error},
     {SHT_SHLIB      , Action::Error},
     {SHT_DYNSYM     , Action::Error},
-    {VPU_SHT_NETDESC, Action::None},
+    {VPU_SHT_NETDESC, Action::RegisterNetworkMetadata},
 };
 
 const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoader::relocationMap = {
@@ -330,6 +330,28 @@ void VPUXLoader::load() {
             }
             break;
         }
+
+            case Action::RegisterNetworkMetadata: {
+                vpuxElfLog(VPUX_ELF_DEBUG, "Resource Requirements:", sectionFlags);
+
+                // only getting the top of the section which contains a structure with resource requirements
+                m_resourceRequirements = *(section.getData<elf::ResourceRequirements>());
+
+
+                // the number of available barriers is computed as follows:
+                // numClusters - (to be used) platform specific
+                // maxNumClustersForArch - platform specific
+                // maxBarriersPerInference - platrofm specific
+                // barriersPerCluster = maxBarriersPerInference / maxNumClustersForArch
+                // nn_barriers = min(maxBarriersPerInference, barriersPerCluster * numClusters)
+                vpuxElfLog(VPUX_ELF_DEBUG, "\t\tnn_barriers %hhu", m_resourceRequirements.nn_barriers_);
+                // not uesd:
+                vpuxElfLog(VPUX_ELF_DEBUG, "\t\tnn_barrier_count_ %hu", m_resourceRequirements.nn_barrier_count_);
+                vpuxElfLog(VPUX_ELF_DEBUG, "\t\tnn_slice_count_ %hhu", m_resourceRequirements.nn_slice_count_);
+                vpuxElfLog(VPUX_ELF_DEBUG, "\t\tnn_slice_length_ %u", m_resourceRequirements.nn_slice_length_);
+                vpuxElfLog(VPUX_ELF_DEBUG, "\t\tddr_scratch_length_ %u", m_resourceRequirements.ddr_scratch_length_);
+                break;
+            }
 
         case Action::Error: {
             VPUX_ELF_THROW("Unexpected section type");
@@ -584,6 +606,11 @@ void VPUXLoader::clean() {
     for(DeviceBuffer& devBuffer : m_allocatedZones) {
         m_bufferManager->deallocate(devBuffer);
     }
+}
+
+elf::ResourceRequirements VPUXLoader::getResourceRequirements()
+{
+    return this->m_resourceRequirements;
 }
 
 }

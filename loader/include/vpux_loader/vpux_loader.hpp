@@ -194,6 +194,7 @@ private:
         Allocate,
         Relocate,
         RegisterUserIO,
+        RegisterNetworkMetadata,
         Error
     };
 
@@ -212,6 +213,7 @@ public:
     details::ArrayRef<DeviceBuffer> getAllocatedBuffers();
     details::ArrayRef<DeviceBuffer> getInputBuffers();
     details::ArrayRef<DeviceBuffer> getOutputBuffers();
+    elf::ResourceRequirements getResourceRequirements();
 
 private:
     bool checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const;
@@ -231,6 +233,7 @@ private:
 
     details::FixedVector<DeviceBuffer> m_userInputs;
     details::FixedVector<DeviceBuffer> m_userOutputs;
+    elf::ResourceRequirements m_resourceRequirements;
 
 };
 
