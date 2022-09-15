@@ -332,7 +332,7 @@ void VPUXLoader::load() {
         }
 
             case Action::RegisterNetworkMetadata: {
-                vpuxElfLog(VPUX_ELF_DEBUG, "Resource Requirements:", sectionFlags);
+                vpuxElfLog(VPUX_ELF_DEBUG, "Resource Requirements:");
 
                 // only getting the top of the section which contains a structure with resource requirements
                 m_resourceRequirements = *(section.getData<elf::ResourceRequirements>());
@@ -345,9 +345,10 @@ void VPUXLoader::load() {
                 // barriersPerCluster = maxBarriersPerInference / maxNumClustersForArch
                 // nn_barriers = min(maxBarriersPerInference, barriersPerCluster * numClusters)
                 vpuxElfLog(VPUX_ELF_DEBUG, "\t\tnn_barriers %hhu", m_resourceRequirements.nn_barriers_);
+                vpuxElfLog(VPUX_ELF_DEBUG, "\t\tnn_slice_count_ %hhu", m_resourceRequirements.nn_slice_count_);
+
                 // not uesd:
                 vpuxElfLog(VPUX_ELF_DEBUG, "\t\tnn_barrier_count_ %hu", m_resourceRequirements.nn_barrier_count_);
-                vpuxElfLog(VPUX_ELF_DEBUG, "\t\tnn_slice_count_ %hhu", m_resourceRequirements.nn_slice_count_);
                 vpuxElfLog(VPUX_ELF_DEBUG, "\t\tnn_slice_length_ %u", m_resourceRequirements.nn_slice_length_);
                 vpuxElfLog(VPUX_ELF_DEBUG, "\t\tddr_scratch_length_ %u", m_resourceRequirements.ddr_scratch_length_);
                 break;
