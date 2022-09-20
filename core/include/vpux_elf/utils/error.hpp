@@ -13,25 +13,15 @@
 
 #pragma once
 
-#ifdef __leon__
-
 #include <cassert>
+#include <assert.h>
+
 #define VPUX_ELF_THROW(...) assert(__VA_ARGS__)
 
 #define VPUX_ELF_THROW_UNLESS(_condition_, ...) \
-    if(!(_condition_))                            \
-    VPUX_ELF_THROW(__VA_ARGS__)
+    if(!(_condition_))                          \
+        VPUX_ELF_THROW(__VA_ARGS__)
 
 #define VPUX_ELF_THROW_WHEN(_condition_, ...) \
-    if((_condition_))                             \
-    VPUX_ELF_THROW(__VA_ARGS__)
-
-#else
-
-#include <vpux/utils/core/error.hpp>
-
-#define VPUX_ELF_THROW(...) VPUX_THROW(__VA_ARGS__)
-#define VPUX_ELF_THROW_UNLESS(__condition__, ...) VPUX_THROW_UNLESS(__condition__, __VA_ARGS__)
-#define VPUX_ELF_THROW_WHEN(__condition__, ...) VPUX_THROW_WHEN(__condition__, __VA_ARGS__)
-
-#endif
+    if((_condition_))                         \
+        VPUX_ELF_THROW(__VA_ARGS__)
