@@ -280,7 +280,9 @@ void VPUXLoader::load() {
 
             VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, "Failed to allocate for section");
 
+            m_bufferManager->lock(devBuf);
             m_bufferManager->copy(devBuf, section.getData<uint8_t>(), sectionSize);
+            m_bufferManager->unlock(devBuf);
 
             m_allocatedZones.push_back(devBuf);
             m_sectionToAddr[sectionCtr] = devBuf;
@@ -440,7 +442,9 @@ void VPUXLoader::applyRelocations(details::ArrayRef<int> relocationSectionIndexe
         VPUX_ELF_THROW_WHEN(targetSectionIdx == 0 || targetSectionIdx > m_reader.getSectionsNum(), "invalid target section from rela section");
 
         //at this point we assume that all sections have an address, to which we can apply a simple lookup
-        auto targetSectionAddr = m_sectionToAddr[targetSectionIdx].cpu_addr();
+        auto targetSectionDevBuf = m_sectionToAddr[targetSectionIdx];
+        m_bufferManager->lock(targetSectionDevBuf);
+        auto targetSectionAddr = targetSectionDevBuf.cpu_addr();
 
         vpuxElfLogFunc(VPUX_ELF_DEBUG,"\tTargetsectionAddr %p", targetSectionAddr);
 
@@ -471,6 +475,7 @@ void VPUXLoader::applyRelocations(details::ArrayRef<int> relocationSectionIndexe
             relocFunc((void*)relocationTargetAddr,targetSymbol, addend);
         }
 
+        m_bufferManager->unlock(targetSectionDevBuf);
     }
 
     return;
@@ -534,7 +539,9 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
         }
 
         //at this point we assume that all sections have an address, to which we can apply a simple lookup
-        auto targetSectionAddr = m_sectionToAddr[targetSectionIdx].cpu_addr();
+        auto targetSectionDevBuf = m_sectionToAddr[targetSectionIdx];
+        m_bufferManager->lock(targetSectionDevBuf);
+        auto targetSectionAddr = targetSectionDevBuf.cpu_addr();
 
         vpuxElfLogFunc(VPUX_ELF_DEBUG,"\t targetSectionAddr %p", targetSectionAddr);
 
@@ -571,6 +578,8 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
 
             relocFunc((void*)targetAddr,targetSymbol, addend);
         }
+
+        m_bufferManager->unlock(targetSectionDevBuf);
     }
 }
 
