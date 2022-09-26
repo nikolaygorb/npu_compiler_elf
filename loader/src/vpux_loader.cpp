@@ -22,6 +22,8 @@
 
 namespace elf {
 
+unsigned int VPUX_ELF_LOGLEVEL(default) = VPUX_ELF_ERROR;
+
 namespace {
 
 const uint32_t ADDRESS_MASK = ~0x00C0'0000u;

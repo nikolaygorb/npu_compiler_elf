@@ -89,19 +89,22 @@ static const char vpuLogHeader[VPUX_ELF_LAST][30] =
     VPUX_ELF_LOG_WARN_COLOR  "W:",
     VPUX_ELF_LOG_INFO_COLOR  "I:",
     VPUX_ELF_LOG_TRACE_COLOR "T:",
-    VPUX_ELF_LOG_DEBUG_COLOR "D:"
+    VPUX_ELF_LOG_DEBUG_COLOR "D:",
 };
 
-unsigned int VPUX_ELF_LOGLEVEL(VPUX_ELF_UNIT_NAME) = VPUX_ELF_INFO;
-static unsigned int VPUX_ELF_LOGLEVEL(default) = VPUX_ELF_INFO;
+
+unsigned int VPUX_ELF_LOGLEVEL(VPUX_ELF_UNIT_NAME) = VPUX_ELF_ERROR;
+namespace elf {
+extern unsigned int VPUX_ELF_LOGLEVEL(default);
+}
 
 static int __attribute__((unused))
 logprintf(enum vpuxLog_t lvl, const char * func __attribute__((unused)),
           const int line __attribute__((unused)),
           const char * format, ...)
 {
-    if(lvl < VPUX_ELF_LOGLEVEL(VPUX_ELF_UNIT_NAME) &&
-       lvl < VPUX_ELF_LOGLEVEL(default))
+    if(lvl > VPUX_ELF_LOGLEVEL(VPUX_ELF_UNIT_NAME) &&
+       lvl > elf::VPUX_ELF_LOGLEVEL(default))
         return 0;
 
     [[maybe_unused]] const char headerFormat[] = "%s [%10" PRId64 "] %s:%d\t";
