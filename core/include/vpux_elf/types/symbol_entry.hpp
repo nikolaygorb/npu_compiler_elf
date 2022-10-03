@@ -73,13 +73,13 @@ struct Elf32_Sym {
 };
 
 //! Extract symbol binding attributes from info
-uint8_t elf64STBind(Elf_Xword info);
+Elf_Xword elf64STBind(Elf_Xword info);
 
 //! Extract symbol type from info
-uint8_t elf64STType(Elf_Xword info);
+Elf_Xword elf64STType(Elf_Xword info);
 
 //! Pack symbol binding attributes and symbol type into info
-uint8_t elf64STInfo(Elf_Word bind, Elf_Word type);
+Elf_Xword elf64STInfo(Elf_Xword bind, Elf_Xword type);
 
 //! Performs a transformation over visibility to zero out all bits that have no defined meaning
 uint8_t elf64STVisibility(uint8_t visibility);
