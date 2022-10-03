@@ -55,31 +55,31 @@ constexpr uint8_t STV_SINGLETON = 5;
 constexpr uint8_t STV_ELIMINATE = 6;
 
 struct Elf64_Sym {
-    Elf_Word      st_name;
-    unsigned char st_info;
-    unsigned char st_other;
-    Elf_Half      st_shndx;
-    Elf64_Addr    st_value;
-    Elf_Xword     st_size;
+    Elf_Word   st_name;
+    uint8_t    st_info;
+    uint8_t    st_other;
+    Elf_Half   st_shndx;
+    Elf64_Addr st_value;
+    Elf_Xword  st_size;
 };
 
 struct Elf32_Sym {
-    Elf_Word      st_name;
-    Elf32_Addr    st_value;
-    Elf_Word      st_size;
-    unsigned char st_info;
-    unsigned char st_other;
-    Elf_Half      st_shndx;
+    Elf_Word   st_name;
+    Elf32_Addr st_value;
+    Elf_Word   st_size;
+    uint8_t    st_info;
+    uint8_t    st_other;
+    Elf_Half   st_shndx;
 };
 
 //! Extract symbol binding attributes from info
-Elf_Xword elf64STBind(Elf_Xword info);
+uint8_t elf64STBind(Elf_Xword info);
 
 //! Extract symbol type from info
-Elf_Xword elf64STType(Elf_Xword info);
+uint8_t elf64STType(Elf_Xword info);
 
 //! Pack symbol binding attributes and symbol type into info
-Elf_Xword elf64STInfo(Elf_Word bind, Elf_Word type);
+uint8_t elf64STInfo(Elf_Word bind, Elf_Word type);
 
 //! Performs a transformation over visibility to zero out all bits that have no defined meaning
 uint8_t elf64STVisibility(uint8_t visibility);

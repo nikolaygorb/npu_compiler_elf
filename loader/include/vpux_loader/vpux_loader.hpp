@@ -77,8 +77,10 @@ public:
     inline size_t size() const { return m_size; }
     inline T* data() { return m_data; }
     inline const T* data() const { return m_data; }
-    inline T& operator[](int index) { return m_data[index]; }
-    inline const T& operator[](int index) const { return m_data[index]; }
+    template <typename I>
+    inline T& operator[](I index) { return m_data[index]; }
+    template <typename I>
+    inline const T& operator[](I index) const { return m_data[index]; }
 
     FixedVector()
         : m_size(0)

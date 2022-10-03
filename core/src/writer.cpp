@@ -55,7 +55,7 @@ std::vector<uint8_t> Writer::generateELF() {
         }
     }
 
-    elfHeader.e_shstrndx = m_sectionHeaderNames->getIndex();
+    elfHeader.e_shstrndx = static_cast<Elf_Half>(m_sectionHeaderNames->getIndex());
 
     for (auto& section : m_sections) {
         section->finalize();
@@ -64,10 +64,12 @@ std::vector<uint8_t> Writer::generateELF() {
 
     auto curOffset = elfHeader.e_ehsize;
     if (elfHeader.e_shnum) {
-        curOffset = elfHeader.e_shoff = alignOffset(curOffset, elfHeader.e_shentsize);
+        elfHeader.e_shoff = alignOffset(curOffset, elfHeader.e_shentsize);
+        curOffset = static_cast<Elf_Half>(elfHeader.e_shoff);
     }
     if (elfHeader.e_phnum) {
-        curOffset = elfHeader.e_phoff = alignOffset(curOffset + elfHeader.e_shnum * elfHeader.e_shentsize, elfHeader.e_phentsize);
+        elfHeader.e_phoff = alignOffset(curOffset + elfHeader.e_shnum * elfHeader.e_shentsize, elfHeader.e_phentsize);
+        curOffset = static_cast<Elf_Half>(elfHeader.e_phoff);
     } else {
         curOffset += elfHeader.e_shnum * elfHeader.e_shentsize;
     }
@@ -203,8 +205,8 @@ elf::ELFHeader Writer::generateELFHeader() const {
     fileHeader.e_flags = 0;
     fileHeader.e_shstrndx = 0;
 
-    fileHeader.e_shnum = m_sections.size();
-    fileHeader.e_phnum = m_segments.size();
+    fileHeader.e_shnum = static_cast<Elf_Half>(m_sections.size());
+    fileHeader.e_phnum = static_cast<Elf_Half>(m_segments.size());
 
     fileHeader.e_shoff = fileHeader.e_phoff = 0;
 

@@ -56,16 +56,16 @@ const std::vector<std::unique_ptr<Relocation>>& RelocationSection::getRelocation
 }
 
 void RelocationSection::finalize() {
-    m_header.sh_info = m_sectionToPatch->getIndex();
+    m_header.sh_info = static_cast<Elf_Word>(m_sectionToPatch->getIndex());
     maskFlags(SHF_INFO_LINK);
     if (m_symTab) {
-        m_header.sh_link = m_symTab->getIndex();
+        m_header.sh_link = static_cast<Elf_Word>(m_symTab->getIndex());
     }
 
     for (const auto& relocation : m_relocations) {
         auto relocationEntry = relocation->m_relocation;
         if (relocation->getSymbol()) {
-            relocationEntry.r_info = elf64RInfo(relocation->getSymbol()->getIndex(), relocation->getType());
+            relocationEntry.r_info = elf64RInfo(static_cast<Elf_Word>(relocation->getSymbol()->getIndex()), relocation->getType());
         }
 
         m_data.insert(m_data.end(), reinterpret_cast<uint8_t*>(&relocationEntry),

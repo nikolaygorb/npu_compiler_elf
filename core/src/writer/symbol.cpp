@@ -20,7 +20,7 @@ using namespace elf::writer;
 
 Symbol::Symbol(const std::string& name) : m_name(name) {
     m_symbol.st_name = 0;
-    m_symbol.st_info = elf64STInfo(STB_LOCAL, STT_NOTYPE);
+    m_symbol.st_info = static_cast<unsigned char>(elf64STInfo(STB_LOCAL, STT_NOTYPE));
     m_symbol.st_other = elf64STVisibility(STV_DEFAULT);
     m_symbol.st_shndx = 0;
     m_symbol.st_value = 0;
@@ -56,7 +56,7 @@ Elf_Word Symbol::getType() const {
 }
 
 void Symbol::setType(Elf_Word type) {
-    m_symbol.st_info = elf64STInfo(elf64STBind(m_symbol.st_info), type);
+    m_symbol.st_info = static_cast<unsigned char>(elf64STInfo(elf64STBind(m_symbol.st_info), type));
 }
 
 Elf_Word Symbol::getBinding() const {
@@ -64,7 +64,7 @@ Elf_Word Symbol::getBinding() const {
 }
 
 void Symbol::setBinding(Elf_Word bind) {
-    m_symbol.st_info = elf64STInfo(bind, elf64STType(m_symbol.st_info));
+    m_symbol.st_info = static_cast<unsigned char>(elf64STInfo(bind, elf64STType(m_symbol.st_info)));
 }
 
 uint8_t Symbol::getVisibility() const {

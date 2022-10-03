@@ -44,12 +44,12 @@ void SymbolSection::finalize() {
 
     while(m_symbols[m_header.sh_info++]->getBinding() == STB_GLOBAL);
 
-    m_header.sh_link = m_namesSection->getIndex();
+    m_header.sh_link = static_cast<Elf_Word>(m_namesSection->getIndex());
 
     for (const auto& symbol : m_symbols) {
         auto symbolEntry = symbol->m_symbol;
-        symbolEntry.st_name = m_namesSection->addString(symbol->getName());
-        symbolEntry.st_shndx = symbol->getRelatedSection() ? symbol->getRelatedSection()->getIndex() : 0;
+        symbolEntry.st_name = static_cast<Elf_Word>(m_namesSection->addString(symbol->getName()));
+        symbolEntry.st_shndx = symbol->getRelatedSection() ? static_cast<Elf_Half>(symbol->getRelatedSection()->getIndex()) : 0;
 
         m_data.insert(m_data.end(), reinterpret_cast<uint8_t*>(&symbolEntry),
                       reinterpret_cast<uint8_t*>(&symbolEntry) + sizeof(symbolEntry));

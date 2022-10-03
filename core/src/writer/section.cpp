@@ -84,7 +84,7 @@ void Section::setIndex(size_t index) {
 }
 
 void Section::setNameOffset(size_t offset) {
-    m_header.sh_name = offset;
+    m_header.sh_name = static_cast<Elf_Word>(offset);
 }
 
 size_t Section::getIndex() const {
