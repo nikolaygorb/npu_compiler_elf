@@ -39,10 +39,10 @@ uint32_t to_dpu_multicast(uint32_t addr, unsigned int &offset1, unsigned int &of
         0x0211, 0x0210, 0x0310, 0x0320, 0x3210, 0x3210, 0x3210, 0x3210,
     };
 
-    VPUX_ELF_THROW_UNLESS(broadcast_mask < 16, "Broadcast mask out of range");
+    VPUX_ELF_THROW_UNLESS(broadcast_mask < 16, RangeError, "Broadcast mask out of range");
     const unsigned short multicast_mask = multicast_masks[broadcast_mask];
 
-    VPUX_ELF_THROW_UNLESS(multicast_mask != 0xffff, "Got an invalid multicast mask");
+    VPUX_ELF_THROW_UNLESS(multicast_mask != 0xffff, RangeError, "Got an invalid multicast mask");
 
     unsigned int base_mask = (static_cast<unsigned int>(multicast_mask) & 0xf) << 20;
     offset1 *= (multicast_mask >> 4) & 0xf;
@@ -260,7 +260,7 @@ void VPUXLoader::load() {
         auto sectionType = sectionHeader->sh_type;
         auto searchAction = actionMap.find(sectionType);
 
-        VPUX_ELF_THROW_WHEN(searchAction == actionMap.end(), "Unknown section type");
+        VPUX_ELF_THROW_WHEN(searchAction == actionMap.end(), SectionError, "Unknown section type");
 
         auto sectionFlags = sectionHeader->sh_flags;
         auto action = searchAction->second;
@@ -280,7 +280,7 @@ void VPUXLoader::load() {
 
             DeviceBuffer devBuf = m_bufferManager->allocate(BufferSpecs(sectionAlignment, sectionSize, sectionFlags));
 
-            VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, "Failed to allocate for section");
+            VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, AllocError, "Failed to allocate for section");
 
             m_bufferManager->lock(devBuf);
             m_bufferManager->copy(devBuf, section.getData<uint8_t>(), sectionSize);
@@ -300,7 +300,7 @@ void VPUXLoader::load() {
             auto sectionAlignment = sectionHeader->sh_addralign;
 
             DeviceBuffer devBuf = m_bufferManager->allocate(BufferSpecs(sectionAlignment, sectionSize, sectionFlags));
-            VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, "Failed to allocate for section");
+            VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, AllocError, "Failed to allocate for section");
 
             m_allocatedZones.push_back(devBuf);
             m_sectionToAddr[sectionCtr] = devBuf;
@@ -325,13 +325,13 @@ void VPUXLoader::load() {
             vpuxElfLog(VPUX_ELF_DEBUG,"Parsed symtab section with flags %lx", sectionFlags);
 
             if(sectionFlags & VPU_SHF_USERINPUT) {
-                VPUX_ELF_THROW_WHEN(m_userInputs.size(),"User inputs already read.... potential more than one input section?");
+                VPUX_ELF_THROW_WHEN(m_userInputs.size(), SequenceError, "User inputs already read.... potential more than one input section?");
 
                 vpuxElfLog(VPUX_ELF_DEBUG,"\tRegistering %lu inputs", section.getEntriesNum() -1);
                 registerUserIO(m_userInputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
             }
             else if(sectionFlags & VPU_SHF_USEROUTPUT) {
-                VPUX_ELF_THROW_WHEN(m_userOutputs.size(),"User outputs already read.... potential more than one output section?");
+                VPUX_ELF_THROW_WHEN(m_userOutputs.size(), SequenceError, "User outputs already read.... potential more than one output section?");
 
                 vpuxElfLog(VPUX_ELF_DEBUG,"\tRegistering %lu outputs", section.getEntriesNum() -1);
                 registerUserIO(m_userOutputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
@@ -363,7 +363,7 @@ void VPUXLoader::load() {
             }
 
         case Action::Error: {
-            VPUX_ELF_THROW("Unexpected section type");
+            VPUX_ELF_THROW(SectionError, "Unexpected section type");
             return;
         }
 
@@ -372,7 +372,7 @@ void VPUXLoader::load() {
         }
 
         default: {
-            VPUX_ELF_THROW("Unhandled section type");
+            VPUX_ELF_THROW(ImplausibleState, "Unhandled section type");
             return;
         }
         }
@@ -421,7 +421,7 @@ void VPUXLoader::applyRelocations(details::ArrayRef<int> relocationSectionIndexe
             auto symTabSection = m_reader.getSection(symTabIdx);
             auto symTabSectionHdr = symTabSection.getHeader();
 
-            VPUX_ELF_THROW_UNLESS(checkSectionType(symTabSectionHdr, elf::SHT_SYMTAB),
+            VPUX_ELF_THROW_UNLESS(checkSectionType(symTabSectionHdr, elf::SHT_SYMTAB), RelocError,
                 "Reloc section pointing to snon-symtab");
 
             return symTabSection.getData<elf::SymbolEntry>();
@@ -436,12 +436,12 @@ void VPUXLoader::applyRelocations(details::ArrayRef<int> relocationSectionIndexe
             targetSectionIdx = relocSecHdr->sh_info;
         }
         else {
-            VPUX_ELF_THROW("Rela section with no target section");    // TODO(E#30067): Review if there is a case where we should accept rela sections w/o a target section?
+            VPUX_ELF_THROW(RelocError, "Rela section with no target section");    // TODO(E#30067): Review if there is a case where we should accept rela sections w/o a target section?
                                                             // This is generally used for executable files, but we would only generate relocatable files
             return;
         }
 
-        VPUX_ELF_THROW_WHEN(targetSectionIdx == 0 || targetSectionIdx > m_reader.getSectionsNum(), "invalid target section from rela section");
+        VPUX_ELF_THROW_WHEN(targetSectionIdx == 0 || targetSectionIdx > m_reader.getSectionsNum(), RelocError, "invalid target section from rela section");
 
         //at this point we assume that all sections have an address, to which we can apply a simple lookup
         auto targetSectionDevBuf = m_sectionToAddr[targetSectionIdx];
@@ -460,7 +460,7 @@ void VPUXLoader::applyRelocations(details::ArrayRef<int> relocationSectionIndexe
             auto addend = relocation.r_addend;
 
             auto reloc = relocationMap.find( static_cast<RelocationType>(relType));
-            VPUX_ELF_THROW_WHEN(reloc == relocationMap.end() || reloc->second == nullptr, "Invalid relocation type detected");
+            VPUX_ELF_THROW_WHEN(reloc == relocationMap.end() || reloc->second == nullptr, RelocError, "Invalid relocation type detected");
 
             auto relocFunc = reloc->second;
 
@@ -502,12 +502,12 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
         auto symTabIdx = relocSecHdr->sh_link;
 
         //in JitRelocations case, we will expect to point to either "VPUX_USER_INPUT" or "VPUX_USER_INPUT" symtabs
-        VPUX_ELF_THROW_WHEN(symTabIdx == VPU_RT_SYMTAB, "JitReloc pointing to runtime symtab idx");
+        VPUX_ELF_THROW_WHEN(symTabIdx == VPU_RT_SYMTAB, RelocError, "JitReloc pointing to runtime symtab idx");
 
         auto symTabSection = m_reader.getSection(symTabIdx);
         auto symTabSectionHdr = symTabSection.getHeader();
 
-        VPUX_ELF_THROW_UNLESS(checkSectionType(symTabSectionHdr, elf::SHT_SYMTAB), "Reloc section pointing to non-symtab");
+        VPUX_ELF_THROW_UNLESS(checkSectionType(symTabSectionHdr, elf::SHT_SYMTAB), RelocError, "Reloc section pointing to non-symtab");
 
         auto symTabSize = symTabSection.getEntriesNum();
         auto symTabs = symTabSection.getData<elf::SymbolEntry>();
@@ -523,7 +523,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
                 return details::ArrayRef<DeviceBuffer>(outputs);
             }
             else {
-                VPUX_ELF_THROW("Jit reloc section pointing neither to userInput nor userOutput");
+                VPUX_ELF_THROW(RelocError, "Jit reloc section pointing neither to userInput nor userOutput");
                 return details::ArrayRef<DeviceBuffer>(outputs);
             }
         };
@@ -535,7 +535,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
             targetSectionIdx = relocSecHdr->sh_info;
         }
         else {
-            VPUX_ELF_THROW("Rela section with no target section");    // TODO(E#30067) : Review if there is a case where we should accept rela sections w/o a target section?
+            VPUX_ELF_THROW(RelocError, "Rela section with no target section");    // TODO(E#30067) : Review if there is a case where we should accept rela sections w/o a target section?
                                                             // This is generally used for executable files, but we would only generate relocatable files
             return;
         }
@@ -560,7 +560,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
 
             vpuxElfLog(VPUX_ELF_DEBUG,"\t\t applying Reloc offset symidx reltype addend %lu %u %u %lu",offset,symIdx,relType,addend);
             auto reloc = relocationMap.find(static_cast<RelocationType>(relType));
-            VPUX_ELF_THROW_WHEN(reloc == relocationMap.end() || reloc->second == nullptr, "Invalid relocation type detected");
+            VPUX_ELF_THROW_WHEN(reloc == relocationMap.end() || reloc->second == nullptr, RelocError, "Invalid relocation type detected");
 
             auto relocFunc = reloc->second;
             auto targetAddr = targetSectionAddr + offset;

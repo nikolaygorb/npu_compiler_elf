@@ -85,7 +85,7 @@ public:
         , m_data(nullptr) {}
 
     FixedVector(size_t size) : m_size(size), m_data(new T[m_size]) {
-        VPUX_ELF_THROW_UNLESS(m_data != nullptr, "Failed to allocate memory for internal FixedVector");
+        VPUX_ELF_THROW_UNLESS(m_data != nullptr, AllocError, "Failed to allocate memory for internal FixedVector");
     }
 
     void resize(size_t size) {
@@ -95,7 +95,7 @@ public:
         m_size = size;
         m_data = new T[m_size];
 
-        VPUX_ELF_THROW_UNLESS(m_data != nullptr, "Failed to allocate memory for internal FixedVector");
+        VPUX_ELF_THROW_UNLESS(m_data != nullptr, AllocError, "Failed to allocate memory for internal FixedVector");
         return;
     }
 

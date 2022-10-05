@@ -24,6 +24,6 @@ void utils::checkELFMagic(const unsigned char* elfIdent) {
         elfIdent[elf::EI_MAG1] != elf::ELFMAG1 ||
         elfIdent[elf::EI_MAG2] != elf::ELFMAG2 ||
         elfIdent[elf::EI_MAG3] != elf::ELFMAG3) {
-        VPUX_ELF_THROW("Incorrect ELF magic");
+        VPUX_ELF_THROW(HeaderError, "Incorrect ELF magic");
     }
 }
