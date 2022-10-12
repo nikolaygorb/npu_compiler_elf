@@ -13,13 +13,17 @@
 
 #pragma once
 
-#ifndef VPUX_ELF_ENABLE_LOGGING
-#define VPUX_ELF_ENABLE_LOGGING 1
+#ifndef VPUX_ELF_LOG_ENABLED
+#define VPUX_ELF_LOG_ENABLED 1
+#endif
+
+#ifndef VPUX_ELF_LOG_UNIT_NAME
+#define VPUX_ELF_LOG_UNIT_NAME "unnamed"
 #endif
 
 namespace elf {
-enum LogLevel {
-    FATAL = 0,
+enum class LogLevel : unsigned int {
+    FATAL = 0U,
     ERROR,
     WARN,
     INFO,
@@ -30,48 +34,30 @@ enum LogLevel {
 
 class Logger {
 public:
-    explicit Logger(LogLevel unitLevel): unitLevel(unitLevel) {
-    }
-
-    static void logprintf(LogLevel lvl, const char* func, const int line, const char* format, ...);
-
-    inline static LogLevel getGlobalLevel(void) {
-        return globalLevel;
-    }
-
-    inline static void setGlobalLevel(const LogLevel& newLevel) {
-        updateLevelVar(globalLevel, newLevel);
-    }
-
-    inline LogLevel getUnitLevel(void) {
-        return unitLevel;
-    }
-
-    inline void setUnitLevel(const LogLevel& newLevel) {
-        updateLevelVar(unitLevel, newLevel);
-    }
+    explicit Logger(const LogLevel& unitLevel, const char* unitName);
+    void logprintf(const LogLevel& level, const char* func, const int line, const char* format, ...);
+    static LogLevel getGlobalLevel();
+    static void setGlobalLevel(const LogLevel& level);
+    LogLevel getUnitLevel(void);
+    void setUnitLevel(const LogLevel& level);
 
 private:
-    inline static void updateLevelVar(LogLevel& Var, LogLevel newLevel) {
-        if (LAST <= newLevel) {
-            return;
-        } else {
-            Var = newLevel;
-        }
-    }
-
     static LogLevel globalLevel;
     LogLevel unitLevel;
+    const char* unitName;
+
+    static void updateLevelVar(LogLevel& levelVar, const LogLevel& levelVal);
 };
 
-static Logger unitLogger(ERROR);
+static constexpr char unitName[] = VPUX_ELF_LOG_UNIT_NAME;
+static Logger unitLogger(LogLevel::ERROR, VPUX_ELF_LOG_UNIT_NAME);
 
 #ifndef VPUX_ELF_LOG
-#define VPUX_ELF_LOG(lvl, ...)                                                                                        \
-    do {                                                                                                              \
-        if ((VPUX_ELF_ENABLE_LOGGING) && ((lvl <= Logger::getGlobalLevel()) || (lvl <= unitLogger.getUnitLevel()))) { \
-            Logger::logprintf(lvl, __func__, __LINE__, ##__VA_ARGS__);                                                \
-        }                                                                                                             \
+#define VPUX_ELF_LOG(lvl, ...)                                                                                         \
+    do {                                                                                                               \
+        if ((VPUX_ELF_LOG_ENABLED) && (((lvl) <= Logger::getGlobalLevel()) || ((lvl) <= unitLogger.getUnitLevel()))) { \
+            unitLogger.logprintf(lvl, __func__, __LINE__, ##__VA_ARGS__);                                              \
+        }                                                                                                              \
     } while (0);
 #endif
 
