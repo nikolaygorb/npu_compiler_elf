@@ -127,7 +127,7 @@ const auto VPU_32_BIT_SUM_Relocation = [](void* targetAddr, const elf::SymbolEnt
 const auto VPU_32_MULTICAST_BASE_Relocation = [](void* targetAddr, const elf::SymbolEntry&  targetSym, const Elf_Sxword addend) -> void {
     const auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG,"\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%lx addend %lu", addr, *addr, symVal, addend);
+    VPUX_ELF_LOG(LogLevel::DEBUG,"\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr, symVal, addend);
 
     *addr = to_dpu_multicast_base(static_cast<uint32_t>(symVal + addend));
 };
