@@ -11,36 +11,54 @@
 // included with the Software Package for additional details.
 //
 
-#ifndef __VPUX_ELF_LOG_H__
-#define __VPUX_ELF_LOG_H__
+#pragma once
 
-#ifndef VPUX_ELF_ENABLE_LOGGING
-#define VPUX_ELF_ENABLE_LOGGING 1
+#ifndef VPUX_ELF_LOG_ENABLED
+#define VPUX_ELF_LOG_ENABLED 1
 #endif
 
-#include "log_helpers.hpp"
-
-#define VPUX_ELF_FATAL_LEVEL 0
-#define VPUX_ELF_ERROR_LEVEL 1
-#define VPUX_ELF_WARN_LEVEL  2
-#define VPUX_ELF_INFO_LEVEL  3
-#define VPUX_ELF_TRACE_LEVEL 4
-#define VPUX_ELF_DEBUG_LEVEL 5
-
-#define VPUX_ELF_LOG_DEFAULT_LEVEL VPUX_ELF_WARN_LEVEL
-
-#ifndef VPUX_ELF_LOG_LEVEL
-#define VPUX_ELF_LOG_LEVEL VPUX_ELF_LOG_DEFAULT_LEVEL
+#ifndef VPUX_ELF_LOG_UNIT_NAME
+#define VPUX_ELF_LOG_UNIT_NAME "unnamed"
 #endif
 
-#define vpuxElfLogFunc(__ELF_LOG_LEVEL__, ...) vpuxLog(__ELF_LOG_LEVEL__, __VA_ARGS__)
+namespace elf {
+enum class LogLevel : unsigned int {
+    FATAL = 0U,
+    ERROR,
+    WARN,
+    INFO,
+    TRACE,
+    DEBUG,
+    LAST,
+};
 
-#define vpuxElfLog(LOG_TYPE, ...)                                               \
-    do {                                                                        \
-        constexpr bool elf_showlog___ = LOG_TYPE##_LEVEL <= VPUX_ELF_LOG_LEVEL; \
-        if (elf_showlog___ && VPUX_ELF_ENABLE_LOGGING) {                        \
-            vpuxElfLogFunc(LOG_TYPE, ##__VA_ARGS__);                            \
-        }                                                                       \
-    } while (0)
+class Logger {
+public:
+    explicit Logger(const LogLevel& unitLevel, const char* unitName);
+    void logprintf(const LogLevel& level, const char* func, const int line, const char* format, ...);
+    static LogLevel getGlobalLevel();
+    static void setGlobalLevel(const LogLevel& level);
+    LogLevel getUnitLevel(void);
+    void setUnitLevel(const LogLevel& level);
 
-#endif // __VPUX_ELF_LOG_H__
+private:
+    static LogLevel globalLevel;
+    LogLevel unitLevel;
+    const char* unitName;
+
+    static void updateLevelVar(LogLevel& levelVar, const LogLevel& levelVal);
+};
+
+static constexpr char unitName[] = VPUX_ELF_LOG_UNIT_NAME;
+static Logger unitLogger(LogLevel::ERROR, VPUX_ELF_LOG_UNIT_NAME);
+
+#ifndef VPUX_ELF_LOG
+#define VPUX_ELF_LOG(lvl, ...)                                                                                         \
+    do {                                                                                                               \
+        if ((VPUX_ELF_LOG_ENABLED) && (((lvl) <= Logger::getGlobalLevel()) || ((lvl) <= unitLogger.getUnitLevel()))) { \
+            unitLogger.logprintf(lvl, __func__, __LINE__, ##__VA_ARGS__);                                              \
+        }                                                                                                              \
+    } while (0);
+#endif
+
+}  // namespace elf
