@@ -12,8 +12,7 @@
 //
 
 #include <vpux_elf/writer/segment.hpp>
-
-#include <vpux/utils/core/error.hpp>
+#include <vpux_elf/utils/error.hpp>
 
 using namespace elf;
 using namespace elf::writer;
@@ -30,8 +29,8 @@ Segment::Segment() {
 }
 
 void Segment::addSection(Section* section) {
-    VPUX_THROW_UNLESS(section->getFileAlignRequirement() == 1, "Adding section with file offset requirement {0} is not supported",
-                      section->getFileAlignRequirement());
+    VPUX_ELF_THROW_UNLESS(section->getFileAlignRequirement() == 1, SectionError,
+                          "Adding section with file align requirement different then 1 is not supported");
     m_sections.push_back(section);
 }
 
