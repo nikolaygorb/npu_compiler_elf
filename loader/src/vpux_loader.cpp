@@ -12,8 +12,6 @@
 //
 
 #include <vpux_loader/vpux_loader.hpp>
-#include <vpux_elf/types/vpu_extensions.hpp>
-#include <vpux_elf/utils/error.hpp>
 
 #ifndef VPUX_ELF_LOG_UNIT_NAME
 #define VPUX_ELF_LOG_UNIT_NAME "VpuxLoader"
@@ -338,11 +336,11 @@ void VPUXLoader::load() {
         }
 
             case Action::RegisterNetworkMetadata: {
+                VPUX_ELF_LOG(LogLevel::DEBUG, "Parsing the network metadata");
                 VPUX_ELF_LOG(LogLevel::DEBUG, "Resource Requirements:");
 
                 // only getting the top of the section which contains a structure with resource requirements
-                m_resourceRequirements = *(section.getData<elf::ResourceRequirements>());
-
+                m_networkMetadata = *(section.getData<elf::NetworkMetadata>());
 
                 // the number of available barriers is computed as follows:
                 // numClusters - (to be used) platform specific
@@ -350,13 +348,13 @@ void VPUXLoader::load() {
                 // maxBarriersPerInference - platrofm specific
                 // barriersPerCluster = maxBarriersPerInference / maxNumClustersForArch
                 // nn_barriers = min(maxBarriersPerInference, barriersPerCluster * numClusters)
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_barriers %hhu", m_resourceRequirements.nn_barriers_);
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_count_ %hhu", m_resourceRequirements.nn_slice_count_);
+                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_barriers %hhu", m_networkMetadata.resource_requirements.nn_barriers_);
+                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_count_ %hhu", m_networkMetadata.resource_requirements.nn_slice_count_);
 
                 // not uesd:
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_barrier_count_ %hu", m_resourceRequirements.nn_barrier_count_);
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_length_ %u", m_resourceRequirements.nn_slice_length_);
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tddr_scratch_length_ %u", m_resourceRequirements.ddr_scratch_length_);
+                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_barrier_count_ %hu", m_networkMetadata.resource_requirements.nn_barrier_count_);
+                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_length_ %u", m_networkMetadata.resource_requirements.nn_slice_length_);
+                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tddr_scratch_length_ %u", m_networkMetadata.resource_requirements.ddr_scratch_length_);
                 break;
             }
 
@@ -622,9 +620,14 @@ void VPUXLoader::clean() {
     }
 }
 
+const elf::NetworkMetadata VPUXLoader::getNetworkMetadata() const
+{
+    return this->m_networkMetadata;
+}
+
 const elf::ResourceRequirements VPUXLoader::getResourceRequirements() const
 {
-    return this->m_resourceRequirements;
+    return this->m_networkMetadata.resource_requirements;
 }
 
 }

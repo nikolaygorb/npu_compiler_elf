@@ -52,12 +52,4 @@ struct ElfTypes<ELF_Bitness::Elf64> {
     using SymbolEntry = Elf64_Sym;
 };
 
-typedef struct {
-    uint32_t nn_slice_length_;
-    uint32_t ddr_scratch_length_;
-    uint16_t nn_barrier_count_;
-    uint8_t nn_slice_count_;
-    uint8_t nn_barriers_;
-} ResourceRequirements;
-
 } // namespace elf

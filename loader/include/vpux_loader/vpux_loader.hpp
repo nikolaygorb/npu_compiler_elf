@@ -22,6 +22,7 @@
 #include <vpux_elf/types/relocation_entry.hpp>
 #include <vpux_elf/types/symbol_entry.hpp>
 #include <vpux_elf/types/vpu_extensions.hpp>
+#include <vpux_headers/metadata.hpp>
 #include <vpux_elf/utils/error.hpp>
 
 namespace elf {
@@ -232,7 +233,8 @@ public:
     details::ArrayRef<DeviceBuffer> getAllocatedBuffers();
     details::ArrayRef<DeviceBuffer> getInputBuffers();
     details::ArrayRef<DeviceBuffer> getOutputBuffers();
-    const  elf::ResourceRequirements getResourceRequirements() const;
+    const elf::ResourceRequirements getResourceRequirements() const;
+    const elf::NetworkMetadata getNetworkMetadata() const;
 
 private:
     bool checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const;
@@ -252,7 +254,8 @@ private:
 
     details::FixedVector<DeviceBuffer> m_userInputs;
     details::FixedVector<DeviceBuffer> m_userOutputs;
-    elf::ResourceRequirements m_resourceRequirements;
+
+    elf::NetworkMetadata m_networkMetadata;
 
 };
 
