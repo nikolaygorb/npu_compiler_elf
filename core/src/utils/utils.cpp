@@ -18,12 +18,22 @@
 #include <vpux_elf/utils/error.hpp>
 
 using namespace elf;
+//
+// @breif returning treu if the magic is correct
+// @params pointer to the elf blob memory
+//
+bool utils::checkELFMagic(const unsigned char* elfIdent) {
 
-void utils::checkELFMagic(const unsigned char* elfIdent) {
-    if (elfIdent[elf::EI_MAG0] != elf::ELFMAG0 ||
+    //assume that the elf magic is correct
+    bool correctMagic = true;
+
+    if (nullptr == elfIdent ||
+        elfIdent[elf::EI_MAG0] != elf::ELFMAG0 ||
         elfIdent[elf::EI_MAG1] != elf::ELFMAG1 ||
         elfIdent[elf::EI_MAG2] != elf::ELFMAG2 ||
         elfIdent[elf::EI_MAG3] != elf::ELFMAG3) {
-        VPUX_ELF_THROW(HeaderError, "Incorrect ELF magic");
+            // if the elf magic is not correct return false
+            correctMagic = false;
     }
+    return correctMagic;
 }
