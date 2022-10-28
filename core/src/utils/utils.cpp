@@ -19,7 +19,7 @@
 
 using namespace elf;
 //
-// @breif returning treu if the magic is correct
+// @breif returning true if the magic is correct
 // @params pointer to the elf blob memory
 //
 bool utils::checkELFMagic(const unsigned char* elfIdent) {
