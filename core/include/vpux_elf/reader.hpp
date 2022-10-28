@@ -82,9 +82,7 @@ public:
 public:
     Reader(const uint8_t* blob, size_t size) : m_blob(blob), m_size(size), m_elfHeader(reinterpret_cast<decltype(m_elfHeader)>(blob)) {
 
-        if (utils::checkELFMagic(m_blob) != true) {
-            VPUX_ELF_THROW(HeaderError, "Incorrect ELF magic");
-        }
+        VPUX_ELF_THROW_UNLESS(utils::checkELFMagic(m_blob), HeaderError, "Incorrect ELF magic");
 
         m_sectionHeadersStart = reinterpret_cast<const typename ElfTypes<B>::SectionHeader*>(m_blob + m_elfHeader->e_shoff);
         m_programHeadersStart = reinterpret_cast<const typename ElfTypes<B>::ProgramHeader*>(m_blob + m_elfHeader->e_phoff);

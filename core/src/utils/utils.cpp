@@ -25,15 +25,13 @@ using namespace elf;
 bool utils::checkELFMagic(const unsigned char* elfIdent) {
 
     //assume that the elf magic is correct
-    bool correctMagic = true;
-
     if (nullptr == elfIdent ||
         elfIdent[elf::EI_MAG0] != elf::ELFMAG0 ||
         elfIdent[elf::EI_MAG1] != elf::ELFMAG1 ||
         elfIdent[elf::EI_MAG2] != elf::ELFMAG2 ||
         elfIdent[elf::EI_MAG3] != elf::ELFMAG3) {
             // if the elf magic is not correct return false
-            correctMagic = false;
+            return false;
     }
-    return correctMagic;
+    return true;
 }
