@@ -238,6 +238,8 @@ uint64_t VPUXLoader::getEntry() {
 }
 
 void VPUXLoader::load() {
+    VPUX_ELF_THROW_UNLESS(m_bufferManager, ArgsError, "null pointer passed for Buffer Manager");
+
     VPUX_ELF_LOG(LogLevel::TRACE, "Starting LOAD process");
     auto numSections = m_reader.getSectionsNum();
 
