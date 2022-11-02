@@ -18,6 +18,7 @@
 #include <vpux_elf/types/program_header.hpp>
 #include <vpux_elf/types/elf_header.hpp>
 #include <vpux_elf/types/elf_structs.hpp>
+#include <vpux_elf/utils/error.hpp>
 #include <vpux_elf/utils/utils.hpp>
 
 
@@ -79,6 +80,7 @@ public:
 
 public:
     Reader(const uint8_t* blob, size_t size) : m_blob(blob), m_size(size), m_elfHeader(reinterpret_cast<decltype(m_elfHeader)>(blob)) {
+        VPUX_ELF_THROW_UNLESS(blob, ArgsError, "nullptr passed for elf buffer");
         utils::checkELFMagic(m_blob);
         m_sectionHeadersStart = reinterpret_cast<const typename ElfTypes<B>::SectionHeader*>(m_blob + m_elfHeader->e_shoff);
         m_programHeadersStart = reinterpret_cast<const typename ElfTypes<B>::ProgramHeader*>(m_blob + m_elfHeader->e_phoff);
