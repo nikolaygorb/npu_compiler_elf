@@ -22,16 +22,17 @@ using namespace elf;
 // @breif returning true if the magic is correct
 // @params pointer to the elf blob memory
 //
-bool utils::checkELFMagic(const unsigned char* elfIdent) {
+bool utils::checkELFMagic(const unsigned char *elfIdent) {
+    if (nullptr == elfIdent)
+        return false;
 
-    //assume that the elf magic is correct
-    if (nullptr == elfIdent ||
-        elfIdent[elf::EI_MAG0] != elf::ELFMAG0 ||
+    // assume that the elf magic is correct
+    if (elfIdent[elf::EI_MAG0] != elf::ELFMAG0 ||
         elfIdent[elf::EI_MAG1] != elf::ELFMAG1 ||
         elfIdent[elf::EI_MAG2] != elf::ELFMAG2 ||
         elfIdent[elf::EI_MAG3] != elf::ELFMAG3) {
-            // if the elf magic is not correct return false
-            return false;
+        // if the elf magic is not correct return false
+        return false;
     }
     return true;
 }
