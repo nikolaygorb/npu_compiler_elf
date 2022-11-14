@@ -16,7 +16,7 @@
 namespace elf {
 namespace utils {
 
-void checkELFMagic(const unsigned char* elfIdent);
+bool checkELFMagic(const unsigned char* elfIdent);
 
 } // namespace utils
 } // namespace elf
