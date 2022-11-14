@@ -26,7 +26,6 @@ bool utils::checkELFMagic(const unsigned char *elfIdent) {
     if (nullptr == elfIdent)
         return false;
 
-    // assume that the elf magic is correct
     if (elfIdent[elf::EI_MAG0] != elf::ELFMAG0 ||
         elfIdent[elf::EI_MAG1] != elf::ELFMAG1 ||
         elfIdent[elf::EI_MAG2] != elf::ELFMAG2 ||
