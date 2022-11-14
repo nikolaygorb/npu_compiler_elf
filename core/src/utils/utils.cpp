@@ -23,8 +23,8 @@ using namespace elf;
 // @params pointer to the elf blob memory
 //
 bool utils::checkELFMagic(const unsigned char *elfIdent) {
-    if (nullptr == elfIdent)
-        return false;
+    VPUX_ELF_THROW_UNLESS(elfIdent, ArgsError, "nullptr passed for elf buffer");
+
 
     if (elfIdent[elf::EI_MAG0] != elf::ELFMAG0 ||
         elfIdent[elf::EI_MAG1] != elf::ELFMAG1 ||
