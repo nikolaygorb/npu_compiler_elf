@@ -18,10 +18,10 @@
 #include <functional>
 #include <vector>
 
-#include <vpux_elf/reader.hpp>
 #include <vpux_elf/types/relocation_entry.hpp>
 #include <vpux_elf/types/symbol_entry.hpp>
 #include <vpux_elf/types/vpu_extensions.hpp>
+#include <vpux_elf/types/elf_structs.hpp>
 #include <vpux_headers/metadata.hpp>
 #include <vpux_elf/utils/error.hpp>
 
@@ -113,6 +113,9 @@ private:
 
 } //namespace details
 
+template<ELF_Bitness B>
+class Reader;
+
 /*
 Abstraction class to encapsulate device addressing logic. We have 2 addresses, that specify the same physical location.
 Object does not own any of the pointed regions
@@ -203,6 +206,33 @@ public:
     virtual ~BufferManager() {};
 };
 
+/*
+Abstraction class to encapsulate access to ELF binary file from DDR memory.
+*/
+
+struct AccessorDescriptor {
+public:
+    uint64_t offset;
+    uint64_t size; 
+    uint64_t procFlags;
+    uint64_t alignment;
+
+    AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t procFlags = 0, uint64_t alignment = 0);
+};
+
+class AccessManager {
+public:
+    virtual const uint8_t* read(const AccessorDescriptor& descriptor) = 0;
+
+    virtual ~AccessManager() = default;
+
+    size_t getSize() const;
+
+protected:
+    size_t m_size = 0;
+    BufferManager* m_bufferMgr = nullptr;
+};
+
 class VPUXLoader {
 private:
     using RelocationFunc = std::function<void(void*, const elf::SymbolEntry&,const Elf_Sxword)>;
@@ -223,7 +253,7 @@ private:
 
 public:
 
-    explicit VPUXLoader(void* elf, size_t elfSize, details::ArrayRef<SymbolEntry> runtimeSymTabs, BufferManager* bufferManager);
+    explicit VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, details::ArrayRef<SymbolEntry> runtimeSymTabs);
     ~VPUXLoader();
 
     uint64_t getEntry() ;
@@ -244,9 +274,9 @@ private:
 
     void applyRelocations(details::ArrayRef<int> relocationSectionIndexes);
 
-    Reader<ELF_Bitness::Elf64> m_reader;
+    Reader<ELF_Bitness::Elf64>* m_reader = nullptr;
+    BufferManager* m_bufferManager = nullptr;
     details::ArrayRef<SymbolEntry> m_runtimeSymTabs;
-    BufferManager* m_bufferManager;
 
     std::vector<DeviceBuffer> m_allocatedZones;
     std::vector<DeviceBuffer> m_sectionToAddr;
@@ -259,4 +289,4 @@ private:
 
 };
 
-}
+} // namespace elf

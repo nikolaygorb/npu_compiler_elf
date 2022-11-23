@@ -20,11 +20,14 @@
 #include <vpux_elf/types/elf_structs.hpp>
 #include <vpux_elf/utils/error.hpp>
 #include <vpux_elf/utils/utils.hpp>
-#include <vpux_elf/utils/error.hpp>
+#include <vpux_elf/utils/log.hpp>
 
+#include <vpux_loader/vpux_loader.hpp>
 
 #include <string>
 #include <vector>
+#include <fstream>
+#include <unordered_map>
 
 namespace elf {
 
@@ -33,16 +36,16 @@ class Reader {
 public:
     class Section {
     public:
-        Section() = delete;
-        Section(const typename ElfTypes<B>::SectionHeader* sectionHeader, const uint8_t* data, const char* name) :
-            m_sectionHeader(sectionHeader), m_data(data), m_name(name) {}
+        Section() = default;
+        Section(AccessManager* accessor, const typename ElfTypes<B>::SectionHeader* sectionHeader, const char* name, const uint8_t* data = nullptr)
+                : m_accessor(accessor), m_header(sectionHeader), m_name(name), m_data(data) {}
 
         const typename ElfTypes<B>::SectionHeader* getHeader() const {
-            return m_sectionHeader;
+            return m_header;
         }
 
         size_t getEntriesNum() const {
-            return static_cast<size_t>(m_sectionHeader->sh_size / m_sectionHeader->sh_entsize);
+            return static_cast<size_t>(m_header->sh_size / m_header->sh_entsize);
         }
 
         const char* getName() const {
@@ -51,19 +54,23 @@ public:
 
         template<typename T>
         const T* getData() const {
+            if (m_data == nullptr) {
+                m_data = m_accessor->read(AccessorDescriptor{m_header->sh_offset, m_header->sh_size, m_header->sh_flags, m_header->sh_addralign});
+            }
             return reinterpret_cast<const T*>(m_data);
         }
 
     private:
-        const typename ElfTypes<B>::SectionHeader* m_sectionHeader;
-        const uint8_t* m_data;
-        const char* m_name;
+        AccessManager* m_accessor = nullptr;
+        const typename ElfTypes<B>::SectionHeader* m_header = nullptr;
+        const char* m_name = nullptr;
+        mutable const uint8_t* m_data = nullptr;
     };
 
     class Segment {
     public:
-        Segment() = delete;
-        Segment(const typename ElfTypes<B>::ProgramHeader* programHeader, const uint8_t* data) : m_programHeader(programHeader), m_data(data) {}
+        Segment(const typename ElfTypes<B>::ProgramHeader* programHeader, const uint8_t* data) 
+                : m_programHeader(programHeader), m_data(data) {}
 
         const typename ElfTypes<B>::ProgramHeader* getHeader() const {
             return m_programHeader;
@@ -74,27 +81,29 @@ public:
         }
 
     private:
-        Reader* m_reader;
-        const typename ElfTypes<B>::ProgramHeader* m_programHeader;
-        const uint8_t* m_data;
+        const typename ElfTypes<B>::ProgramHeader* m_programHeader = nullptr;
+        const uint8_t* m_data = nullptr;
     };
 
 public:
-    Reader(const uint8_t* blob, size_t size) : m_blob(blob), m_size(size), m_elfHeader(reinterpret_cast<decltype(m_elfHeader)>(blob)) {
+    Reader(AccessManager* accessor) 
+            : m_accessor(accessor) {
+        VPUX_ELF_THROW_UNLESS(m_accessor, ArgsError, "Accessor pointer is null");
 
-        VPUX_ELF_THROW_UNLESS(utils::checkELFMagic(m_blob), HeaderError, "Incorrect ELF magic");
+        m_elfHeader = reinterpret_cast<const typename ElfTypes<B>::ELFHeader*>(
+            m_accessor->read(AccessorDescriptor{0, sizeof(typename ElfTypes<B>::ELFHeader)}));
 
-        m_sectionHeadersStart = reinterpret_cast<const typename ElfTypes<B>::SectionHeader*>(m_blob + m_elfHeader->e_shoff);
-        m_programHeadersStart = reinterpret_cast<const typename ElfTypes<B>::ProgramHeader*>(m_blob + m_elfHeader->e_phoff);
-        m_sectionHeadersNames = reinterpret_cast<const char*>(m_blob + (m_sectionHeadersStart + m_elfHeader->e_shstrndx)->sh_offset);
-    }
+        VPUX_ELF_THROW_UNLESS(utils::checkELFMagic(reinterpret_cast<const uint8_t*>(m_elfHeader)), HeaderError, "Incorrect ELF magic");
 
-    const uint8_t* getBlob() const {
-        return m_blob;
-    }
+        m_sectionHeadersStart = reinterpret_cast<const typename ElfTypes<B>::SectionHeader*>(
+            m_accessor->read(AccessorDescriptor{m_elfHeader->e_shoff, (uint64_t)(m_elfHeader->e_shnum*m_elfHeader->e_shentsize)}));
+        m_programHeadersStart = reinterpret_cast<const typename ElfTypes<B>::ProgramHeader*>(
+            m_accessor->read(AccessorDescriptor{m_elfHeader->e_phoff, sizeof(typename ElfTypes<B>::ProgramHeader)}));
 
-    size_t getSize() const {
-        return m_size;
+        const auto secNames = reinterpret_cast<const typename ElfTypes<B>::SectionHeader*>(
+                                m_sectionHeadersStart + m_elfHeader->e_shstrndx);
+        m_sectionHeadersNames = reinterpret_cast<const char*>(
+            m_accessor->read(AccessorDescriptor{secNames->sh_offset, secNames->sh_size}));
     }
 
     const typename ElfTypes<B>::ELFHeader* getHeader() const {
@@ -109,29 +118,42 @@ public:
         return m_elfHeader->e_phnum;
     }
 
-    Section getSection(size_t index) {
-        const auto sectionHeader = m_sectionHeadersStart + index;
-        auto data = m_blob + sectionHeader->sh_offset;
-        const auto name = m_sectionHeadersNames + sectionHeader->sh_name;
+    const Section& getSection(size_t index) const {
+        if (m_sectionsCache.find(index) != m_sectionsCache.end()) {
+            return m_sectionsCache[index];
+        }
 
-        return {sectionHeader, data, name};
+        const auto secHeader = m_sectionHeadersStart + index;
+        const auto name = m_sectionHeadersNames + secHeader->sh_name;
+        const auto data = m_accessor->read(AccessorDescriptor{secHeader->sh_offset, secHeader->sh_size, secHeader->sh_flags, secHeader->sh_addralign});
+        auto section = Section(m_accessor, secHeader, name, data);
+        m_sectionsCache[index] = section;
+
+        return m_sectionsCache[index];
     }
 
-    Segment getSegment(size_t index) {
-        const auto programHeader = m_programHeadersStart + index;
-        auto data = m_blob + programHeader->p_offset;
+    const Section& getSectionNoData(size_t index) const {
+        if (m_sectionsCache.find(index) != m_sectionsCache.end()) {
+            return m_sectionsCache[index];
+        }
 
-        return {programHeader, data};
+        const auto sectionHeader = m_sectionHeadersStart + index;
+        const auto name = m_sectionHeadersNames + sectionHeader->sh_name;
+        auto section = Section(m_accessor, sectionHeader, name);
+        m_sectionsCache[index] = section;
+        
+        return m_sectionsCache[index];
     }
 
 private:
-    const uint8_t* m_blob = nullptr;
-    const size_t m_size;
+    AccessManager* m_accessor;
 
     const typename ElfTypes<B>::ELFHeader* m_elfHeader = nullptr;
     const typename ElfTypes<B>::SectionHeader* m_sectionHeadersStart = nullptr;
     const typename ElfTypes<B>::ProgramHeader* m_programHeadersStart = nullptr;
     const char* m_sectionHeadersNames = nullptr;
+
+    mutable std::unordered_map<size_t, Section> m_sectionsCache;
 };
 
 } // namespace elf

@@ -17,6 +17,7 @@
 #define VPUX_ELF_LOG_UNIT_NAME "VpuxLoader"
 #endif
 #include <vpux_elf/utils/log.hpp>
+#include <vpux_elf/reader.hpp>
 
 namespace elf {
 
@@ -196,25 +197,36 @@ const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoade
     {R_VPU_DISP4_MULTICAST_OFFSET_CMP   , VPU_DISP4_MULTICAST_OFFSET_Relocation},
 };
 
-VPUXLoader::VPUXLoader(void* elf, size_t elfSize, details::ArrayRef<SymbolEntry> runtimeSymTabs, BufferManager* bufferManager) :
-                        m_reader(reinterpret_cast<const uint8_t*>(elf), elfSize), m_runtimeSymTabs(runtimeSymTabs),
-                        m_bufferManager(bufferManager), m_allocatedZones(), m_sectionToAddr(), m_jitRelocations(),
+AccessorDescriptor::AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t procFlags, uint64_t alignment)
+    : offset(offset)
+    , size(size)
+    , procFlags(procFlags)
+    , alignment(alignment) {}
+
+size_t AccessManager::getSize() const {
+    return m_size;
+}
+
+VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, details::ArrayRef<SymbolEntry> runtimeSymTabs) :
+                        m_reader(new Reader<ELF_Bitness::Elf64>(accessor)), m_bufferManager(bufferManager),
+                        m_runtimeSymTabs(runtimeSymTabs), m_allocatedZones(), m_sectionToAddr(), m_jitRelocations(),
                         m_userInputs(), m_userOutputs() {
     load();
 };
 
 VPUXLoader::~VPUXLoader() {
     clean();
+    delete m_reader;
 }
 
 uint64_t VPUXLoader::getEntry() {
 
     //this is very very temporary version
-    auto numSections = m_reader.getSectionsNum();
+    auto numSections = m_reader->getSectionsNum();
 
     for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
 
-        auto section = m_reader.getSection(sectionCtr);
+        const auto& section = m_reader->getSectionNoData(sectionCtr);
 
         auto hdr = section.getHeader();
         if(hdr->sh_type == elf::SHT_SYMTAB) {
@@ -239,7 +251,7 @@ void VPUXLoader::load() {
     VPUX_ELF_THROW_UNLESS(m_bufferManager, ArgsError, "null pointer passed for Buffer Manager");
 
     VPUX_ELF_LOG(LogLevel::TRACE, "Starting LOAD process");
-    auto numSections = m_reader.getSectionsNum();
+    auto numSections = m_reader->getSectionsNum();
 
     m_sectionToAddr.resize(numSections);
     m_allocatedZones.reserve(numSections);
@@ -252,7 +264,7 @@ void VPUXLoader::load() {
     for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
         VPUX_ELF_LOG(LogLevel::DEBUG,"Solving section %zu", sectionCtr);
 
-        const auto& section = m_reader.getSection(sectionCtr);
+        const auto& section = m_reader->getSection(sectionCtr);
 
         const auto sectionHeader = section.getHeader();
         auto sectionType = sectionHeader->sh_type;
@@ -398,7 +410,7 @@ void VPUXLoader::applyRelocations(details::ArrayRef<int> relocationSectionIndexe
 
         VPUX_ELF_LOG(LogLevel::DEBUG,"applying relocation section %u", relocationSectionIdx);
 
-        const auto& relocSection = m_reader.getSection(relocationSectionIdx);
+        const auto& relocSection = m_reader->getSection(relocationSectionIdx);
         auto relocations = relocSection.getData<elf::RelocationAEntry>();
         auto relocSecHdr = relocSection.getHeader();
         auto numRelocs = relocSection.getEntriesNum();
@@ -416,7 +428,7 @@ void VPUXLoader::applyRelocations(details::ArrayRef<int> relocationSectionIndexe
                 return m_runtimeSymTabs.data();
             }
 
-            auto symTabSection = m_reader.getSection(symTabIdx);
+            const auto& symTabSection = m_reader->getSectionNoData(symTabIdx);
             auto symTabSectionHdr = symTabSection.getHeader();
 
             VPUX_ELF_THROW_UNLESS(checkSectionType(symTabSectionHdr, elf::SHT_SYMTAB), RelocError,
@@ -439,7 +451,7 @@ void VPUXLoader::applyRelocations(details::ArrayRef<int> relocationSectionIndexe
             return;
         }
 
-        VPUX_ELF_THROW_WHEN(targetSectionIdx == 0 || targetSectionIdx > m_reader.getSectionsNum(), RelocError, "invalid target section from rela section");
+        VPUX_ELF_THROW_WHEN(targetSectionIdx == 0 || targetSectionIdx > m_reader->getSectionsNum(), RelocError, "invalid target section from rela section");
 
         //at this point we assume that all sections have an address, to which we can apply a simple lookup
         auto targetSectionDevBuf = m_sectionToAddr[targetSectionIdx];
@@ -489,7 +501,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
 
         VPUX_ELF_LOG(LogLevel::DEBUG,"\tapplying JITrelocation section %u", relocationSectionIdx);
 
-        const auto& relocSection = m_reader.getSection(relocationSectionIdx);
+        const auto& relocSection = m_reader->getSection(relocationSectionIdx);
         auto relocations = relocSection.getData<elf::RelocationAEntry>();
         auto relocSecHdr = relocSection.getHeader();
         auto numRelocs = relocSection.getEntriesNum();
@@ -502,7 +514,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
         //in JitRelocations case, we will expect to point to either "VPUX_USER_INPUT" or "VPUX_USER_INPUT" symtabs
         VPUX_ELF_THROW_WHEN(symTabIdx == VPU_RT_SYMTAB, RelocError, "JitReloc pointing to runtime symtab idx");
 
-        auto symTabSection = m_reader.getSection(symTabIdx);
+        const auto& symTabSection = m_reader->getSectionNoData(symTabIdx);
         auto symTabSectionHdr = symTabSection.getHeader();
 
         VPUX_ELF_THROW_UNLESS(checkSectionType(symTabSectionHdr, elf::SHT_SYMTAB), RelocError, "Reloc section pointing to non-symtab");
@@ -632,4 +644,4 @@ const elf::ResourceRequirements VPUXLoader::getResourceRequirements() const
     return this->m_networkMetadata.resource_requirements;
 }
 
-}
+} // namespace elf
