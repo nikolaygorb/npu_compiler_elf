@@ -98,14 +98,6 @@ const auto VPU_32_BIT_Relocation = [](void* targetAddr, const elf::SymbolEntry& 
     *addr = static_cast<uint32_t>(symVal + addend);
 };
 
-const auto VPU_32_BIT_OR_Relocation = [](void* targetAddr, const elf::SymbolEntry&  targetSym, const Elf_Sxword addend) -> void {
-    const auto addr = reinterpret_cast<uint32_t*>(targetAddr);
-    auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG,"\t\t32Bit OR reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr, symVal, addend);
-
-    *addr |= symVal + addend;
-};
-
 const auto VPU_32_BIT_RTM_Relocation = [](void* targetAddr, const elf::SymbolEntry&  targetSym, const Elf_Sxword addend) -> void {
     const auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
