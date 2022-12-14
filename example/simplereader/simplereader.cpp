@@ -11,6 +11,7 @@
 // included with the Software Package for additional details.
 //
 
+#include <vpux_elf/accessor.hpp>
 #include <vpux_elf/reader.hpp>
 
 #include <vpux_elf/types/symbol_entry.hpp>
@@ -29,7 +30,9 @@ int main(int argc, char* argv[]) {
     std::vector<uint8_t> elfBlob((std::istreambuf_iterator<char>(stream)), (std::istreambuf_iterator<char>()));
     stream.close();
 
-    elf::Reader<elf::ELF_Bitness::Elf64> reader(elfBlob.data(), elfBlob.size());
+    elf::ElfDDRAccessManager elfAccess(elfBlob.data(), elfBlob.size());
+
+    elf::Reader<elf::ELF_Bitness::Elf64> reader(&elfAccess);
 
     std::cout << "Number of sections: " << reader.getSectionsNum() << '\n';
     std::cout << "Number of segments: " << reader.getSegmentsNum() << '\n';
