@@ -19,8 +19,8 @@ namespace elf {
 
 constexpr uint8_t MAX_TENSOR_REF_DIMS = 8;
 constexpr uint8_t MAX_TENSOR_REF_STRIDES = MAX_TENSOR_REF_DIMS + 1;
-constexpr uint8_t MAX_METADATA_IO = 5;
-constexpr uint8_t MAX_OV_NODES = 10;
+constexpr uint8_t MAX_METADATA_IO = 32;
+constexpr uint8_t MAX_OV_NODES = MAX_METADATA_IO;
 constexpr uint8_t MAX_STRING_LEN = 32;
 
 using TensorName = char[MAX_STRING_LEN];
