@@ -19,7 +19,8 @@
 
 # Compiler flags
 
-set(
+list(
+    POP_BACK
     UMD_COMPILER_OPTIONS_COMMON 
     "/std:c++17"    # ISO C++ programming language standard features
     "/Zm400"        # AdditionalOptions - Increase virtual memory size
@@ -40,7 +41,8 @@ list(
 )
 endif()
 
-set(
+list(
+    POP_BACK
     UMD_COMPILER_OPTIONS_RELEASE
     "/Ox"  # Full Optimization
     "/Ob2" # Inline Function Expansion: Any Suitable
@@ -51,7 +53,8 @@ set(
     "/GL"  # Whole Program Optimization - Works in conjunction with /LTCG link flag
 )
 
-set(
+list(
+    POP_BACK
     UMD_COMPILER_OPTIONS_DEBUG
     "/GS"  # BufferSecurityCheck
     "/Od"  # OptimizationDisabled
@@ -66,7 +69,8 @@ set( UMD_COMPILER_OPTIONS_DEBUG ${UMD_COMPILER_OPTIONS_COMMON} ${UMD_COMPILER_OP
 
 # Linker flags
 
-set(
+list(
+    POP_BACK
     UMD_LINKER_OPTIONS_COMMON
     "/INCREMENTAL:NO"       # Disable Incremental Linking
     "/MANIFEST:NO"          # Don't create a side-by-side manifest file
@@ -77,7 +81,8 @@ set(
     "/CETCOMPAT"            # CET Shadow Stack compatible (/CETCOMPAT)
 )
 
-set(
+list(
+    POP_BACK
     UMD_LINKER_OPTIONS_RELEASE
     "/OPT:ICF"              # EnableCOMDATFolding
     "/OPT:REF"              # OptimizeReferences
@@ -85,7 +90,8 @@ set(
     "/LTCG:incremental"     # Incremental Link time code generation
 )
 
-set(
+list(
+    POP_BACK
     UMD_LINKER_OPTIONS_DEBUG
     "/DEBUG:FULL"           # GenerateDebugInfo
     "/OPT:NOICF"            # Prevent unreferenced data (COMDATs) from being folded in the program
