@@ -13,7 +13,11 @@
 
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 
-set(TARGET_NAME vpux_elf)
+include( ./cmake/compiler_linker_options.cmake )
+
+set(LIB_NAME vpux_elf)
+
+project(${LIB_NAME})
 
 include(TestBigEndian)
 TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
@@ -26,17 +30,25 @@ list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/example/.*")
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS} ${SOURCES})
 
-add_library(${TARGET_NAME} STATIC ${SOURCES})
-target_include_directories(${TARGET_NAME} PUBLIC
+add_library(${LIB_NAME} STATIC ${SOURCES})
+target_include_directories(${LIB_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/loader/include>)
 
-enable_warnings_as_errors(${TARGET_NAME} WIN_STRICT)
+# Set compiler options
+target_compile_options(${LIB_NAME} PUBLIC
+    $<$<CONFIG:Release>:${UMD_COMPILER_OPTIONS_RELEASE}>
+    $<$<CONFIG:Debug>:${UMD_COMPILER_OPTIONS_DEBUG}>
+    $<$<CONFIG:RelWithDebInfo>:${UMD_COMPILER_OPTIONS_RELEASE}>)
 
-add_subdirectory(example)
+# Set linker options
+target_link_options(${LIB_NAME} PUBLIC
+    $<$<CONFIG:Release>:${UMD_LINKER_OPTIONS_RELEASE}>
+    $<$<CONFIG:Debug>:${UMD_LINKER_OPTIONS_DEBUG}>
+    $<$<CONFIG:RelWithDebInfo>:${UMD_LINKER_OPTIONS_RELEASE}>)
 
 if(NOT BUILD_SHARED_LIBS)
-    install(TARGETS ${TARGET_NAME}
+    install(TARGETS ${LIB_NAME}
             RUNTIME DESTINATION ${IE_CPACK_RUNTIME_PATH} COMPONENT ${VPUX_PLUGIN_COMPONENT}
             ARCHIVE DESTINATION ${IE_CPACK_ARCHIVE_PATH} COMPONENT ${VPUX_PLUGIN_COMPONENT}
             LIBRARY DESTINATION ${IE_CPACK_LIBRARY_PATH} COMPONENT ${VPUX_PLUGIN_COMPONENT})
