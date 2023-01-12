@@ -36,13 +36,13 @@ target_include_directories(${LIB_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/loader/include>)
 
 # Set compiler options
-target_compile_options(${LIB_NAME} PUBLIC
+target_compile_options(${LIB_NAME} PRIVATE
     $<$<CONFIG:Release>:${UMD_COMPILER_OPTIONS_RELEASE}>
     $<$<CONFIG:Debug>:${UMD_COMPILER_OPTIONS_DEBUG}>
     $<$<CONFIG:RelWithDebInfo>:${UMD_COMPILER_OPTIONS_RELEASE}>)
 
 # Set linker options
-target_link_options(${LIB_NAME} PUBLIC
+target_link_options(${LIB_NAME} PRIVATE
     $<$<CONFIG:Release>:${UMD_LINKER_OPTIONS_RELEASE}>
     $<$<CONFIG:Debug>:${UMD_LINKER_OPTIONS_DEBUG}>
     $<$<CONFIG:RelWithDebInfo>:${UMD_LINKER_OPTIONS_RELEASE}>)
