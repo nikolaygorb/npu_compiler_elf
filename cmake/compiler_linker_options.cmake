@@ -20,9 +20,7 @@
 if(MSVC)
     # Compiler flags
 
-    list(
-        APPEND
-        UMD_COMPILER_OPTIONS_COMMON
+    set(UMD_COMPILER_OPTIONS_COMMON
         "/std:c++17"    # ISO C++ programming language standard features
         "/Zm400"        # AdditionalOptions - Increase virtual memory size
         "/MP"           # MultiProcessorCompilation true
@@ -35,43 +33,34 @@ if(MSVC)
     )
 
     if( "${ARCH}" STREQUAL "32" )
-    list(
-        APPEND UMD_COMPILER_OPTIONS_COMMON
-        /arch:SSE2  # Streaming SIMD Extensions 2
-        /Gr         # Calling Convention: __fastcall
-    )
+        set(UMD_COMPILER_OPTIONS_COMMON
+            /arch:SSE2  # Streaming SIMD Extensions 2
+            /Gr         # Calling Convention: __fastcall
+        )
     endif()
 
-    list(
-        APPEND
-        UMD_COMPILER_OPTIONS_RELEASE
+    set(UMD_COMPILER_OPTIONS_RELEASE
         "/Ox"  # Full Optimization
         "/Ob2" # Inline Function Expansion: Any Suitable
         "/Oi"  # Enable Instrinsic Functions
         "/Ot"  # Favor speed over size of EXEs and DLLs
         "/GF"  # Enable String Pooling: Yes
-        "/MD"  # Runtime Library: Multi-threaded
     )
 
-    list(
-        APPEND
-        UMD_COMPILER_OPTIONS_DEBUG
+    set(UMD_COMPILER_OPTIONS_DEBUG
         "/GS"  # BufferSecurityCheck
         "/Od"  # OptimizationDisabled
         "/sdl" # SDLchecks
-        "/MDd" # Runtime Library: Multi-threaded Debug
         "/bigobj" # increase max .obj sections to 2^32 (from 2^16).
                 # avoids: https://learn.microsoft.com/en-us/cpp/error-messages/compiler-errors-1/fatal-error-c1128?view=msvc-170
     )
 
-    set( UMD_COMPILER_OPTIONS_RELEASE ${UMD_COMPILER_OPTIONS_COMMON} ${UMD_COMPILER_OPTIONS_RELEASE} )
-    set( UMD_COMPILER_OPTIONS_DEBUG ${UMD_COMPILER_OPTIONS_COMMON} ${UMD_COMPILER_OPTIONS_DEBUG} )
+    set( UMD_COMPILER_OPTIONS_RELEASE ${UMD_COMPILER_OPTIONS_COMMON} ${UMD_COMPILER_OPTIONS_RELEASE} ${RUNTIME_RELEASE} )
+    set( UMD_COMPILER_OPTIONS_DEBUG ${UMD_COMPILER_OPTIONS_COMMON} ${UMD_COMPILER_OPTIONS_DEBUG} ${RUNTIME_DEBUG} )
 
     # Linker flags
 
-    list(
-        APPEND
-        UMD_LINKER_OPTIONS_COMMON
+    set(UMD_LINKER_OPTIONS_COMMON
         "/INCREMENTAL:NO"       # Disable Incremental Linking
         "/MANIFEST:NO"          # Don't create a side-by-side manifest file
         "/MANIFESTUAC:NO"       # Don't embed User Account Control (UAC) information in manifest
@@ -81,16 +70,12 @@ if(MSVC)
         "/CETCOMPAT"            # CET Shadow Stack compatible (/CETCOMPAT)
     )
 
-    list(
-        APPEND
-        UMD_LINKER_OPTIONS_RELEASE
+    set(UMD_LINKER_OPTIONS_RELEASE
         "/OPT:ICF"              # Enable COMDAT Folding
         "/RELEASE"              # Set the Checksum in the header of .exe file
     )
 
-    list(
-        APPEND
-        UMD_LINKER_OPTIONS_DEBUG
+    set(UMD_LINKER_OPTIONS_DEBUG
         "/DEBUG:FULL"           # GenerateDebugInfo
         "/OPT:NOICF"            # Prevent unreferenced data (COMDATs) from being folded in the program
     )
