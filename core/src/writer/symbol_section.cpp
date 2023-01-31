@@ -38,7 +38,7 @@ const std::vector<std::unique_ptr<Symbol>>& SymbolSection::getSymbols() const {
 }
 
 void SymbolSection::finalize() {
-    std::sort(m_symbols.begin(), m_symbols.end(), [](const std::unique_ptr<Symbol>& lhs, const std::unique_ptr<Symbol>& rhs) {
+    std::stable_sort(m_symbols.begin(), m_symbols.end(), [](const std::unique_ptr<Symbol>& lhs, const std::unique_ptr<Symbol>& rhs) {
         return lhs->getBinding() < rhs->getBinding();
     });
 
