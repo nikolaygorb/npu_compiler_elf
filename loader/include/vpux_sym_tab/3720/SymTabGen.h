@@ -16,7 +16,7 @@ class SymTabGen {
     static SymbolEntry symTab_[N_TABS][SPECIAL_SYMTAB_SIZE];
 
 public:
-    SymTabGen() {}
+    SymTabGen() = delete;
 
     static void initSymTab() {
         uint32_t inv_addr[] = {nn_public::CONFIG_1_TILE_INV_METADATA_ADDR_0,
@@ -62,7 +62,7 @@ public:
         }
     }
 
-    static const details::ArrayRef<SymbolEntry> symTab(uint8_t index) {
+    static details::ArrayRef<SymbolEntry> symTab(uint8_t index) {
         check_cond_and_exit((index != 0 && index <= N_TABS), "The sym tab configuration %hhu is not supported!", index);
 
         // Return configuration of index -1, because the configuration list begins at 0
