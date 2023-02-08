@@ -6,7 +6,6 @@
 #include <vpux_loader/vpux_loader.hpp>
 #include "elf_utils.h"
 #include "nn_resource_locator.h"
-#error
 
 namespace elf{
 
@@ -50,7 +49,7 @@ public:
             symTab_[j][VPU_NNRD_SYM_RTM_DMA0].st_size = dmaTaskLocator0.count();
 
             nn::common_runtime::TaskLocator<nn_public::VpuDMATask> dmaTaskLocator1(
-                nn_public::DMA0_STORAGE_ADDR_1, nn_public::VPU_DMA_STORAGE_PER_ENGINE);
+                nn_public::DMA1_STORAGE_ADDR_0, nn_public::VPU_DMA_STORAGE_PER_ENGINE);
             symTab_[j][VPU_NNRD_SYM_RTM_DMA1].st_value =
                 static_cast<Elf64_Addr>(reinterpret_cast<uintptr_t>(dmaTaskLocator1.tasks()));
             symTab_[j][VPU_NNRD_SYM_RTM_DMA1].st_size = dmaTaskLocator1.count();
