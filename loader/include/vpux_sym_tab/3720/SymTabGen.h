@@ -5,9 +5,8 @@
 #include "api/vpu_cmx_info_mtl.h"
 #include <vpux_loader/vpux_loader.hpp>
 #include "elf_utils.h"
-#include "nn_resource_locator.h"
 
-namespace elf{
+namespace elf {
 
 class SymTabGen {
     static constexpr uint8_t N_TABS = 2;
@@ -24,6 +23,10 @@ public:
 
         uint32_t akr_addr[] = {nn_public::CONFIG_1_TILE_AKR_METADATA_ADDR_0,
                                nn_public::CONFIG_2_TILES_AKR_METADATA_ADDR};
+
+        uint32_t dma0_addr[] = {nn_public::DMA0_STORAGE_ADDR, nn_public::DMA0_STORAGE_ADDR};
+
+        uint32_t dma1_addr[] = {nn_public::DMA0_STORAGE_ADDR, nn_public::DMA1_STORAGE_ADDR};
 
         for (int j = 0; j < N_TABS; ++j) {
             for (size_t i = 0; i < SPECIAL_SYMTAB_SIZE; ++i) {
@@ -42,17 +45,11 @@ public:
             symTab_[j][VPU_NNRD_SYM_RTM_ACT].st_value = akr_addr[j];
             symTab_[j][VPU_NNRD_SYM_RTM_ACT].st_size = nn_public::VPU_KERNEL_RANGE_COUNT;
 
-            nn::common_runtime::TaskLocator<nn_public::VpuDMATask> dmaTaskLocator0(
-                nn_public::DMA0_STORAGE_ADDR_0, nn_public::VPU_DMA_STORAGE_PER_ENGINE);
-            symTab_[j][VPU_NNRD_SYM_RTM_DMA0].st_value =
-                static_cast<Elf64_Addr>(reinterpret_cast<uintptr_t>(dmaTaskLocator0.tasks()));
-            symTab_[j][VPU_NNRD_SYM_RTM_DMA0].st_size = dmaTaskLocator0.count();
+            symTab_[j][VPU_NNRD_SYM_RTM_DMA0].st_value = dma0_addr[j];
+            symTab_[j][VPU_NNRD_SYM_RTM_DMA0].st_size = nn_public::VPU_DMA_TASK_COUNT;
 
-            nn::common_runtime::TaskLocator<nn_public::VpuDMATask> dmaTaskLocator1(
-                nn_public::DMA1_STORAGE_ADDR_0, nn_public::VPU_DMA_STORAGE_PER_ENGINE);
-            symTab_[j][VPU_NNRD_SYM_RTM_DMA1].st_value =
-                static_cast<Elf64_Addr>(reinterpret_cast<uintptr_t>(dmaTaskLocator1.tasks()));
-            symTab_[j][VPU_NNRD_SYM_RTM_DMA1].st_size = dmaTaskLocator1.count();
+            symTab_[j][VPU_NNRD_SYM_RTM_DMA1].st_value = dma1_addr[j];
+            symTab_[j][VPU_NNRD_SYM_RTM_DMA1].st_size = nn_public::VPU_DMA_TASK_COUNT;
 
             symTab_[j][VPU_NNRD_SYM_FIFO_BASE].st_value = 0x0;
             symTab_[j][VPU_NNRD_SYM_FIFO_BASE].st_size = 0;
