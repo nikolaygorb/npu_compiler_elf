@@ -137,7 +137,7 @@ static_assert(sizeof(OVNode) == 1168, "OVNode size != 1168");
 struct VPUX_ALIGNED_STRUCT(4) ResourceRequirements {
     uint32_t nn_slice_length_;
     uint32_t ddr_scratch_length_;
-    uint16_t nn_barrier_count_;
+    uint8_t pad_[2];
     uint8_t nn_slice_count_;
     uint8_t nn_barriers_;
 };
