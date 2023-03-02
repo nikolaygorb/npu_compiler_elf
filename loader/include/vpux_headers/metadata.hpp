@@ -7,9 +7,19 @@
 
 #pragma once
 
+#if defined(_MSC_VER)
+#define VPUX_ALIGNED_STRUCT(alignment)
+#elif defined(__GNUC__) || defined(__clang__)
+#define VPUX_ALIGNED_STRUCT(alignment)
+#else
+#error Define alignment macro
+#endif
+
 #include <cstdint>
 
 namespace elf {
+
+#pragma pack(push, 1)
 
 constexpr uint8_t MAX_TENSOR_REF_DIMS = 8;
 constexpr uint8_t MAX_TENSOR_REF_STRIDES = MAX_TENSOR_REF_DIMS + 1;
@@ -86,23 +96,32 @@ enum OVNodeType {
     OVNodeType_MAX = OVNodeType_U64
 };
 
-struct TensorRef {
+struct VPUX_ALIGNED_STRUCT(8) TensorRef {
     float strides[MAX_TENSOR_REF_STRIDES];
     uint32_t dimensions[MAX_TENSOR_REF_DIMS];
+    uint8_t pad0_[4];
     TensorName name;
     uint64_t order;
     DType data_type;
-    uint32_t dimensions_size, strides_size;
+    uint32_t dimensions_size;
+    uint32_t strides_size;
+    uint8_t pad1_[4];
 };
 
-struct PreprocessingInfo {
+static_assert(sizeof(TensorRef) == 128, "TensorRef size != 128");
+static_assert(offsetof(TensorRef, name) % 8 == 0, "Alignment error");
+
+struct VPUX_ALIGNED_STRUCT(4) PreprocessingInfo {
     TensorName input_name;
     PreProcessColorSpace input_format;
     PreProcessColorSpace output_format;
     PreProcessResizeAlgorithm algorithm;
 };
 
-struct OVNode {
+static_assert(sizeof(PreprocessingInfo) == 44, "PreprocessingInfo size != 44");
+static_assert(offsetof(PreprocessingInfo, input_format) % 8 == 0, "Alignment error");
+
+struct VPUX_ALIGNED_STRUCT(8) OVNode {
     TensorName tensor_names[MAX_METADATA_IO];
     uint64_t shape[MAX_TENSOR_REF_DIMS];
     TensorName friendly_name;
@@ -110,19 +129,24 @@ struct OVNode {
     OVNodeType type;
     uint32_t shape_size;
     uint32_t tensor_names_count = 0;
+    uint8_t pad_[4];
 };
 
-struct ResourceRequirements{
+static_assert(sizeof(OVNode) == 1168, "OVNode size != 1168");
+
+struct VPUX_ALIGNED_STRUCT(4) ResourceRequirements {
     uint32_t nn_slice_length_;
     uint32_t ddr_scratch_length_;
-    uint16_t nn_barrier_count_;
+    uint8_t pad_[2];
     uint8_t nn_slice_count_;
     uint8_t nn_barriers_;
 };
 
-struct NetworkMetadata {
-    ResourceRequirements resource_requirements;
+static_assert(sizeof(ResourceRequirements) == 12, "ResourceRequirements size != 12");
 
+struct VPUX_ALIGNED_STRUCT(8) NetworkMetadata {
+    ResourceRequirements resource_requirements;
+    uint8_t pad0_[4];
     TensorRef net_input[MAX_METADATA_IO];
     TensorRef net_output[MAX_METADATA_IO];
 
@@ -137,11 +161,28 @@ struct NetworkMetadata {
     PreprocessingInfo pre_process_info[MAX_METADATA_IO];
     TensorName blob_name;
 
-    uint32_t net_input_count = 0, net_output_count = 0;
-    uint32_t in_tenosr_count = 0, out_tensor_count = 0;
+    uint32_t net_input_count = 0;
+    uint32_t net_output_count = 0;
+    uint32_t in_tenosr_count = 0;
+    uint32_t out_tensor_count = 0;
     uint32_t profiling_output_count = 0;
-    uint32_t ov_parameters_count = 0, ov_results_count = 0;
+    uint32_t ov_parameters_count = 0;
+    uint32_t ov_results_count = 0;
     uint32_t pre_process_info_count = 0;
 };
+
+static_assert(sizeof(NetworkMetadata) == 96720, "NetworkMetadata size != 96720");
+static_assert(offsetof(NetworkMetadata, net_input) % 8 == 0, "Alignment error");
+static_assert(offsetof(NetworkMetadata, net_output) % 8 == 0, "Alignment error");
+static_assert(offsetof(NetworkMetadata, in_tensor_desc) % 8 == 0, "Alignment error");
+static_assert(offsetof(NetworkMetadata, out_tensor_desc) % 8 == 0, "Alignment error");
+static_assert(offsetof(NetworkMetadata, profiling_output) % 8 == 0, "Alignment error");
+static_assert(offsetof(NetworkMetadata, ov_parameters) % 8 == 0, "Alignment error");
+static_assert(offsetof(NetworkMetadata, ov_results) % 8 == 0, "Alignment error");
+static_assert(offsetof(NetworkMetadata, pre_process_info) % 8 == 0, "Alignment error");
+static_assert(offsetof(NetworkMetadata, blob_name) % 8 == 0, "Alignment error");
+static_assert(offsetof(NetworkMetadata, net_input_count) % 4 == 0, "Alignment error");
+
+#pragma pack(pop)
 
 } // namespace elf

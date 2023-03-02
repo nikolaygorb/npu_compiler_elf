@@ -352,7 +352,6 @@ void VPUXLoader::load() {
                 VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_count_ %hhu", m_networkMetadata.resource_requirements.nn_slice_count_);
 
                 // not uesd:
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_barrier_count_ %hu", m_networkMetadata.resource_requirements.nn_barrier_count_);
                 VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_length_ %u", m_networkMetadata.resource_requirements.nn_slice_length_);
                 VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tddr_scratch_length_ %u", m_networkMetadata.resource_requirements.ddr_scratch_length_);
                 break;
