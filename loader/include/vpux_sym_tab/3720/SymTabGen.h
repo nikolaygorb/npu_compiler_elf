@@ -21,15 +21,24 @@ public:
     SymTabGen() = delete;
 
     static void initSymTab() {
-        uint32_t inv_addr[] = {nn_public::CONFIG_1_TILE_INV_METADATA_ADDR_0,
-                               nn_public::CONFIG_2_TILES_INV_METADATA_ADDR};
+        nn_public::VpuMetadataMapSingle *single =
+            reinterpret_cast<nn_public::VpuMetadataMapSingle *>(nn_public::METADATA0_STORAGE_ADDR);
+        nn_public::VpuMetadataMapDual0 *dual0 =
+            reinterpret_cast<nn_public::VpuMetadataMapDual0 *>(nn_public::METADATA0_STORAGE_ADDR);
+        nn_public::VpuMetadataMapDual1 *dual1 =
+            reinterpret_cast<nn_public::VpuMetadataMapDual1 *>(nn_public::METADATA1_STORAGE_ADDR);
 
-        uint32_t akr_addr[] = {nn_public::CONFIG_1_TILE_AKR_METADATA_ADDR_0,
-                               nn_public::CONFIG_2_TILES_AKR_METADATA_ADDR};
+        uint32_t inv_addr[] = {reinterpret_cast<uint32_t>(single->inv_storage),
+                               reinterpret_cast<uint32_t>(dual0->inv_storage)};
 
-        uint32_t dma0_addr[] = {nn_public::DMA0_STORAGE_ADDR, nn_public::DMA0_STORAGE_ADDR};
+        uint32_t akr_addr[] = {reinterpret_cast<uint32_t>(single->akr_storage),
+                               reinterpret_cast<uint32_t>(dual0->akr_storage)};
 
-        uint32_t dma1_addr[] = {nn_public::DMA0_STORAGE_ADDR, nn_public::DMA1_STORAGE_ADDR};
+        uint32_t dma0_addr[] = {reinterpret_cast<uint32_t>(single->dma_storage),
+                                reinterpret_cast<uint32_t>(dual0->dma0_storage)};
+
+        uint32_t dma1_addr[] = {reinterpret_cast<uint32_t>(single->dma_storage),
+                                reinterpret_cast<uint32_t>(dual1->dma1_storage)};
 
         for (int j = 0; j < N_TABS; ++j) {
             for (size_t i = 0; i < SPECIAL_SYMTAB_SIZE; ++i) {
@@ -39,7 +48,7 @@ public:
                 symTab_[j][i].st_name = 0;
             }
 
-            symTab_[j][VPU_NNRD_SYM_NNCXM_SLICE_BASE_ADDR].st_value = nn_public::WORKSPACE_ADDR_0;
+            symTab_[j][VPU_NNRD_SYM_NNCXM_SLICE_BASE_ADDR].st_value = nn_public::VPU_WORKSPACE_ADDR_0;
             symTab_[j][VPU_NNRD_SYM_NNCXM_SLICE_BASE_ADDR].st_size = nn_public::VPU_WORKSPACE_SIZE;
 
             symTab_[j][VPU_NNRD_SYM_RTM_IVAR].st_value = inv_addr[j];
