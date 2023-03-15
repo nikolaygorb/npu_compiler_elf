@@ -15,6 +15,7 @@
 #error Define alignment macro
 #endif
 
+#include <cstddef>
 #include <cstdint>
 
 namespace elf {
