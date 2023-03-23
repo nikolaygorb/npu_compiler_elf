@@ -15,24 +15,17 @@ SymTabGen::SymTabGen() {
 }
 
 void SymTabGen::initSymTab() {
-    nn_public::VpuMetadataMapSingle* single =
-            reinterpret_cast<nn_public::VpuMetadataMapSingle*>(nn_public::METADATA0_STORAGE_ADDR);
-    nn_public::VpuMetadataMapDual0* dual0 =
-            reinterpret_cast<nn_public::VpuMetadataMapDual0*>(nn_public::METADATA0_STORAGE_ADDR);
-    nn_public::VpuMetadataMapDual1* dual1 =
-            reinterpret_cast<nn_public::VpuMetadataMapDual1*>(nn_public::METADATA1_STORAGE_ADDR);
+    uint32_t inv_addr[] = {nn_public::METADATA0_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapSingle, inv_storage),
+                           nn_public::METADATA0_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapDual0, inv_storage)};
 
-    Elf64_Addr inv_addr[] = {reinterpret_cast<Elf64_Addr>(single->inv_storage),
-                           reinterpret_cast<Elf64_Addr>(dual0->inv_storage)};
+    uint32_t akr_addr[] = {nn_public::METADATA0_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapSingle, akr_storage),
+                           nn_public::METADATA0_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapDual0, akr_storage)};
 
-    Elf64_Addr akr_addr[] = {reinterpret_cast<Elf64_Addr>(single->akr_storage),
-                           reinterpret_cast<Elf64_Addr>(dual0->akr_storage)};
+    uint32_t dma0_addr[] = {nn_public::METADATA0_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapSingle, dma_storage),
+                            nn_public::METADATA0_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapDual0, dma0_storage)};
 
-    Elf64_Addr dma0_addr[] = {reinterpret_cast<Elf64_Addr>(single->dma_storage),
-                            reinterpret_cast<Elf64_Addr>(dual0->dma0_storage)};
-
-    Elf64_Addr dma1_addr[] = {reinterpret_cast<Elf64_Addr>(single->dma_storage),
-                            reinterpret_cast<Elf64_Addr>(dual1->dma1_storage)};
+    uint32_t dma1_addr[] = {nn_public::METADATA0_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapSingle, dma_storage),
+                            nn_public::METADATA1_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapDual1, dma1_storage)};
 
     for (int j = 0; j < N_TABS; ++j) {
         for (size_t i = 0; i < SPECIAL_SYMTAB_SIZE; ++i) {

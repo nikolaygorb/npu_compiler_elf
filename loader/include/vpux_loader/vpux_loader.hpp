@@ -109,7 +109,7 @@ public:
 
     void resize(size_t size) {
         if (m_data) {
-            delete m_data;
+            delete[] m_data;
         }
         m_size = size;
         m_data = new T[m_size];
@@ -120,7 +120,7 @@ public:
 
     ~FixedVector() {
         if (m_data) {
-            delete m_data;
+            delete[] m_data;
         }
     }
 
