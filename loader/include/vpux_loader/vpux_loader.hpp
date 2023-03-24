@@ -7,84 +7,108 @@
 
 #pragma once
 
+#include <functional>
 #include <map>
 #include <string>
-#include <functional>
 #include <vector>
 
+#include <vpux_elf/types/elf_structs.hpp>
 #include <vpux_elf/types/relocation_entry.hpp>
 #include <vpux_elf/types/symbol_entry.hpp>
 #include <vpux_elf/types/vpu_extensions.hpp>
-#include <vpux_elf/types/elf_structs.hpp>
-#include <vpux_headers/metadata.hpp>
 #include <vpux_elf/utils/error.hpp>
+#include <vpux_headers/metadata.hpp>
 
 namespace elf {
-namespace details{
 
-//quick immutable array ref
+// quick immutable array ref
 template <typename T>
 class ArrayRef {
 public:
     using value_type = T;
-    using pointer = value_type *;
-    using const_pointer = const value_type *;
-    using reference = value_type &;
-    using const_reference = const value_type &;
+    using pointer = value_type*;
+    using const_pointer = const value_type*;
+    using reference = value_type&;
+    using const_reference = const value_type&;
     using iterator = const_pointer;
     using const_iterator = const_pointer;
     using reverse_iterator = std::reverse_iterator<iterator>;
 
 public:
-    inline size_t size() const {return m_size;}
-    inline const T* data() const { return m_data;}
-    inline const T& operator[](size_t index) const {return m_data[index];}
+    inline size_t size() const {
+        return m_size;
+    }
+    inline const T* data() const {
+        return m_data;
+    }
+    inline const T& operator[](size_t index) const {
+        return m_data[index];
+    }
 
-    ArrayRef() : m_data(nullptr), m_size(0) {};
-    ArrayRef(const T* data, size_t size) : m_data(data), m_size(size) {};
+    ArrayRef(): m_data(nullptr), m_size(0){};
+    ArrayRef(const T* data, size_t size): m_data(data), m_size(size){};
 
-    template<typename A>
-    ArrayRef(const std::vector<T, A> &vector)
-      : m_data(vector.data()), m_size(vector.size()) {}
+    template <typename A>
+    ArrayRef(const std::vector<T, A>& vector): m_data(vector.data()), m_size(vector.size()) {
+    }
 
     template <size_t N>
-    constexpr ArrayRef(const std::array<T, N> &array)
-        : m_data(array.data()), m_size(N) {}
+    constexpr ArrayRef(const std::array<T, N>& array): m_data(array.data()), m_size(N) {
+    }
 
+    iterator begin() const {
+        return m_data;
+    }
+    iterator end() const {
+        return m_data + m_size;
+    }
 
-    iterator begin() const { return m_data; }
-    iterator end() const { return m_data + m_size; }
+    reverse_iterator rbegin() const {
+        return reverse_iterator(end());
+    }
+    reverse_iterator rend() const {
+        return reverse_iterator(begin());
+    }
 
-    reverse_iterator rbegin() const { return reverse_iterator(end()); }
-    reverse_iterator rend() const { return reverse_iterator(begin()); }
-
-    bool empty() const { return m_size == 0; }
+    bool empty() const {
+        return m_size == 0;
+    }
 
 private:
     const T* m_data;
     const size_t m_size;
-
 };
+
+namespace details {
 
 template <typename T>
 class FixedVector {
 public:
-    inline size_t size() const { return m_size; }
-    inline T* data() { return m_data; }
-    inline const T* data() const { return m_data; }
-    inline T& operator[](size_t index) { return m_data[index]; }
-    inline const T& operator[](size_t index) const { return m_data[index]; }
+    inline size_t size() const {
+        return m_size;
+    }
+    inline T* data() {
+        return m_data;
+    }
+    inline const T* data() const {
+        return m_data;
+    }
+    inline T& operator[](size_t index) {
+        return m_data[index];
+    }
+    inline const T& operator[](size_t index) const {
+        return m_data[index];
+    }
 
-    FixedVector()
-        : m_size(0)
-        , m_data(nullptr) {}
+    FixedVector(): m_size(0), m_data(nullptr) {
+    }
 
-    FixedVector(size_t size) : m_size(size), m_data(new T[m_size]) {
+    FixedVector(size_t size): m_size(size), m_data(new T[m_size]) {
         VPUX_ELF_THROW_UNLESS(m_data != nullptr, AllocError, "Failed to allocate memory for internal FixedVector");
     }
 
     void resize(size_t size) {
-        if(m_data) {
+        if (m_data) {
             delete m_data;
         }
         m_size = size;
@@ -95,7 +119,7 @@ public:
     }
 
     ~FixedVector() {
-        if(m_data){
+        if (m_data) {
             delete m_data;
         }
     }
@@ -105,9 +129,9 @@ private:
     T* m_data;
 };
 
-} //namespace details
+}  // namespace details
 
-template<ELF_Bitness B>
+template <ELF_Bitness B>
 class Reader;
 
 /*
@@ -122,17 +146,15 @@ in memory, but from 2 different view-points
 
 class DeviceBuffer {
 public:
-    DeviceBuffer() :
-         m_cpuAddr(nullptr), m_vpuAddr(0), m_size(0) {};
+    DeviceBuffer(): m_cpuAddr(nullptr), m_vpuAddr(0), m_size(0){};
 
-    DeviceBuffer(uint8_t* cpu_addr, uint64_t vpu_addr, size_t size) :
-        m_cpuAddr(cpu_addr), m_vpuAddr(vpu_addr), m_size(size) {};
+    DeviceBuffer(uint8_t* cpu_addr, uint64_t vpu_addr, size_t size)
+            : m_cpuAddr(cpu_addr), m_vpuAddr(vpu_addr), m_size(size){};
 
-    DeviceBuffer(const DeviceBuffer& other) :
-        m_cpuAddr(other.m_cpuAddr), m_vpuAddr(other.m_vpuAddr), m_size(other.m_size) {};
+    DeviceBuffer(const DeviceBuffer& other)
+            : m_cpuAddr(other.m_cpuAddr), m_vpuAddr(other.m_vpuAddr), m_size(other.m_size){};
 
-    DeviceBuffer(DeviceBuffer&& other) :
-        m_cpuAddr(other.m_cpuAddr), m_vpuAddr(other.m_vpuAddr), m_size(other.m_size) {};
+    DeviceBuffer(DeviceBuffer&& other): m_cpuAddr(other.m_cpuAddr), m_vpuAddr(other.m_vpuAddr), m_size(other.m_size){};
 
     DeviceBuffer& operator=(const DeviceBuffer& other) {
         m_cpuAddr = other.m_cpuAddr;
@@ -150,16 +172,23 @@ public:
         return *this;
     }
 
-    uint8_t* cpu_addr() {return m_cpuAddr;}
-    const uint8_t* cpu_addr() const {return m_cpuAddr;}
-    uint64_t vpu_addr() const {return m_vpuAddr;}
-    size_t size() const {return m_size;}
+    uint8_t* cpu_addr() {
+        return m_cpuAddr;
+    }
+    const uint8_t* cpu_addr() const {
+        return m_cpuAddr;
+    }
+    uint64_t vpu_addr() const {
+        return m_vpuAddr;
+    }
+    size_t size() const {
+        return m_size;
+    }
 
 private:
     uint8_t* m_cpuAddr;
     uint64_t m_vpuAddr;
     size_t m_size;
-
 };
 
 struct BufferSpecs {
@@ -168,9 +197,8 @@ public:
     uint64_t size;
     Elf_Xword procFlags;
     BufferSpecs(uint64_t alignment, uint64_t size, uint64_t procFlags)
-        : alignment(alignment)
-        , size(size)
-        , procFlags(procFlags) {}
+            : alignment(alignment), size(size), procFlags(procFlags) {
+    }
 };
 
 class BufferManager {
@@ -197,7 +225,7 @@ public:
     /// @param devAddress - DeviceBuffer reference
     virtual void unlock(DeviceBuffer& devAddress) = 0;
     virtual size_t copy(DeviceBuffer& to, const uint8_t* from, size_t count) = 0;
-    virtual ~BufferManager() {};
+    virtual ~BufferManager(){};
 };
 
 /*
@@ -207,7 +235,7 @@ Abstraction class to encapsulate access to ELF binary file from DDR memory.
 struct AccessorDescriptor {
 public:
     uint64_t offset;
-    uint64_t size; 
+    uint64_t size;
     uint64_t procFlags;
     uint64_t alignment;
 
@@ -229,48 +257,40 @@ protected:
 
 class VPUXLoader {
 private:
-    using RelocationFunc = std::function<void(void*, const elf::SymbolEntry&,const Elf_Sxword)>;
+    using RelocationFunc = std::function<void(void*, const elf::SymbolEntry&, const Elf_Sxword)>;
     using RelocationType = Elf_Word;
 
-    enum class Action {
-        None,
-        AllocateAndLoad,
-        Allocate,
-        Relocate,
-        RegisterUserIO,
-        RegisterNetworkMetadata,
-        Error
-    };
+    enum class Action { None, AllocateAndLoad, Allocate, Relocate, RegisterUserIO, RegisterNetworkMetadata, Error };
 
     static const std::map<Elf_Word, Action> actionMap;
     static const std::map<RelocationType, RelocationFunc> relocationMap;
 
 public:
-
-    explicit VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, details::ArrayRef<SymbolEntry> runtimeSymTabs);
+    explicit VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, ArrayRef<SymbolEntry> runtimeSymTabs);
     ~VPUXLoader();
 
-    uint64_t getEntry() ;
+    uint64_t getEntry();
 
     void applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs);
 
-    details::ArrayRef<DeviceBuffer> getAllocatedBuffers();
-    details::ArrayRef<DeviceBuffer> getInputBuffers();
-    details::ArrayRef<DeviceBuffer> getOutputBuffers();
+    ArrayRef<DeviceBuffer> getAllocatedBuffers() const;
+    ArrayRef<DeviceBuffer> getInputBuffers() const;
+    ArrayRef<DeviceBuffer> getOutputBuffers() const;
     const elf::ResourceRequirements getResourceRequirements() const;
     const elf::NetworkMetadata getNetworkMetadata() const;
 
 private:
     bool checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const;
-    void registerUserIO(details::FixedVector<DeviceBuffer>& io,const elf::SymbolEntry* symbols, size_t symbolCount) const;
+    void registerUserIO(details::FixedVector<DeviceBuffer>& io, const elf::SymbolEntry* symbols,
+                        size_t symbolCount) const;
     void load();
     void clean();
 
-    void applyRelocations(details::ArrayRef<int> relocationSectionIndexes);
+    void applyRelocations(ArrayRef<int> relocationSectionIndexes);
 
     Reader<ELF_Bitness::Elf64>* m_reader = nullptr;
     BufferManager* m_bufferManager = nullptr;
-    details::ArrayRef<SymbolEntry> m_runtimeSymTabs;
+    ArrayRef<SymbolEntry> m_runtimeSymTabs;
 
     std::vector<DeviceBuffer> m_allocatedZones;
     std::vector<DeviceBuffer> m_sectionToAddr;
@@ -280,7 +300,6 @@ private:
     details::FixedVector<DeviceBuffer> m_userOutputs;
 
     elf::NetworkMetadata m_networkMetadata;
-
 };
 
-} // namespace elf
+}  // namespace elf
