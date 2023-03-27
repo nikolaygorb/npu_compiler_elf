@@ -49,17 +49,12 @@ static ResourceRequirements readResourcesFromElf(AccessManager* elfAccess) {
 }
 
 HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr): bufferManager(bufferMgr) {
-    resRequirements = readResourcesFromElf(accessMgr);
-
     // EISW-73555
     // For now, only generate 1 mapped inference, even if the network is compiled for a single tile
-    try {
-        loaders.push_back(std::make_unique<VPUXLoader>(accessMgr, bufferManager,
-                                                       SymTabGen::getSymTab(resRequirements.nn_slice_count_)));
-    } catch (...) {
-        // Rethrow to let driver know that construction failed and HostParsedInference object cannot be further used
-        throw;
-    }
+    resRequirements = readResourcesFromElf(accessMgr);
+
+    loaders.push_back(std::make_unique<VPUXLoader>(accessMgr, bufferManager,
+                                                   SymTabGen::getSymTab(resRequirements.nn_slice_count_)));
 
     parsedInference = bufferManager->allocate(
             BufferSpecs(DEFAULT_ALIGN, sizeof(nn_public::VpuHostParsedInference), SHF_EXECINSTR));
