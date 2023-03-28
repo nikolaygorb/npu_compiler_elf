@@ -45,7 +45,7 @@ static ResourceRequirements readResourcesFromElf(AccessManager* elfAccess) {
         }
     }
 
-    throw std::runtime_error("Failed to find a resource");
+    VPUX_ELF_THROW(HeaderError,"Failed to find a resource");
 }
 
 HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr): bufferManager(bufferMgr) {
