@@ -89,13 +89,17 @@ ArrayRef<DeviceBuffer> HostParsedInference::getOutputBuffers() const {
     return getBuffers(loaders, outputs, std::mem_fn(&VPUXLoader::getOutputBuffers));
 }
 
+ArrayRef<DeviceBuffer> HostParsedInference::getProfBuffers() const {
+    return getBuffers(loaders, profiling, std::mem_fn(&VPUXLoader::getProfBuffers));
+}
+
 NetworkMetadata HostParsedInference::getMetadata() {
     return loaders.front()->getNetworkMetadata();
 }
 
-void HostParsedInference::applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs) {
+void HostParsedInference::applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs, std::vector<DeviceBuffer>& profiling) {
     for (auto const& loader : loaders) {
-        return loader->applyJitRelocations(inputs, outputs);
+        return loader->applyJitRelocations(inputs, outputs, profiling);
     }
 }
 

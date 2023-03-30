@@ -103,6 +103,7 @@ constexpr Elf_Word VPU_SHT_NETDESC   = 0x8aaaaaaa;
 constexpr Elf_Xword VPU_SHF_JIT             = 0x100000;
 constexpr Elf_Xword VPU_SHF_USERINPUT       = 0x200000;
 constexpr Elf_Xword VPU_SHF_USEROUTPUT      = 0x400000;
+constexpr Elf_Xword VPU_SHF_PROFOUTPUT      = 0x800000;
 constexpr Elf_Xword VPU_SHF_PROC_DPU        = 0x10000000;
 constexpr Elf_Xword VPU_SHF_PROC_DMA        = 0x20000000;
 constexpr Elf_Xword VPU_SHF_PROC_SHAVE      = 0x40000000;
@@ -124,6 +125,7 @@ constexpr Elf_Word VPU_NNRD_SYM_RTM_DMA0 = 3;
 constexpr Elf_Word VPU_NNRD_SYM_RTM_DMA1 = 4;
 constexpr Elf_Word VPU_NNRD_SYM_FIFO_BASE = 5;
 constexpr Elf_Word VPU_NNRD_SYM_BARRIERS_START = 6;
+constexpr Elf_Word VPU_NNRD_SYM_HW_REGISTER = 7;
 
 //
 // VPU constants

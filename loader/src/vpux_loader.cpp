@@ -219,7 +219,8 @@ VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, Ar
           m_sectionToAddr(),
           m_jitRelocations(),
           m_userInputs(),
-          m_userOutputs() {
+          m_userOutputs(),
+          m_profOutputs() {
     load();
 };
 
@@ -357,6 +358,12 @@ void VPUXLoader::load() {
                 VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu outputs", section.getEntriesNum() - 1);
                 registerUserIO(m_userOutputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
             }
+            else if(sectionFlags & VPU_SHF_PROFOUTPUT) {
+                VPUX_ELF_THROW_WHEN(m_profOutputs.size(), SequenceError, "Profiling outputs already read.... potential more than one output section?");
+
+                VPUX_ELF_LOG(LogLevel::DEBUG,"\tRegistering %zu prof outputs", section.getEntriesNum() -1);
+                registerUserIO(m_profOutputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
+            }
             break;
         }
 
@@ -411,6 +418,10 @@ void VPUXLoader::load() {
     VPUX_ELF_LOG(LogLevel::INFO, "Registered %zu outputs of sizes: ", m_userOutputs.size());
     for (size_t outputCtr = 0; outputCtr < m_userOutputs.size(); ++outputCtr) {
         VPUX_ELF_LOG(LogLevel::INFO, "\t %zu : %zu", outputCtr, m_userOutputs[outputCtr].size());
+    }
+    VPUX_ELF_LOG(LogLevel::INFO,"Registered %zu prof outputs of sizes: ", m_profOutputs.size());
+    for(size_t outputCtr = 0; outputCtr < m_profOutputs.size(); ++outputCtr) {
+        VPUX_ELF_LOG(LogLevel::INFO,"\t %zu : %zu", outputCtr, m_profOutputs[outputCtr].size());
     }
 
     return;
@@ -509,7 +520,7 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
 };
 
 // TODO(E#30069) : a lot of shared logic with applyRelocations.... refactor to share code.... duplicate for WIP purposes
-void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs) {
+void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs, std::vector<DeviceBuffer>& profiling) {
     VPUX_ELF_LOG(LogLevel::TRACE, "apply JITrelocations");
     for (const auto& relocationSectionIdx : m_jitRelocations) {
         VPUX_ELF_LOG(LogLevel::DEBUG, "\tapplying JITrelocation section %u", relocationSectionIdx);
@@ -545,6 +556,8 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
                 return ArrayRef<DeviceBuffer>(inputs);
             } else if (relocSecFlags & VPU_SHF_USEROUTPUT) {
                 return ArrayRef<DeviceBuffer>(outputs);
+            } else if(relocSecFlags & VPU_SHF_PROFOUTPUT) {
+                return ArrayRef<DeviceBuffer>(profiling);
             } else {
                 VPUX_ELF_THROW(RelocError, "Jit reloc section pointing neither to userInput nor userOutput");
                 return ArrayRef<DeviceBuffer>(outputs);
@@ -639,6 +652,10 @@ ArrayRef<DeviceBuffer> VPUXLoader::getInputBuffers() const {
 
 ArrayRef<DeviceBuffer> VPUXLoader::getOutputBuffers() const {
     return ArrayRef<DeviceBuffer>(m_userOutputs.data(), m_userOutputs.size());
+};
+
+ArrayRef<DeviceBuffer> VPUXLoader::getProfBuffers() const {
+    return ArrayRef<DeviceBuffer>(m_profOutputs.data(), m_profOutputs.size());
 };
 
 bool VPUXLoader::checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const {
