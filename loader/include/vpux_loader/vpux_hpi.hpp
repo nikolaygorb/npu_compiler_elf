@@ -15,8 +15,9 @@ public:
     ArrayRef<DeviceBuffer> getAllocatedBuffers() const;
     ArrayRef<DeviceBuffer> getInputBuffers() const;
     ArrayRef<DeviceBuffer> getOutputBuffers() const;
+    ArrayRef<DeviceBuffer> getProfBuffers() const;
     NetworkMetadata getMetadata();
-    void applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs);
+    void applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs, std::vector<DeviceBuffer>& profiling);
 
 private:
     DeviceBuffer parsedInference;
@@ -26,6 +27,7 @@ private:
     mutable std::vector<DeviceBuffer> allocations;
     mutable std::vector<DeviceBuffer> inputs;
     mutable std::vector<DeviceBuffer> outputs;
+    mutable std::vector<DeviceBuffer> profiling;
 };
 
 }  // namespace elf

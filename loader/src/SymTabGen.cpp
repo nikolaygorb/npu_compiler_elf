@@ -55,6 +55,9 @@ void SymTabGen::initSymTab() {
 
         symTab_[j][VPU_NNRD_SYM_BARRIERS_START].st_value = 0;
         symTab_[j][VPU_NNRD_SYM_BARRIERS_START].st_size = 0;
+
+        symTab_[j][VPU_NNRD_SYM_HW_REGISTER].st_value = 0;
+        symTab_[j][VPU_NNRD_SYM_HW_REGISTER].st_size = 0;
     }
 }
 

@@ -271,11 +271,12 @@ public:
 
     uint64_t getEntry();
 
-    void applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs);
+    void applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs, std::vector<DeviceBuffer>& profiling);
 
     ArrayRef<DeviceBuffer> getAllocatedBuffers() const;
     ArrayRef<DeviceBuffer> getInputBuffers() const;
     ArrayRef<DeviceBuffer> getOutputBuffers() const;
+    ArrayRef<DeviceBuffer> getProfBuffers() const;
     const elf::ResourceRequirements getResourceRequirements() const;
     const elf::NetworkMetadata getNetworkMetadata() const;
 
@@ -298,6 +299,7 @@ private:
 
     details::FixedVector<DeviceBuffer> m_userInputs;
     details::FixedVector<DeviceBuffer> m_userOutputs;
+    details::FixedVector<DeviceBuffer> m_profOutputs;
 
     elf::NetworkMetadata m_networkMetadata;
 };
