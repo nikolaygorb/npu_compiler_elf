@@ -40,7 +40,7 @@ private:
     static const std::map<RelocationType, RelocationFunc> relocationMap;
 
 public:
-    explicit VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, ArrayRef<SymbolEntry> runtimeSymTabs);
+    explicit VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, ArrayRef<SymbolEntry> runtimeSymTabs, bool symTabOverrideMode = false, ArrayRef<std::string> symbolnames = ArrayRef<std::string>());
     ~VPUXLoader();
 
     uint64_t getEntry();
@@ -76,6 +76,10 @@ private:
     details::FixedVector<DeviceBuffer> m_profOutputs;
 
     elf::NetworkMetadata m_networkMetadata;
+
+    const bool m_symTabOverrideMode;
+    const bool m_explicitAllocations;
+    ArrayRef<std::string> m_symbolNames;
 };
 
 }  // namespace elf
