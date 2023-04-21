@@ -26,9 +26,15 @@ constexpr uint8_t MAX_TENSOR_REF_DIMS = 8;
 constexpr uint8_t MAX_TENSOR_REF_STRIDES = MAX_TENSOR_REF_DIMS + 1;
 constexpr uint8_t MAX_METADATA_IO = 32;
 constexpr uint8_t MAX_OV_NODES = MAX_METADATA_IO;
-constexpr uint8_t MAX_STRING_LEN = 32;
 
-using TensorName = char[MAX_STRING_LEN];
+// Common string size used by the drivers
+// It is highly recommended to keep this size identical between loader and drivers
+constexpr uint16_t MAX_STRING_LEN = 256;
+
+using BasicString = char[MAX_STRING_LEN];
+using ArchName = BasicString;
+using BlobName = BasicString;
+using TensorName = BasicString;
 
 enum class DType {
     DType_NOT_SET = 0,
@@ -109,7 +115,7 @@ struct VPUX_ALIGNED_STRUCT(8) TensorRef {
     uint8_t pad1_[4];
 };
 
-static_assert(sizeof(TensorRef) == 128, "TensorRef size != 128");
+static_assert(sizeof(TensorRef) == 352, "TensorRef size != 352");
 static_assert(offsetof(TensorRef, name) % 8 == 0, "Alignment error");
 
 struct VPUX_ALIGNED_STRUCT(4) PreprocessingInfo {
@@ -119,7 +125,7 @@ struct VPUX_ALIGNED_STRUCT(4) PreprocessingInfo {
     PreProcessResizeAlgorithm algorithm;
 };
 
-static_assert(sizeof(PreprocessingInfo) == 44, "PreprocessingInfo size != 44");
+static_assert(sizeof(PreprocessingInfo) == 268, "PreprocessingInfo size != 268");
 static_assert(offsetof(PreprocessingInfo, input_format) % 8 == 0, "Alignment error");
 
 struct VPUX_ALIGNED_STRUCT(8) OVNode {
@@ -133,7 +139,7 @@ struct VPUX_ALIGNED_STRUCT(8) OVNode {
     uint8_t pad_[4];
 };
 
-static_assert(sizeof(OVNode) == 1168, "OVNode size != 1168");
+static_assert(sizeof(OVNode) == 8784, "OVNode size != 8784");
 
 struct VPUX_ALIGNED_STRUCT(4) ResourceRequirements {
     uint32_t nn_slice_length_;
@@ -146,6 +152,14 @@ struct VPUX_ALIGNED_STRUCT(4) ResourceRequirements {
 static_assert(sizeof(ResourceRequirements) == 12, "ResourceRequirements size != 12");
 
 struct VPUX_ALIGNED_STRUCT(8) NetworkMetadata {
+    // Contains the VPU architecture name null-terminated string provided by the compiler.
+    // The loader expects an identical string to the one provided by the comiler.
+    ArchName arch_name;
+    // Contains the network name null-terminated string provided by the compiler.
+    // If no name is provided by the compiler, a default name is used.
+    // The driver expects an identical string as initially provided to the compiler.
+    BlobName blob_name;
+
     ResourceRequirements resource_requirements;
     uint8_t pad0_[4];
     TensorRef net_input[MAX_METADATA_IO];
@@ -160,7 +174,6 @@ struct VPUX_ALIGNED_STRUCT(8) NetworkMetadata {
     OVNode ov_results[MAX_OV_NODES];
 
     PreprocessingInfo pre_process_info[MAX_METADATA_IO];
-    TensorName blob_name;
 
     uint32_t net_input_count = 0;
     uint32_t net_output_count = 0;
@@ -172,7 +185,10 @@ struct VPUX_ALIGNED_STRUCT(8) NetworkMetadata {
     uint32_t pre_process_info_count = 0;
 };
 
-static_assert(sizeof(NetworkMetadata) == 96720, "NetworkMetadata size != 96720");
+static_assert(sizeof(NetworkMetadata) == 627632, "NetworkMetadata size != 627632");
+static_assert(offsetof(NetworkMetadata, arch_name) % 8 == 0, "Alignment error");
+static_assert(offsetof(NetworkMetadata, blob_name) % 8 == 0, "Alignment error");
+static_assert(offsetof(NetworkMetadata, resource_requirements) % 4 == 0, "Alignment error");
 static_assert(offsetof(NetworkMetadata, net_input) % 8 == 0, "Alignment error");
 static_assert(offsetof(NetworkMetadata, net_output) % 8 == 0, "Alignment error");
 static_assert(offsetof(NetworkMetadata, in_tensor_desc) % 8 == 0, "Alignment error");
@@ -180,10 +196,9 @@ static_assert(offsetof(NetworkMetadata, out_tensor_desc) % 8 == 0, "Alignment er
 static_assert(offsetof(NetworkMetadata, profiling_output) % 8 == 0, "Alignment error");
 static_assert(offsetof(NetworkMetadata, ov_parameters) % 8 == 0, "Alignment error");
 static_assert(offsetof(NetworkMetadata, ov_results) % 8 == 0, "Alignment error");
-static_assert(offsetof(NetworkMetadata, pre_process_info) % 8 == 0, "Alignment error");
-static_assert(offsetof(NetworkMetadata, blob_name) % 8 == 0, "Alignment error");
+static_assert(offsetof(NetworkMetadata, pre_process_info) % 4 == 0, "Alignment error");
 static_assert(offsetof(NetworkMetadata, net_input_count) % 4 == 0, "Alignment error");
 
 #pragma pack(pop)
 
-} // namespace elf
+}  // namespace elf

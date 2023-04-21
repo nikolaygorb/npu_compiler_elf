@@ -41,7 +41,8 @@ static ResourceRequirements readResourcesFromElf(AccessManager* elfAccess) {
         auto sectionType = sectionHeader->sh_type;
 
         if (sectionType == elf::VPU_SHT_NETDESC) {
-            return *(section.getData<ResourceRequirements>());
+            auto metadata = *section.getData<NetworkMetadata>();
+            return metadata.resource_requirements;
         }
     }
 
