@@ -95,7 +95,7 @@ constexpr uint8_t VPU_STT_ENTRY = STT_LOOS;
 //
 
 constexpr Elf_Word VPU_SHT_NETDESC   = 0x8aaaaaaa;
-
+constexpr Elf_Word VPU_SHT_PROF      = 0xaaaaaaaa;
 //
 // Section flags
 //

@@ -187,6 +187,7 @@ const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
         {SHT_SHLIB, Action::Error},
         {SHT_DYNSYM, Action::Error},
         {VPU_SHT_NETDESC, Action::RegisterNetworkMetadata},
+        {VPU_SHT_PROF, Action::None},
 };
 
 const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoader::relocationMap = {
