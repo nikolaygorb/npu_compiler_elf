@@ -8,6 +8,35 @@
 
 namespace elf {
 
+namespace {
+// Base of frequency values used in tables (in MHz).
+static constexpr uint32_t FREQ_BASE = 700;
+// Step of frequency for each entry in tables (in MHz).
+static constexpr uint32_t FREQ_STEP = 100;
+// Base of bandwidth values used in tables (in MB/s).
+static constexpr uint32_t BW_BASE = 2000;
+// Step of bandwidth values used in tables (in MB/s).
+static constexpr uint32_t BW_STEP = 100;
+
+// value in [0.0..1.0] range indicating scalability of network for a given DDR bandwidth.
+static const std::array<float, nn_public::VPU_SCALABILITY_VALUES_PER_FREQ> byBWScales({0.0F, 0.2F, 0.4F, 0.6F, 0.8F});
+// expected ticks (based on FRC @37.5MHz) an inference should take for a given DDR bandwidth.
+static const std::array<uint64_t, nn_public::VPU_SCALABILITY_VALUES_PER_FREQ> byBWTicks({10UL, 12UL, 14UL, 16UL, 18UL});
+
+} // namespace
+
+static void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics &metrics) {
+    metrics.bw_base = BW_BASE;
+    metrics.bw_step = BW_STEP;
+    metrics.freq_base = FREQ_BASE;
+    metrics.freq_step = FREQ_STEP;
+
+    for (uint32_t i = 0; i < nn_public::VPU_SCALABILITY_NUM_OF_FREQ; ++i) {
+        std::copy(byBWScales.begin(), byBWScales.end(), std::begin(metrics.scalability[i]));
+        std::copy(byBWTicks.begin(), byBWTicks.end(), std::begin(metrics.ticks[i]));
+    }
+}
+
 constexpr auto DEFAULT_ALIGN = 64;
 
 template <typename T>
@@ -46,7 +75,7 @@ static ResourceRequirements readResourcesFromElf(AccessManager* elfAccess) {
         }
     }
 
-    VPUX_ELF_THROW(HeaderError,"Failed to find a resource");
+    VPUX_ELF_THROW(HeaderError, "Failed to find a resource");
 }
 
 HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr): bufferManager(bufferMgr) {
@@ -64,7 +93,8 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     hpi->resource_requirements_ = {};
     hpi->resource_requirements_.nn_slice_count_ = resRequirements.nn_slice_count_;
     hpi->resource_requirements_.nn_barriers_ = resRequirements.nn_barriers_;
-    hpi->performance_metrics_ = {};
+
+    setDefaultPerformanceMetrics(hpi->performance_metrics_);
 
     hpi->mapped_.address = loaders.front()->getEntry();
     hpi->mapped_.count = 1;
