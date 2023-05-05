@@ -4,6 +4,7 @@
 #include <api/vpu_nce_hw_mtl.h>
 #include <vpux_sym_tab/3720/SymTabGen.h>
 #include <vpux_elf/reader.hpp>
+#include <array>
 // clang-format on
 
 namespace elf {
