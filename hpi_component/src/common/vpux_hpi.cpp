@@ -29,15 +29,14 @@ enum ArchKind {
 
 namespace {
 template <typename T>
-static ArrayRef<DeviceBuffer> getBuffers(const std::vector<std::unique_ptr<VPUXLoader>> &loaders,
-                                         std::vector<DeviceBuffer> &vec, T &&get) {
-    // Clear vector to ensure we are always in sync with latest allocation state from loaders
+static ArrayRef<DeviceBuffer> getBuffers(const std::unique_ptr<VPUXLoader> &loader, std::vector<DeviceBuffer> &vec,
+                                         T &&get) {
+    // Clear vector to ensure we are always in sync with latest allocation state from loader
     vec.clear();
 
-    for (const auto &loader : loaders) {
-        auto buffs = get(loader);
-        std::copy(buffs.begin(), buffs.end(), std::back_inserter(vec));
-    }
+    auto buffs = get(loader);
+    std::copy(buffs.begin(), buffs.end(), std::back_inserter(vec));
+
     return ArrayRef<DeviceBuffer>(vec);
 }
 
@@ -136,15 +135,14 @@ HostParsedInference::HostParsedInference(BufferManager *bufferMgr, AccessManager
 
     // EISW-73555
     // For now, only generate 1 mapped inference for each loader instance
-    loaders.push_back(
-        std::make_unique<VPUXLoader>(accessMgr, bufferManager, obj->getSymTab(resRequirements.nn_slice_count_)));
+    loader = std::make_unique<VPUXLoader>(accessMgr, bufferManager, obj->getSymTab(resRequirements.nn_slice_count_));
 
     // DeviceBuffer getting a pointer to arch specific host parsed inference
     parsedInference = obj->allocHostParsedInference(bufferManager);
 
     // reinterpret cast the device buffer to the arch specific strucutres
     // and set the fields required for the executions of the mapped inference
-    obj->setHostParsedInference(parsedInference, loaders.front()->getEntry(), resRequirements);
+    obj->setHostParsedInference(parsedInference, loader->getEntry(), resRequirements);
 }
 
 HostParsedInference::~HostParsedInference() {
@@ -156,30 +154,28 @@ DeviceBuffer HostParsedInference::getParsedInference() {
 }
 
 ArrayRef<DeviceBuffer> HostParsedInference::getAllocatedBuffers() const {
-    return getBuffers(loaders, allocations, std::mem_fn(&VPUXLoader::getAllocatedBuffers));
+    return getBuffers(loader, allocations, std::mem_fn(&VPUXLoader::getAllocatedBuffers));
 }
 
 ArrayRef<DeviceBuffer> HostParsedInference::getInputBuffers() const {
-    return getBuffers(loaders, inputs, std::mem_fn(&VPUXLoader::getInputBuffers));
+    return getBuffers(loader, inputs, std::mem_fn(&VPUXLoader::getInputBuffers));
 }
 
 ArrayRef<DeviceBuffer> HostParsedInference::getOutputBuffers() const {
-    return getBuffers(loaders, outputs, std::mem_fn(&VPUXLoader::getOutputBuffers));
+    return getBuffers(loader, outputs, std::mem_fn(&VPUXLoader::getOutputBuffers));
 }
 
 ArrayRef<DeviceBuffer> HostParsedInference::getProfBuffers() const {
-    return getBuffers(loaders, profiling, std::mem_fn(&VPUXLoader::getProfBuffers));
+    return getBuffers(loader, profiling, std::mem_fn(&VPUXLoader::getProfBuffers));
 }
 
 NetworkMetadata HostParsedInference::getMetadata() {
-    return loaders.front()->getNetworkMetadata();
+    return loader->getNetworkMetadata();
 }
 
 void HostParsedInference::applyInputOutput(std::vector<DeviceBuffer> &inputs, std::vector<DeviceBuffer> &outputs,
                                            std::vector<DeviceBuffer> &profiling) {
-    for (auto const &loader : loaders) {
-        return loader->applyJitRelocations(inputs, outputs, profiling);
-    }
+    return loader->applyJitRelocations(inputs, outputs, profiling);
 }
 
 } // namespace elf

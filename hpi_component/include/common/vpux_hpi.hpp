@@ -23,7 +23,7 @@ private:
     DeviceBuffer parsedInference;
     BufferManager* bufferManager;
     ResourceRequirements resRequirements;
-    std::vector<std::unique_ptr<VPUXLoader>> loaders;
+    std::unique_ptr<VPUXLoader> loader;
     mutable std::vector<DeviceBuffer> allocations;
     mutable std::vector<DeviceBuffer> inputs;
     mutable std::vector<DeviceBuffer> outputs;
