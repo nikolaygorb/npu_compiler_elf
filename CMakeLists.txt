@@ -17,6 +17,8 @@ if(IS_BIG_ENDIAN)
     message(FATAL "ELF Parsing Library supports only little-endian architectures")
 endif()
 
+add_compile_definitions(HOST_BUILD)
+
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "*.hpp" "*.cpp")
 list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/example/.*")
 

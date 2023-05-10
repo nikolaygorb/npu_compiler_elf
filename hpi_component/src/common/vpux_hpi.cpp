@@ -6,7 +6,7 @@
 #include <vpux_elf/reader.hpp>
 #include <vpux_hpi.hpp>
 
-#if defined(CONFIG_TARGET_SOC_3720) || defined(__x86_64__)
+#if defined(CONFIG_TARGET_SOC_3720) || defined(HOST_BUILD)
 #include <hpi_3720.hpp>
 #endif
 
@@ -67,7 +67,9 @@ static ResourceRequirements readResourcesFromElf(AccessManager *elfAccess) {
 
 #ifdef CONFIG_TARGET_SOC_4000
     ResourceRequirements res{};
-    // TODO: read resources from elf for 4000 once EISW-66314 is fixed.
+    // TODO: At this point we are not able to test
+    // the functionality with a proper generated ELF
+    // EISW-79514
     res.nn_slice_count_ = 1;
     res.nn_barriers_ = 16;
     return res;
@@ -97,6 +99,9 @@ static ArchKind readArchKind(AccessManager *elfAccess) {
         }
     }
 
+// TODO: At this point we are not able to test
+// the functionality with a proper generated ELF
+// EISW-79514
 #ifdef CONFIG_TARGET_SOC_4000
     return knownArch.find("VPUX40XX")->second;
 #endif
@@ -116,7 +121,7 @@ HostParsedInference::HostParsedInference(BufferManager *bufferMgr, AccessManager
     // TODO: EISW-79344
     std::unique_ptr<HostParsedInferenceCommon> obj;
     switch (arch) {
-#if defined(CONFIG_TARGET_SOC_3720) || defined(__x86_64__)
+#if defined(CONFIG_TARGET_SOC_3720) || defined(HOST_BUILD)
         case ArchKind::VPUX37XX:
             obj.reset(new HostParsedInference_3720());
             break;
