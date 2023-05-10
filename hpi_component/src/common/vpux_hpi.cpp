@@ -134,7 +134,6 @@ HostParsedInference::HostParsedInference(BufferManager *bufferMgr, AccessManager
     VPUX_ELF_THROW_WHEN(obj.get() == nullptr, AllocError, "Allocation Error!");
 
     // EISW-73555
-    // For now, only generate 1 mapped inference for each loader instance
     loader = std::make_unique<VPUXLoader>(accessMgr, bufferManager, obj->getSymTab(resRequirements.nn_slice_count_));
 
     // DeviceBuffer getting a pointer to arch specific host parsed inference
