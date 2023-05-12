@@ -123,12 +123,12 @@ HostParsedInference::HostParsedInference(BufferManager *bufferMgr, AccessManager
     switch (arch) {
 #if defined(CONFIG_TARGET_SOC_3720) || defined(HOST_BUILD)
         case ArchKind::VPUX37XX:
-            obj.reset(new HostParsedInference_3720());
+            obj = std::make_unique<HostParsedInference_3720>();
             break;
 #endif
 #ifdef CONFIG_TARGET_SOC_4000 // EISW-77741
         case ArchKind::VPUX40XX:
-            obj.reset(new HostParsedInference_4000());
+            obj = std::make_unique<HostParsedInference_4000>();
             break;
 #endif
         default:
