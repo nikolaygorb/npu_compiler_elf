@@ -42,7 +42,7 @@ static void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics &metri
     }
 }
 
-ArrayRef<SymbolEntry> HostParsedInference_4000::getSymTab(uint8_t index) const {
+ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t index) const {
     nn_public::VpuMetadataMap *metadata =
         reinterpret_cast<nn_public::VpuMetadataMap *>(nn_public::VPU_METADATA_STORAGE_ADDR);
 

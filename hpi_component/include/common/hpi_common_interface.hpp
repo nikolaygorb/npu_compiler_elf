@@ -15,7 +15,7 @@ constexpr auto DEFAULT_ALIGN = 64;
 class HostParsedInferenceCommon {
 public:
     virtual ~HostParsedInferenceCommon() = default;
-    virtual ArrayRef<SymbolEntry> getSymTab(uint8_t index) const = 0;
+    virtual ArrayRef<SymbolEntry> getSymbolTable(uint8_t index) const = 0;
 
     /**
      * Allocate specific architecture host parsed inference

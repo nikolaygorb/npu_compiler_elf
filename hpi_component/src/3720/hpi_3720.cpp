@@ -47,7 +47,7 @@ static void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics &metri
     }
 }
 
-ArrayRef<SymbolEntry> HostParsedInference_3720::getSymTab(uint8_t index) const {
+ArrayRef<SymbolEntry> HostParsedInference_3720::getSymbolTable(uint8_t index) const {
     uint32_t inv_addr[] = {nn_public::METADATA0_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapSingle, inv_storage),
                            nn_public::METADATA0_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapDual0, inv_storage)};
 
