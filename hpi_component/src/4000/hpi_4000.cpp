@@ -88,16 +88,13 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t index) co
 }
 
 DeviceBuffer HostParsedInference_4000::allocateHostParsedInference(BufferManager *bufferManager) {
-    // to be dealocated by the caller of this method.
-    // this will only return an architecture specific
-    // pointer to a strucutre
     auto ptr = bufferManager->allocate(BufferSpecs(
         DEFAULT_ALIGN, utils::alignUp(sizeof(nn_public::VpuHostParsedInference), DEFAULT_ALIGN), SHF_EXECINSTR));
 
     auto perfMetrics =
         bufferManager->allocate(BufferSpecs(DEFAULT_ALIGN, sizeof(nn_public::VpuPerformanceMetrics), SHF_EXECINSTR));
     reinterpret_cast<nn_public::VpuHostParsedInference *>(ptr.cpu_addr())->performance_metrics_.ptr =
-        (uint64_t)perfMetrics.cpu_addr();
+        reinterpret_cast<uint64_t>(perfMetrics.cpu_addr());
 
     return ptr;
 }

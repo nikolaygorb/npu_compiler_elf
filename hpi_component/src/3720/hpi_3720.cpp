@@ -102,14 +102,12 @@ ArrayRef<SymbolEntry> HostParsedInference_3720::getSymbolTable(uint8_t index) co
 }
 
 DeviceBuffer HostParsedInference_3720::allocateHostParsedInference(BufferManager *bufferManager) {
-    // to be dealocated by the caller of this method.
-    // this will only return an architecture specific
-    // pointer to a strucutre
-    return bufferManager->allocate(
-        BufferSpecs(DEFAULT_ALIGN, utils::alignUp(sizeof(nn_public::VpuHostParsedInference), DEFAULT_ALIGN), SHF_EXECINSTR));
+    return bufferManager->allocate(BufferSpecs(
+        DEFAULT_ALIGN, utils::alignUp(sizeof(nn_public::VpuHostParsedInference), DEFAULT_ALIGN), SHF_EXECINSTR));
 }
 
-void HostParsedInference_3720::setHostParsedInference(DeviceBuffer &devBuffer, uint64_t mapped_entry, ResourceRequirements resReq) {
+void HostParsedInference_3720::setHostParsedInference(DeviceBuffer &devBuffer, uint64_t mapped_entry,
+                                                      ResourceRequirements resReq) {
     auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference *>(devBuffer.cpu_addr());
 
     hpi->resource_requirements_ = {};

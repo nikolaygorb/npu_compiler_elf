@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache 2.0
 //
 
-
 #pragma once
 
 #include <vpux_loader/vpux_loader.hpp>
@@ -21,7 +20,7 @@ public:
      * Allocate specific architecture host parsed inference
      *
      * @param bufferManager the buffer manager used by the caller to allocate
-     * loader and sections
+     * loader and sections. To be deallocated by the caller of this method.
      *
      * @return DeviceBuffer to the HostParsedInference allocated using
      * the structures used for the current architecture.
@@ -41,7 +40,7 @@ public:
      *
      * @param resReq resource requirements to be added to the host parsed inference
      */
-    virtual void setHostParsedInference(DeviceBuffer &devBuffer, const uint64_t mapped_entry, ResourceRequirements resReq) = 0;
-
+    virtual void setHostParsedInference(DeviceBuffer &devBuffer, uint64_t mapped_entry,
+                                        ResourceRequirements resReq) = 0;
 };
 } // namespace elf

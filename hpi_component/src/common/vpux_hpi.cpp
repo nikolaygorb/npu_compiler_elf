@@ -139,13 +139,11 @@ HostParsedInference::HostParsedInference(BufferManager *bufferMgr, AccessManager
     VPUX_ELF_THROW_WHEN(obj.get() == nullptr, AllocError, "Allocation Error!");
 
     // EISW-73555
-    loader = std::make_unique<VPUXLoader>(accessMgr, bufferManager, obj->getSymTab(resRequirements.nn_slice_count_));
+    loader = std::make_unique<VPUXLoader>(accessMgr, bufferManager, obj->getSymbolTable(resRequirements.nn_slice_count_));
 
     // DeviceBuffer getting a pointer to arch specific host parsed inference
     parsedInference = obj->allocateHostParsedInference(bufferManager);
 
-    // reinterpret cast the device buffer to the arch specific strucutres
-    // and set the fields required for the executions of the mapped inference
     obj->setHostParsedInference(parsedInference, loader->getEntry(), resRequirements);
 }
 
