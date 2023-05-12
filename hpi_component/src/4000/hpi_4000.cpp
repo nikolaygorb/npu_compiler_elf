@@ -42,10 +42,6 @@ static void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics &metri
     }
 }
 
-std::string HostParsedInference_4000::getType() const {
-    return "VPUX40XX";
-}
-
 ArrayRef<SymbolEntry> HostParsedInference_4000::getSymTab(uint8_t index) const {
     nn_public::VpuMetadataMap *metadata =
         reinterpret_cast<nn_public::VpuMetadataMap *>(nn_public::VPU_METADATA_STORAGE_ADDR);
