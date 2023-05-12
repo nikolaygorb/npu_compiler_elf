@@ -7,19 +7,15 @@
 
 #pragma once
 
+#include <vpux_loader/vpux_loader.hpp>
+
 namespace elf {
-
-
 
 constexpr auto DEFAULT_ALIGN = 64;
 
 class HostParsedInferenceCommon {
 public:
-    HostParsedInferenceCommon() = default;
     virtual ~HostParsedInferenceCommon() = default;
-    HostParsedInferenceCommon(HostParsedInferenceCommon &) = delete;
-    HostParsedInferenceCommon(HostParsedInferenceCommon &&) = delete;
-    virtual std::string getType() const = 0;
     virtual ArrayRef<SymbolEntry> getSymTab(uint8_t index) const = 0;
 
     /**
