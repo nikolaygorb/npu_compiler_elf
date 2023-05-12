@@ -28,17 +28,6 @@ enum ArchKind {
 };
 
 namespace {
-template <typename T>
-static ArrayRef<DeviceBuffer> getBuffers(const std::unique_ptr<VPUXLoader> &loader, std::vector<DeviceBuffer> &vec,
-                                         T &&get) {
-    // Clear vector to ensure we are always in sync with latest allocation state from loader
-    vec.clear();
-
-    auto buffs = get(loader);
-    std::copy(buffs.begin(), buffs.end(), std::back_inserter(vec));
-
-    return ArrayRef<DeviceBuffer>(vec);
-}
 
 static ResourceRequirements readResourcesFromElf(AccessManager *elfAccess) {
     /* TODO: Temporary solution copied from InferenceManagerDemo */
@@ -151,24 +140,24 @@ HostParsedInference::~HostParsedInference() {
     bufferManager->deallocate(parsedInference);
 }
 
-DeviceBuffer HostParsedInference::getParsedInference() {
+DeviceBuffer HostParsedInference::getParsedInference() const {
     return parsedInference;
 }
 
 ArrayRef<DeviceBuffer> HostParsedInference::getAllocatedBuffers() const {
-    return getBuffers(loader, allocations, std::mem_fn(&VPUXLoader::getAllocatedBuffers));
+    return loader->getAllocatedBuffers();
 }
 
 ArrayRef<DeviceBuffer> HostParsedInference::getInputBuffers() const {
-    return getBuffers(loader, inputs, std::mem_fn(&VPUXLoader::getInputBuffers));
+    return loader->getInputBuffers();
 }
 
 ArrayRef<DeviceBuffer> HostParsedInference::getOutputBuffers() const {
-    return getBuffers(loader, outputs, std::mem_fn(&VPUXLoader::getOutputBuffers));
+    return loader->getOutputBuffers();
 }
 
 ArrayRef<DeviceBuffer> HostParsedInference::getProfBuffers() const {
-    return getBuffers(loader, profiling, std::mem_fn(&VPUXLoader::getProfBuffers));
+    return loader->getProfBuffers();
 }
 
 NetworkMetadata HostParsedInference::getMetadata() {
