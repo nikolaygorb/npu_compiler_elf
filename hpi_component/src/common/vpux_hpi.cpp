@@ -142,7 +142,7 @@ HostParsedInference::HostParsedInference(BufferManager *bufferMgr, AccessManager
     loader = std::make_unique<VPUXLoader>(accessMgr, bufferManager, obj->getSymTab(resRequirements.nn_slice_count_));
 
     // DeviceBuffer getting a pointer to arch specific host parsed inference
-    parsedInference = obj->allocHostParsedInference(bufferManager);
+    parsedInference = obj->allocateHostParsedInference(bufferManager);
 
     // reinterpret cast the device buffer to the arch specific strucutres
     // and set the fields required for the executions of the mapped inference

@@ -101,7 +101,7 @@ ArrayRef<SymbolEntry> HostParsedInference_3720::getSymTab(uint8_t index) const {
     return ArrayRef<SymbolEntry>(symTab_[index - 1], SPECIAL_SYMTAB_SIZE);
 }
 
-DeviceBuffer HostParsedInference_3720::allocHostParsedInference(BufferManager *bufferManager) {
+DeviceBuffer HostParsedInference_3720::allocateHostParsedInference(BufferManager *bufferManager) {
     // to be dealocated by the caller of this method.
     // this will only return an architecture specific
     // pointer to a strucutre

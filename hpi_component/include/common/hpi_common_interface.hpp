@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache 2.0
 //
 
-//
 
 #pragma once
 
@@ -28,7 +27,7 @@ public:
      * the structures used for the current architecture.
      *
      */
-    virtual DeviceBuffer allocHostParsedInference(BufferManager *bufferManager) = 0;
+    virtual DeviceBuffer allocateHostParsedInference(BufferManager *bufferManager) = 0;
     /**
      * Set the entry (mapped inference) and the resource requirements
      * for the pre-alocated DeviceBuffer that contains the current architecture
