@@ -82,7 +82,7 @@ static ArchKind readArchKind(AccessManager *elfAccess) {
         auto sectionType = sectionHeader->sh_type;
 
         if (sectionType == elf::VPU_SHT_NETDESC) {
-            char archName[MAX_STRING_LEN];
+            char archName[MAX_STRING_LEN] = {};
             strncpy(archName, section.getData<NetworkMetadata>()->arch_name, MAX_STRING_LEN);
             return knownArch.find(archName)->second;
         }
