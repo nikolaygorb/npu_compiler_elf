@@ -17,8 +17,6 @@ if(IS_BIG_ENDIAN)
     message(FATAL "ELF Parsing Library supports only little-endian architectures")
 endif()
 
-add_compile_definitions(HOST_BUILD)
-
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "*.hpp" "*.cpp")
 list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/example/.*")
 
@@ -28,6 +26,9 @@ list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/src
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS} ${SOURCES})
 
 add_library(${LIB_NAME} STATIC ${SOURCES})
+
+target_compile_definitions(${LIB_NAME} PUBLIC HOST_BUILD)
+
 target_include_directories(${LIB_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/loader/include>
