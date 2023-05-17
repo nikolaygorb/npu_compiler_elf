@@ -29,7 +29,7 @@ public:
     virtual DeviceBuffer allocateHostParsedInference(BufferManager *bufferManager) = 0;
     /**
      * Set the entry (mapped inference) and the resource requirements
-     * for the pre-alocated DeviceBuffer that contains the current architecture
+     * for the pre-allocated DeviceBuffer that contains the current architecture
      * structure in memory
      *
      * @param devBuffer reference to the device buffer in order to reinterpret
