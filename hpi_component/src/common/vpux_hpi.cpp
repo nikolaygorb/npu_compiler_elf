@@ -125,8 +125,6 @@ HostParsedInference::HostParsedInference(BufferManager *bufferMgr, AccessManager
             break;
     }
 
-    VPUX_ELF_THROW_WHEN(obj.get() == nullptr, AllocError, "Allocation Error!");
-
     // EISW-73555
     loader = std::make_unique<VPUXLoader>(accessMgr, bufferManager, obj->getSymbolTable(resRequirements.nn_slice_count_));
 
