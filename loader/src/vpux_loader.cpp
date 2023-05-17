@@ -17,6 +17,7 @@ namespace elf {
 
 namespace {
 
+const uint32_t CMX_BASE_ADDR_MSK = 0x001F'FFFF;
 const uint32_t ADDRESS_MASK = ~0x00C0'0000u;
 const uint64_t SLICE_LENGTH = 2 * 1024 * 1024;
 
@@ -173,7 +174,44 @@ const auto VPU_DISP4_MULTICAST_OFFSET_Relocation = [](void *targetAddr, const el
     *addr |= offs[index] != 0;
 };
 
-} // namespace
+const auto VPU_32_BIT_MASKED_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                                    const Elf_Sxword addend) -> void {
+    auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit Masked reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
+
+    *addr = static_cast<uint32_t>(symVal + addend) & CMX_BASE_ADDR_MSK;
+};
+
+const auto VPU_32_BIT_MASKED_SUM_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                                    const Elf_Sxword addend) -> void {
+    auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit Masked SUM reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
+
+    *addr += static_cast<uint32_t>(symVal + addend) & CMX_BASE_ADDR_MSK;
+};
+
+const auto VPU_32_MULTICAST_BASE_MASKED_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                                 const Elf_Sxword addend) -> void {
+    const auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
+                 symVal, addend);
+
+    *addr = to_dpu_multicast_base(static_cast<uint32_t>(symVal + addend) & CMX_BASE_ADDR_MSK);
+};
+
+const auto VPU_32_BIT_INVARIANT_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                                    const Elf_Sxword addend) -> void {
+    auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit Masked Shifted by 4 reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
+
+    *addr = (static_cast<uint32_t>(symVal + addend) & 0x0001'FFFF) >> 5;
+};
+
+}  // namespace
 
 const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
     {SHT_NULL, Action::None},
@@ -204,6 +242,10 @@ const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoade
     {R_VPU_32_MULTICAST_BASE_SUB, VPU_32_MULTICAST_BASE_SUB_Relocation},
     {R_VPU_DISP28_MULTICAST_OFFSET, VPU_DISP28_MULTICAST_OFFSET_Relocation},
     {R_VPU_DISP4_MULTICAST_OFFSET_CMP, VPU_DISP4_MULTICAST_OFFSET_Relocation},
+    {R_VPU_32_MASKED, VPU_32_BIT_MASKED_Relocation},
+    {R_VPU_32_MASKED_SUM, VPU_32_BIT_MASKED_SUM_Relocation},
+    {R_VPU_32_MULTICAST_BASE_MASKED, VPU_32_MULTICAST_BASE_MASKED_Relocation},
+    {R_VPU_32_INVARIANT, VPU_32_BIT_INVARIANT_Relocation},
 };
 
 AccessorDescriptor::AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t procFlags, uint64_t alignment)

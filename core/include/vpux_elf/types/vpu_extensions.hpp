@@ -85,6 +85,30 @@ constexpr Elf_Word R_VPU_DISP28_MULTICAST_OFFSET = 9;
 constexpr Elf_Word R_VPU_DISP4_MULTICAST_OFFSET_CMP = 10;
 
 //
+// VPU40XX specific DPU relocs
+//
+
+// Originated from act_offset field of DPU invariant
+// Formula:
+// Dst = (S + A) & CMX_BASE_ADDR_MSK
+constexpr Elf_Word R_VPU_32_MASKED = 11;
+
+// Originated from weight_start field of DPU variant
+// Formula:
+// Dst += (S + A) & CMX_BASE_ADDR_MSK
+constexpr Elf_Word R_VPU_32_MASKED_SUM = 12;
+
+// Originated from sp_base field of DPU invariant
+// Formula:
+// Dst = to_dpu_multicast_base((S + A) & CMX_BASE_ADDR_MSK)
+constexpr Elf_Word R_VPU_32_MULTICAST_BASE_MASKED = 13;
+
+// Special Reloc for Variant to Invariant link
+// Formula:
+// Dst = ((S + A) & 0x0001'FFFF) >> 5
+constexpr Elf_Word R_VPU_32_INVARIANT = 14;
+
+//
 // Symbol types
 //
 
