@@ -57,14 +57,29 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t index) co
         symTab_[j][VPU_NNRD_SYM_NNCXM_SLICE_BASE_ADDR].st_value = nn_public::VPU_WORKSPACE_ADDR;
         symTab_[j][VPU_NNRD_SYM_NNCXM_SLICE_BASE_ADDR].st_size = nn_public::VPU_METADATA_SIZE;
 
-        symTab_[j][VPU_NNRD_SYM_RTM_IVAR].st_value = reinterpret_cast<uint64_t>(metadata->inv_storage);
+        metadata = nn_public::align_storage(alignof(nn_public::VpuDPUInvariant), metadata);
+        symTab_[j][VPU_NNRD_SYM_RTM_IVAR].st_value = metadata;
         symTab_[j][VPU_NNRD_SYM_RTM_IVAR].st_size = nn_public::VPU_INVARIANT_COUNT;
+        metadata += nn_public::VPU_INVARIANT_COUNT * sizeof(nn_public::VpuDPUInvariant);
 
-        symTab_[j][VPU_NNRD_SYM_RTM_ACT].st_value = reinterpret_cast<uint64_t>(metadata->akr_storage);
+        // Not used here but must be considered for proper offsetting of the following areas
+        metadata = nn_public::align_storage(alignof(nn_public::VpuDPUVariant), metadata);
+        metadata += nn_public::VPU_VARIANT_COUNT * sizeof(nn_public::VpuDPUVariant);
+
+        metadata = nn_public::align_storage(alignof(nn_public::VpuActKernelRange), metadata);
+        symTab_[j][VPU_NNRD_SYM_RTM_ACT].st_value = metadata;
         symTab_[j][VPU_NNRD_SYM_RTM_ACT].st_size = nn_public::VPU_KERNEL_RANGE_COUNT;
+        metadata += nn_public::VPU_KERNEL_RANGE_COUNT * sizeof(nn_public::VpuActKernelRange);
 
-        symTab_[j][VPU_NNRD_SYM_RTM_DMA0].st_value = reinterpret_cast<uint64_t>(metadata->dma_storage);
+        // Not used here but must be considered for proper offsetting of the following areas
+        metadata = nn_public::align_storage(alignof(nn_public::VpuActKernelInvocation), metadata);
+        metadata += nn_public::VPU_KERNEL_INVO_COUNT * sizeof(nn_public::VpuActKernelInvocation);
+
+        // DMA tasks should be further split into lists based on DDR/CMX origin
+        metadata = nn_public::align_storage(alignof(nn_public::VpuDMATask), metadata);
+        symTab_[j][VPU_NNRD_SYM_RTM_DMA0].st_value = metadata;
         symTab_[j][VPU_NNRD_SYM_RTM_DMA0].st_size = nn_public::VPU_DMA_TASK_COUNT;
+        metadata += nn_public::VPU_DMA_TASK_COUNT * sizeof(nn_public::VpuDMATask);
 
         symTab_[j][VPU_NNRD_SYM_RTM_DMA1].st_value = 0x0;
         symTab_[j][VPU_NNRD_SYM_RTM_DMA1].st_size = 0;
