@@ -1,7 +1,7 @@
 // clang-format off
 #include <vpux_loader/vpux_hpi.hpp>
 #include <api/vpu_nnrt_api.h>
-#include <api/vpu_nce_hw_mtl.h>
+#include <api/vpu_nce_hw_37xx.h>
 #include <vpux_sym_tab/3720/SymTabGen.h>
 #include <vpux_elf/reader.hpp>
 #include <array>

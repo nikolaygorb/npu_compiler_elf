@@ -7,7 +7,7 @@
 
 // clang-format off
 #include <vpux_loader/vpux_loader.hpp>
-#include <api/vpu_nce_hw_mtl.h>
+#include <api/vpu_nce_hw_37xx.h>
 //clang-format on
 
 namespace elf {

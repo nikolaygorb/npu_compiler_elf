@@ -2,7 +2,7 @@
 
 #include <vpux_sym_tab/3720/SymTabGen.h>
 #include "api/vpu_nnrt_api.h"
-#include "api/vpu_cmx_info_mtl.h"
+#include "api/vpu_cmx_info_37xx.h"
 
 // clang-format on
 
