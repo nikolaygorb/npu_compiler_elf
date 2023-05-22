@@ -3,14 +3,8 @@
 #include <vpux_elf/utils/utils.hpp>
 #include <hpi_3720.hpp>
 #include <api/vpu_nnrt_api.h>
-<<<<<<< HEAD
 #include "api/vpu_cmx_info_37xx.h"
-
-=======
-#include <api/vpu_cmx_info_mtl.h>
-#include <api/vpu_nce_hw_mtl.h>
 #include <array>
->>>>>>> 025c0f4... adding performance metrics after rebasing on latest
 
 namespace elf {
 
