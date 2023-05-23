@@ -20,12 +20,20 @@ endif()
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "*.hpp" "*.cpp")
 list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/example/.*")
 
+# TODO: EISW-77741
+list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/src/4000/hpi_4000.cpp")
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS} ${SOURCES})
 
 add_library(${LIB_NAME} STATIC ${SOURCES})
+
+target_compile_definitions(${LIB_NAME} PUBLIC HOST_BUILD)
+
 target_include_directories(${LIB_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/loader/include>)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/loader/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/3720>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/common>)
 
 # Set compiler options
 target_compile_options(${LIB_NAME} PRIVATE
