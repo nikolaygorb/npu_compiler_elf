@@ -20,13 +20,13 @@ namespace {
 const uint32_t ADDRESS_MASK = ~0x00C0'0000u;
 const uint64_t SLICE_LENGTH = 2 * 1024 * 1024;
 
-uint32_t to_dpu_multicast(uint32_t addr, unsigned int& offset1, unsigned int& offset2, unsigned int& offset3) {
+uint32_t to_dpu_multicast(uint32_t addr, unsigned int &offset1, unsigned int &offset2, unsigned int &offset3) {
     const uint32_t bare_ptr = addr & ADDRESS_MASK;
     const uint32_t broadcast_mask = (addr & ~ADDRESS_MASK) >> 20;
 
     static const unsigned short multicast_masks[16] = {
-            0x0000, 0x0001, 0x0002, 0x0003, 0x0012, 0x0011, 0x0010, 0x0030,
-            0x0211, 0x0210, 0x0310, 0x0320, 0x3210, 0x3210, 0x3210, 0x3210,
+        0x0000, 0x0001, 0x0002, 0x0003, 0x0012, 0x0011, 0x0010, 0x0030,
+        0x0211, 0x0210, 0x0310, 0x0320, 0x3210, 0x3210, 0x3210, 0x3210,
     };
 
     VPUX_ELF_THROW_UNLESS(broadcast_mask < 16, RangeError, "Broadcast mask out of range");
@@ -43,22 +43,24 @@ uint32_t to_dpu_multicast(uint32_t addr, unsigned int& offset1, unsigned int& of
 }
 
 uint32_t to_dpu_multicast_base(uint32_t addr) {
-    unsigned int offset1, offset2, offset3;
+    unsigned int offset1 = 0;
+    unsigned int offset2 = 0;
+    unsigned int offset3 = 0;
     return to_dpu_multicast(addr, offset1, offset2, offset3);
 }
 
-const auto VPU_64_BIT_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+const auto VPU_64_BIT_Relocation = [](void *targetAddr, const elf::SymbolEntry &targetSym,
                                       const Elf_Sxword addend) -> void {
-    auto addr = reinterpret_cast<uint64_t*>(targetAddr);
+    auto addr = reinterpret_cast<uint64_t *>(targetAddr);
     auto symVal = targetSym.st_value;
     VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t64Bit Reloc addr %p symval 0x%llx addnd %llu", addr, symVal, addend);
 
     *addr = symVal + addend;
 };
 
-const auto VPU_64_BIT_OR_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+const auto VPU_64_BIT_OR_Relocation = [](void *targetAddr, const elf::SymbolEntry &targetSym,
                                          const Elf_Sxword addend) -> void {
-    auto addr = reinterpret_cast<uint64_t*>(targetAddr);
+    auto addr = reinterpret_cast<uint64_t *>(targetAddr);
     auto symVal = targetSym.st_value;
     VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t64Bit OR reloc, addr %p addrVal 0x%llx symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
@@ -66,19 +68,19 @@ const auto VPU_64_BIT_OR_Relocation = [](void* targetAddr, const elf::SymbolEntr
     *addr |= symVal + addend;
 };
 
-const auto VPU_64_BIT_LSHIFT_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+const auto VPU_64_BIT_LSHIFT_Relocation = [](void *targetAddr, const elf::SymbolEntry &targetSym,
                                              const Elf_Sxword addend) -> void {
-    (void)addend;  // hush compiler warning;
-    auto addr = reinterpret_cast<uint64_t*>(targetAddr);
+    (void)addend; // hush compiler warning;
+    auto addr = reinterpret_cast<uint64_t *>(targetAddr);
     auto symVal = targetSym.st_value;
     VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t64Bit LSHIFT reloc, addr %p addrVal 0x%llx symVal 0x%llx", addr, *addr, symVal);
 
     *addr <<= symVal;
 };
 
-const auto VPU_DISP40_RTM_RELOCATION = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+const auto VPU_DISP40_RTM_RELOCATION = [](void *targetAddr, const elf::SymbolEntry &targetSym,
                                           const Elf_Sxword addend) -> void {
-    auto addr = reinterpret_cast<uint64_t*>(targetAddr);
+    auto addr = reinterpret_cast<uint64_t *>(targetAddr);
     auto symVal = targetSym.st_value;
     auto symSize = targetSym.st_size;
     uint64_t mask = 0xffffffffff;
@@ -89,18 +91,18 @@ const auto VPU_DISP40_RTM_RELOCATION = [](void* targetAddr, const elf::SymbolEnt
     *addr |= (symVal + (addend * (maskedAddr & (symSize - 1)))) & mask;
 };
 
-const auto VPU_32_BIT_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+const auto VPU_32_BIT_Relocation = [](void *targetAddr, const elf::SymbolEntry &targetSym,
                                       const Elf_Sxword addend) -> void {
-    auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    auto addr = reinterpret_cast<uint32_t *>(targetAddr);
     auto symVal = targetSym.st_value;
     VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
 
     *addr = static_cast<uint32_t>(symVal + addend);
 };
 
-const auto VPU_32_BIT_RTM_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+const auto VPU_32_BIT_RTM_Relocation = [](void *targetAddr, const elf::SymbolEntry &targetSym,
                                           const Elf_Sxword addend) -> void {
-    const auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    const auto addr = reinterpret_cast<uint32_t *>(targetAddr);
     auto symVal = targetSym.st_value;
     auto symSize = targetSym.st_size;
     VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit RTM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
@@ -109,9 +111,9 @@ const auto VPU_32_BIT_RTM_Relocation = [](void* targetAddr, const elf::SymbolEnt
     *addr = static_cast<uint32_t>(symVal + (addend * (*addr & (symSize - 1))));
 };
 
-const auto VPU_32_BIT_SUM_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+const auto VPU_32_BIT_SUM_Relocation = [](void *targetAddr, const elf::SymbolEntry &targetSym,
                                           const Elf_Sxword addend) -> void {
-    const auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    const auto addr = reinterpret_cast<uint32_t *>(targetAddr);
     auto symVal = targetSym.st_value;
     VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
@@ -119,9 +121,9 @@ const auto VPU_32_BIT_SUM_Relocation = [](void* targetAddr, const elf::SymbolEnt
     *addr += static_cast<uint32_t>(symVal + addend);
 };
 
-const auto VPU_32_MULTICAST_BASE_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+const auto VPU_32_MULTICAST_BASE_Relocation = [](void *targetAddr, const elf::SymbolEntry &targetSym,
                                                  const Elf_Sxword addend) -> void {
-    const auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    const auto addr = reinterpret_cast<uint32_t *>(targetAddr);
     auto symVal = targetSym.st_value;
     VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
@@ -129,9 +131,9 @@ const auto VPU_32_MULTICAST_BASE_Relocation = [](void* targetAddr, const elf::Sy
     *addr = to_dpu_multicast_base(static_cast<uint32_t>(symVal + addend));
 };
 
-const auto VPU_32_MULTICAST_BASE_SUB_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+const auto VPU_32_MULTICAST_BASE_SUB_Relocation = [](void *targetAddr, const elf::SymbolEntry &targetSym,
                                                      const Elf_Sxword addend) -> void {
-    const auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    const auto addr = reinterpret_cast<uint32_t *>(targetAddr);
     auto symVal = targetSym.st_value;
     VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
@@ -139,15 +141,15 @@ const auto VPU_32_MULTICAST_BASE_SUB_Relocation = [](void* targetAddr, const elf
     *addr = to_dpu_multicast_base(static_cast<uint32_t>(symVal + addend)) - *addr;
 };
 
-const auto VPU_DISP28_MULTICAST_OFFSET_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+const auto VPU_DISP28_MULTICAST_OFFSET_Relocation = [](void *targetAddr, const elf::SymbolEntry &targetSym,
                                                        const Elf_Sxword addend) -> void {
-    const auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    const auto addr = reinterpret_cast<uint32_t *>(targetAddr);
     auto symVal = targetSym.st_value;
     VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
 
     unsigned int offs[3] = {SLICE_LENGTH >> 4, SLICE_LENGTH >> 4,
-                            SLICE_LENGTH >> 4};  // 1024 * 1024 >> 4 as HW requirement
+                            SLICE_LENGTH >> 4}; // 1024 * 1024 >> 4 as HW requirement
     to_dpu_multicast(static_cast<uint32_t>(symVal + addend), offs[0], offs[1], offs[2]);
 
     const auto index = *addr >> 4;
@@ -155,15 +157,15 @@ const auto VPU_DISP28_MULTICAST_OFFSET_Relocation = [](void* targetAddr, const e
     *addr |= offs[index] << 4;
 };
 
-const auto VPU_DISP4_MULTICAST_OFFSET_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+const auto VPU_DISP4_MULTICAST_OFFSET_Relocation = [](void *targetAddr, const elf::SymbolEntry &targetSym,
                                                       const Elf_Sxword addend) -> void {
-    const auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    const auto addr = reinterpret_cast<uint32_t *>(targetAddr);
     auto symVal = targetSym.st_value;
     VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
 
     unsigned int offs[3] = {SLICE_LENGTH >> 4, SLICE_LENGTH >> 4,
-                            SLICE_LENGTH >> 4};  // 1024 * 1024 >> 4 as HW requirement
+                            SLICE_LENGTH >> 4}; // 1024 * 1024 >> 4 as HW requirement
     to_dpu_multicast(static_cast<uint32_t>(symVal + addend), offs[0], offs[1], offs[2]);
 
     const auto index = *addr & 0xf;
@@ -171,57 +173,59 @@ const auto VPU_DISP4_MULTICAST_OFFSET_Relocation = [](void* targetAddr, const el
     *addr |= offs[index] != 0;
 };
 
-}  // namespace
+} // namespace
 
 const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
-        {SHT_NULL, Action::None},
-        {SHT_PROGBITS, Action::AllocateAndLoad},
-        {SHT_SYMTAB, Action::RegisterUserIO},
-        {SHT_STRTAB, Action::None},
-        {SHT_RELA, Action::Relocate},
-        {SHT_HASH, Action::Error},
-        {SHT_DYNAMIC, Action::Error},
-        {SHT_NOTE, Action::Error},
-        {SHT_NOBITS, Action::Allocate},
-        {SHT_REL, Action::Error},
-        {SHT_SHLIB, Action::Error},
-        {SHT_DYNSYM, Action::Error},
-        {VPU_SHT_NETDESC, Action::RegisterNetworkMetadata},
-        {VPU_SHT_PROF, Action::None},
+    {SHT_NULL, Action::None},
+    {SHT_PROGBITS, Action::AllocateAndLoad},
+    {SHT_SYMTAB, Action::RegisterUserIO},
+    {SHT_STRTAB, Action::None},
+    {SHT_RELA, Action::Relocate},
+    {SHT_HASH, Action::Error},
+    {SHT_DYNAMIC, Action::Error},
+    {SHT_NOTE, Action::Error},
+    {SHT_NOBITS, Action::Allocate},
+    {SHT_REL, Action::Error},
+    {SHT_SHLIB, Action::Error},
+    {SHT_DYNSYM, Action::Error},
+    {VPU_SHT_NETDESC, Action::RegisterNetworkMetadata},
+    {VPU_SHT_PROF, Action::None},
 };
 
 const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoader::relocationMap = {
-        {R_VPU_64, VPU_64_BIT_Relocation},
-        {R_VPU_64_OR, VPU_64_BIT_OR_Relocation},
-        {R_VPU_DISP40_RTM, VPU_DISP40_RTM_RELOCATION},
-        {R_VPU_64_LSHIFT, VPU_64_BIT_LSHIFT_Relocation},
-        {R_VPU_32, VPU_32_BIT_Relocation},
-        {R_VPU_32_RTM, VPU_32_BIT_RTM_Relocation},
-        {R_VPU_32_SUM, VPU_32_BIT_SUM_Relocation},
-        {R_VPU_32_MULTICAST_BASE, VPU_32_MULTICAST_BASE_Relocation},
-        {R_VPU_32_MULTICAST_BASE_SUB, VPU_32_MULTICAST_BASE_SUB_Relocation},
-        {R_VPU_DISP28_MULTICAST_OFFSET, VPU_DISP28_MULTICAST_OFFSET_Relocation},
-        {R_VPU_DISP4_MULTICAST_OFFSET_CMP, VPU_DISP4_MULTICAST_OFFSET_Relocation},
+    {R_VPU_64, VPU_64_BIT_Relocation},
+    {R_VPU_64_OR, VPU_64_BIT_OR_Relocation},
+    {R_VPU_DISP40_RTM, VPU_DISP40_RTM_RELOCATION},
+    {R_VPU_64_LSHIFT, VPU_64_BIT_LSHIFT_Relocation},
+    {R_VPU_32, VPU_32_BIT_Relocation},
+    {R_VPU_32_RTM, VPU_32_BIT_RTM_Relocation},
+    {R_VPU_32_SUM, VPU_32_BIT_SUM_Relocation},
+    {R_VPU_32_MULTICAST_BASE, VPU_32_MULTICAST_BASE_Relocation},
+    {R_VPU_32_MULTICAST_BASE_SUB, VPU_32_MULTICAST_BASE_SUB_Relocation},
+    {R_VPU_DISP28_MULTICAST_OFFSET, VPU_DISP28_MULTICAST_OFFSET_Relocation},
+    {R_VPU_DISP4_MULTICAST_OFFSET_CMP, VPU_DISP4_MULTICAST_OFFSET_Relocation},
 };
 
 AccessorDescriptor::AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t procFlags, uint64_t alignment)
-        : offset(offset), size(size), procFlags(procFlags), alignment(alignment) {
-}
+    : offset(offset)
+    , size(size)
+    , procFlags(procFlags)
+    , alignment(alignment) {}
 
 size_t AccessManager::getSize() const {
     return m_size;
 }
 
-VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, ArrayRef<SymbolEntry> runtimeSymTabs)
-        : m_reader(new Reader<ELF_Bitness::Elf64>(accessor)),
-          m_bufferManager(bufferManager),
-          m_runtimeSymTabs(runtimeSymTabs),
-          m_allocatedZones(),
-          m_sectionToAddr(),
-          m_jitRelocations(),
-          m_userInputs(),
-          m_userOutputs(),
-          m_profOutputs() {
+VPUXLoader::VPUXLoader(AccessManager *accessor, BufferManager *bufferManager, ArrayRef<SymbolEntry> runtimeSymTabs)
+    : m_reader(new Reader<ELF_Bitness::Elf64>(accessor))
+    , m_bufferManager(bufferManager)
+    , m_runtimeSymTabs(runtimeSymTabs)
+    , m_allocatedZones()
+    , m_sectionToAddr()
+    , m_jitRelocations()
+    , m_userInputs()
+    , m_userOutputs()
+    , m_profOutputs() {
     load();
 };
 
@@ -235,7 +239,7 @@ uint64_t VPUXLoader::getEntry() {
     auto numSections = m_reader->getSectionsNum();
 
     for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
-        const auto& section = m_reader->getSectionNoData(sectionCtr);
+        const auto &section = m_reader->getSectionNoData(sectionCtr);
 
         auto hdr = section.getHeader();
         if (hdr->sh_type == elf::SHT_SYMTAB) {
@@ -243,7 +247,7 @@ uint64_t VPUXLoader::getEntry() {
             auto symTabs = section.getData<elf::SymbolEntry>();
 
             for (size_t symTabIdx = 0; symTabIdx < symTabsSize; ++symTabIdx) {
-                auto& symTab = symTabs[symTabIdx];
+                auto &symTab = symTabs[symTabIdx];
                 auto symType = elf64STType(symTab.st_info);
                 if (symType == VPU_STT_ENTRY) {
                     auto secIndx = symTab.st_shndx;
@@ -273,7 +277,7 @@ void VPUXLoader::load() {
     for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
         VPUX_ELF_LOG(LogLevel::DEBUG, "Solving section %zu", sectionCtr);
 
-        const auto& section = m_reader->getSection(sectionCtr);
+        const auto &section = m_reader->getSection(sectionCtr);
 
         const auto sectionHeader = section.getHeader();
         auto sectionType = sectionHeader->sh_type;
@@ -290,122 +294,125 @@ void VPUXLoader::load() {
         VPUX_ELF_LOG(LogLevel::DEBUG, "    action: %u", (uint32_t)action);
 
         switch (action) {
-        case Action::AllocateAndLoad: {
-            VPUX_ELF_LOG(LogLevel::TRACE, "Allocate and loading %zu", sectionCtr);
+            case Action::AllocateAndLoad: {
+                VPUX_ELF_LOG(LogLevel::TRACE, "Allocate and loading %zu", sectionCtr);
 
-            auto sectionSize = sectionHeader->sh_size;
-            auto sectionAlignment = sectionHeader->sh_addralign;
+                auto sectionSize = sectionHeader->sh_size;
+                auto sectionAlignment = sectionHeader->sh_addralign;
 
-            DeviceBuffer devBuf = m_bufferManager->allocate(BufferSpecs(sectionAlignment, sectionSize, sectionFlags));
+                DeviceBuffer devBuf =
+                    m_bufferManager->allocate(BufferSpecs(sectionAlignment, sectionSize, sectionFlags));
 
-            VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, AllocError,
-                                "Failed to allocate for section");
+                VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, AllocError,
+                                    "Failed to allocate for section");
 
-            m_bufferManager->lock(devBuf);
-            m_bufferManager->copy(devBuf, section.getData<uint8_t>(), sectionSize);
-            m_bufferManager->unlock(devBuf);
+                m_bufferManager->lock(devBuf);
+                m_bufferManager->copy(devBuf, section.getData<uint8_t>(), sectionSize);
+                m_bufferManager->unlock(devBuf);
 
-            m_allocatedZones.push_back(devBuf);
-            m_sectionToAddr[sectionCtr] = devBuf;
+                m_allocatedZones.push_back(devBuf);
+                m_sectionToAddr[sectionCtr] = devBuf;
 
-            VPUX_ELF_LOG(LogLevel::DEBUG, "\tFor section %s Allocated %p of size  %llu and copied from %p to %p",
-                         section.getName(), devBuf.cpu_addr(), sectionSize, section.getData<uint8_t>(),
-                         section.getData<uint8_t>() + sectionSize);
-            break;
-        }
-
-        case Action::Allocate: {
-            VPUX_ELF_LOG(LogLevel::TRACE, "Allocating %zu", sectionCtr);
-
-            auto sectionSize = sectionHeader->sh_size;
-            auto sectionAlignment = sectionHeader->sh_addralign;
-
-            DeviceBuffer devBuf = m_bufferManager->allocate(BufferSpecs(sectionAlignment, sectionSize, sectionFlags));
-            VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, AllocError,
-                                "Failed to allocate for section");
-
-            m_allocatedZones.push_back(devBuf);
-            m_sectionToAddr[sectionCtr] = devBuf;
-
-            VPUX_ELF_LOG(LogLevel::DEBUG, "\tFor section %s Allocated %p of size %llu", section.getName(),
-                         devBuf.cpu_addr(), sectionSize);
-            break;
-        }
-
-        case Action::Relocate: {
-            if (sectionFlags & VPU_SHF_JIT) {
-                VPUX_ELF_LOG(LogLevel::DEBUG, "Registering JIT Relocation %zu", sectionCtr);
-                m_jitRelocations.push_back(static_cast<int>(sectionCtr));
-            } else {
-                relocationSectionIndexes.push_back(static_cast<int>(sectionCtr));
-                VPUX_ELF_LOG(LogLevel::DEBUG, "Registering Relocation %zu", sectionCtr);
+                VPUX_ELF_LOG(LogLevel::DEBUG, "\tFor section %s Allocated %p of size  %llu and copied from %p to %p",
+                             section.getName(), devBuf.cpu_addr(), sectionSize, section.getData<uint8_t>(),
+                             section.getData<uint8_t>() + sectionSize);
+                break;
             }
-            break;
-        }
 
-        case Action::RegisterUserIO: {
-            VPUX_ELF_LOG(LogLevel::DEBUG, "Parsed symtab section with flags %llx", sectionFlags);
+            case Action::Allocate: {
+                VPUX_ELF_LOG(LogLevel::TRACE, "Allocating %zu", sectionCtr);
 
-            if (sectionFlags & VPU_SHF_USERINPUT) {
-                VPUX_ELF_THROW_WHEN(m_userInputs.size(), SequenceError,
-                                    "User inputs already read.... potential more than one input section?");
+                auto sectionSize = sectionHeader->sh_size;
+                auto sectionAlignment = sectionHeader->sh_addralign;
 
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu inputs", section.getEntriesNum() - 1);
-                registerUserIO(m_userInputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
-            } else if (sectionFlags & VPU_SHF_USEROUTPUT) {
-                VPUX_ELF_THROW_WHEN(m_userOutputs.size(), SequenceError,
-                                    "User outputs already read.... potential more than one output section?");
+                DeviceBuffer devBuf =
+                    m_bufferManager->allocate(BufferSpecs(sectionAlignment, sectionSize, sectionFlags));
+                VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, AllocError,
+                                    "Failed to allocate for section");
 
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu outputs", section.getEntriesNum() - 1);
-                registerUserIO(m_userOutputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
+                m_allocatedZones.push_back(devBuf);
+                m_sectionToAddr[sectionCtr] = devBuf;
+
+                VPUX_ELF_LOG(LogLevel::DEBUG, "\tFor section %s Allocated %p of size %llu", section.getName(),
+                             devBuf.cpu_addr(), sectionSize);
+                break;
             }
-            else if(sectionFlags & VPU_SHF_PROFOUTPUT) {
-                VPUX_ELF_THROW_WHEN(m_profOutputs.size(), SequenceError, "Profiling outputs already read.... potential more than one output section?");
 
-                VPUX_ELF_LOG(LogLevel::DEBUG,"\tRegistering %zu prof outputs", section.getEntriesNum() -1);
-                registerUserIO(m_profOutputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
+            case Action::Relocate: {
+                if (sectionFlags & VPU_SHF_JIT) {
+                    VPUX_ELF_LOG(LogLevel::DEBUG, "Registering JIT Relocation %zu", sectionCtr);
+                    m_jitRelocations.push_back(static_cast<int>(sectionCtr));
+                } else {
+                    relocationSectionIndexes.push_back(static_cast<int>(sectionCtr));
+                    VPUX_ELF_LOG(LogLevel::DEBUG, "Registering Relocation %zu", sectionCtr);
+                }
+                break;
             }
-            break;
-        }
 
-        case Action::RegisterNetworkMetadata: {
-            VPUX_ELF_LOG(LogLevel::DEBUG, "Parsing the network metadata");
-            VPUX_ELF_LOG(LogLevel::DEBUG, "Resource Requirements:");
+            case Action::RegisterUserIO: {
+                VPUX_ELF_LOG(LogLevel::DEBUG, "Parsed symtab section with flags %llx", sectionFlags);
 
-            // only getting the top of the section which contains a structure with resource requirements
-            m_networkMetadata = *(section.getData<elf::NetworkMetadata>());
+                if (sectionFlags & VPU_SHF_USERINPUT) {
+                    VPUX_ELF_THROW_WHEN(m_userInputs.size(), SequenceError,
+                                        "User inputs already read.... potential more than one input section?");
 
-            // the number of available barriers is computed as follows:
-            // numClusters - (to be used) platform specific
-            // maxNumClustersForArch - platform specific
-            // maxBarriersPerInference - platrofm specific
-            // barriersPerCluster = maxBarriersPerInference / maxNumClustersForArch
-            // nn_barriers = min(maxBarriersPerInference, barriersPerCluster * numClusters)
-            VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_barriers %hhu", m_networkMetadata.resource_requirements.nn_barriers_);
-            VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_count_ %hhu",
-                         m_networkMetadata.resource_requirements.nn_slice_count_);
+                    VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu inputs", section.getEntriesNum() - 1);
+                    registerUserIO(m_userInputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
+                } else if (sectionFlags & VPU_SHF_USEROUTPUT) {
+                    VPUX_ELF_THROW_WHEN(m_userOutputs.size(), SequenceError,
+                                        "User outputs already read.... potential more than one output section?");
 
-            // not uesd:
-            VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_length_ %u",
-                         m_networkMetadata.resource_requirements.nn_slice_length_);
-            VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tddr_scratch_length_ %u",
-                         m_networkMetadata.resource_requirements.ddr_scratch_length_);
-            break;
-        }
+                    VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu outputs", section.getEntriesNum() - 1);
+                    registerUserIO(m_userOutputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
+                } else if (sectionFlags & VPU_SHF_PROFOUTPUT) {
+                    VPUX_ELF_THROW_WHEN(m_profOutputs.size(), SequenceError,
+                                        "Profiling outputs already read.... potential more than one output section?");
 
-        case Action::Error: {
-            VPUX_ELF_THROW(SectionError, "Unexpected section type");
-            return;
-        }
+                    VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu prof outputs", section.getEntriesNum() - 1);
+                    registerUserIO(m_profOutputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
+                }
+                break;
+            }
 
-        case Action::None: {
-            break;
-        }
+            case Action::RegisterNetworkMetadata: {
+                VPUX_ELF_LOG(LogLevel::DEBUG, "Parsing the network metadata");
+                VPUX_ELF_LOG(LogLevel::DEBUG, "Resource Requirements:");
 
-        default: {
-            VPUX_ELF_THROW(ImplausibleState, "Unhandled section type");
-            return;
-        }
+                // only getting the top of the section which contains a structure with resource requirements
+                m_networkMetadata = *(section.getData<elf::NetworkMetadata>());
+
+                // the number of available barriers is computed as follows:
+                // numClusters - (to be used) platform specific
+                // maxNumClustersForArch - platform specific
+                // maxBarriersPerInference - platrofm specific
+                // barriersPerCluster = maxBarriersPerInference / maxNumClustersForArch
+                // nn_barriers = min(maxBarriersPerInference, barriersPerCluster * numClusters)
+                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_barriers %hhu",
+                             m_networkMetadata.resource_requirements.nn_barriers_);
+                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_count_ %hhu",
+                             m_networkMetadata.resource_requirements.nn_slice_count_);
+
+                // not uesd:
+                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_length_ %u",
+                             m_networkMetadata.resource_requirements.nn_slice_length_);
+                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tddr_scratch_length_ %u",
+                             m_networkMetadata.resource_requirements.ddr_scratch_length_);
+                break;
+            }
+
+            case Action::Error: {
+                VPUX_ELF_THROW(SectionError, "Unexpected section type");
+                return;
+            }
+
+            case Action::None: {
+                break;
+            }
+
+            default: {
+                VPUX_ELF_THROW(ImplausibleState, "Unhandled section type");
+                return;
+            }
         }
     }
 
@@ -420,9 +427,9 @@ void VPUXLoader::load() {
     for (size_t outputCtr = 0; outputCtr < m_userOutputs.size(); ++outputCtr) {
         VPUX_ELF_LOG(LogLevel::INFO, "\t %zu : %zu", outputCtr, m_userOutputs[outputCtr].size());
     }
-    VPUX_ELF_LOG(LogLevel::INFO,"Registered %zu prof outputs of sizes: ", m_profOutputs.size());
-    for(size_t outputCtr = 0; outputCtr < m_profOutputs.size(); ++outputCtr) {
-        VPUX_ELF_LOG(LogLevel::INFO,"\t %zu : %zu", outputCtr, m_profOutputs[outputCtr].size());
+    VPUX_ELF_LOG(LogLevel::INFO, "Registered %zu prof outputs of sizes: ", m_profOutputs.size());
+    for (size_t outputCtr = 0; outputCtr < m_profOutputs.size(); ++outputCtr) {
+        VPUX_ELF_LOG(LogLevel::INFO, "\t %zu : %zu", outputCtr, m_profOutputs[outputCtr].size());
     }
 
     return;
@@ -430,10 +437,10 @@ void VPUXLoader::load() {
 
 void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
     VPUX_ELF_LOG(LogLevel::TRACE, "apply relocations");
-    for (const auto& relocationSectionIdx : relocationSectionIndexes) {
+    for (const auto &relocationSectionIdx : relocationSectionIndexes) {
         VPUX_ELF_LOG(LogLevel::DEBUG, "applying relocation section %u", relocationSectionIdx);
 
-        const auto& relocSection = m_reader->getSection(relocationSectionIdx);
+        const auto &relocSection = m_reader->getSection(relocationSectionIdx);
         auto relocations = relocSection.getData<elf::RelocationAEntry>();
         auto relocSecHdr = relocSection.getHeader();
         auto numRelocs = relocSection.getEntriesNum();
@@ -446,12 +453,12 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
         auto symTabIdx = relocSecHdr->sh_link;
 
         // by convention, we will assume symTabIdx==VPU_RT_SYMTAB to be the "built-in" symtab
-        auto getSymTab = [&]() -> const SymbolEntry* {
+        auto getSymTab = [&]() -> const SymbolEntry * {
             if (symTabIdx == VPU_RT_SYMTAB) {
                 return m_runtimeSymTabs.data();
             }
 
-            const auto& symTabSection = m_reader->getSectionNoData(symTabIdx);
+            const auto &symTabSection = m_reader->getSectionNoData(symTabIdx);
             auto symTabSectionHdr = symTabSection.getHeader();
 
             VPUX_ELF_THROW_UNLESS(checkSectionType(symTabSectionHdr, elf::SHT_SYMTAB), RelocError,
@@ -468,10 +475,10 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
             targetSectionIdx = relocSecHdr->sh_info;
         } else {
             VPUX_ELF_THROW(RelocError,
-                           "Rela section with no target section");  // TODO(E#30067): Review if there is a case where we
-                                                                    // should accept rela sections w/o a target section?
-                                                                    // This is generally used for executable files, but
-                                                                    // we would only generate relocatable files
+                           "Rela section with no target section"); // TODO(E#30067): Review if there is a case where we
+                                                                   // should accept rela sections w/o a target section?
+                                                                   // This is generally used for executable files, but
+                                                                   // we would only generate relocatable files
             return;
         }
 
@@ -487,7 +494,7 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
 
         // apply the actual relocations
         for (size_t relocIdx = 0; relocIdx < numRelocs; ++relocIdx) {
-            const elf::RelocationAEntry& relocation = relocations[relocIdx];
+            const elf::RelocationAEntry &relocation = relocations[relocIdx];
 
             auto relOffset = relocation.r_offset;
             auto relSymIdx = elf64RSym(relocation.r_info);
@@ -511,7 +518,7 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
             VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tApplying Relocation at offset %llu symidx %u reltype %u addend %llu",
                          relOffset, relSymIdx, relType, addend);
 
-            relocFunc((void*)relocationTargetAddr, targetSymbol, addend);
+            relocFunc((void *)relocationTargetAddr, targetSymbol, addend);
         }
 
         m_bufferManager->unlock(targetSectionDevBuf);
@@ -521,12 +528,13 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
 };
 
 // TODO(E#30069) : a lot of shared logic with applyRelocations.... refactor to share code.... duplicate for WIP purposes
-void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs, std::vector<DeviceBuffer>& profiling) {
+void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer> &inputs, std::vector<DeviceBuffer> &outputs,
+                                     std::vector<DeviceBuffer> &profiling) {
     VPUX_ELF_LOG(LogLevel::TRACE, "apply JITrelocations");
-    for (const auto& relocationSectionIdx : m_jitRelocations) {
+    for (const auto &relocationSectionIdx : m_jitRelocations) {
         VPUX_ELF_LOG(LogLevel::DEBUG, "\tapplying JITrelocation section %u", relocationSectionIdx);
 
-        const auto& relocSection = m_reader->getSection(relocationSectionIdx);
+        const auto &relocSection = m_reader->getSection(relocationSectionIdx);
         auto relocations = relocSection.getData<elf::RelocationAEntry>();
         auto relocSecHdr = relocSection.getHeader();
         auto numRelocs = relocSection.getEntriesNum();
@@ -540,7 +548,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
         // in JitRelocations case, we will expect to point to either "VPUX_USER_INPUT" or "VPUX_USER_INPUT" symtabs
         VPUX_ELF_THROW_WHEN(symTabIdx == VPU_RT_SYMTAB, RelocError, "JitReloc pointing to runtime symtab idx");
 
-        const auto& symTabSection = m_reader->getSectionNoData(symTabIdx);
+        const auto &symTabSection = m_reader->getSectionNoData(symTabIdx);
         auto symTabSectionHdr = symTabSection.getHeader();
 
         VPUX_ELF_THROW_UNLESS(checkSectionType(symTabSectionHdr, elf::SHT_SYMTAB), RelocError,
@@ -557,7 +565,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
                 return ArrayRef<DeviceBuffer>(inputs);
             } else if (relocSecFlags & VPU_SHF_USEROUTPUT) {
                 return ArrayRef<DeviceBuffer>(outputs);
-            } else if(relocSecFlags & VPU_SHF_PROFOUTPUT) {
+            } else if (relocSecFlags & VPU_SHF_PROFOUTPUT) {
                 return ArrayRef<DeviceBuffer>(profiling);
             } else {
                 VPUX_ELF_THROW(RelocError, "Jit reloc section pointing neither to userInput nor userOutput");
@@ -571,12 +579,11 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
         if (relocSecFlags & SHF_INFO_LINK) {
             targetSectionIdx = relocSecHdr->sh_info;
         } else {
-            VPUX_ELF_THROW(
-                    RelocError,
-                    "Rela section with no target section");  // TODO(E#30067) : Review if there is a case where we
-                                                             // should accept rela sections w/o a target section? This
-                                                             // is generally used for executable files, but we would
-                                                             // only generate relocatable files
+            VPUX_ELF_THROW(RelocError,
+                           "Rela section with no target section"); // TODO(E#30067) : Review if there is a case where we
+                                                                   // should accept rela sections w/o a target section?
+                                                                   // This is generally used for executable files, but
+                                                                   // we would only generate relocatable files
             return;
         }
 
@@ -591,7 +598,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
         for (size_t relocIdx = 0; relocIdx < numRelocs; ++relocIdx) {
             VPUX_ELF_LOG(LogLevel::DEBUG, "\t Solving Reloc at %p %zu", relocations, relocIdx);
 
-            const elf::RelocationAEntry& relocation = relocations[relocIdx];
+            const elf::RelocationAEntry &relocation = relocations[relocIdx];
 
             auto offset = relocation.r_offset;
             auto symIdx = elf64RSym(relocation.r_info);
@@ -620,7 +627,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
             targetSymbol.st_value = userAddrs[symIdx - 1].vpu_addr();
             targetSymbol.st_size = origSymbol.st_size;
 
-            relocFunc((void*)targetAddr, targetSymbol, addend);
+            relocFunc((void *)targetAddr, targetSymbol, addend);
         }
 
         m_bufferManager->unlock(targetSectionDevBuf);
@@ -631,7 +638,7 @@ ArrayRef<DeviceBuffer> VPUXLoader::getAllocatedBuffers() const {
     return ArrayRef<DeviceBuffer>(m_allocatedZones);
 }
 
-void VPUXLoader::registerUserIO(details::FixedVector<DeviceBuffer>& userIO, const elf::SymbolEntry* symbols,
+void VPUXLoader::registerUserIO(details::FixedVector<DeviceBuffer> &userIO, const elf::SymbolEntry *symbols,
                                 size_t symbolCount) const {
     if (symbolCount <= 1) {
         VPUX_ELF_LOG(LogLevel::WARN, "Have a USER_IO symbols section with no symbols");
@@ -642,7 +649,7 @@ void VPUXLoader::registerUserIO(details::FixedVector<DeviceBuffer>& userIO, cons
 
     // symbol sections always start with an UNDEFINED symbol by standard
     for (size_t symbolCtr = 1; symbolCtr < symbolCount; ++symbolCtr) {
-        const elf::SymbolEntry& sym = symbols[symbolCtr];
+        const elf::SymbolEntry &sym = symbols[symbolCtr];
         userIO[symbolCtr - 1] = DeviceBuffer(nullptr, 0, sym.st_size);
     }
 }
@@ -659,12 +666,12 @@ ArrayRef<DeviceBuffer> VPUXLoader::getProfBuffers() const {
     return ArrayRef<DeviceBuffer>(m_profOutputs.data(), m_profOutputs.size());
 };
 
-bool VPUXLoader::checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const {
+bool VPUXLoader::checkSectionType(const elf::SectionHeader *section, Elf_Word secType) const {
     return section->sh_type == secType;
 }
 
 void VPUXLoader::clean() {
-    for (DeviceBuffer& devBuffer : m_allocatedZones) {
+    for (DeviceBuffer &devBuffer : m_allocatedZones) {
         m_bufferManager->deallocate(devBuffer);
     }
 }
@@ -677,4 +684,4 @@ const elf::ResourceRequirements VPUXLoader::getResourceRequirements() const {
     return this->m_networkMetadata.resource_requirements;
 }
 
-}  // namespace elf
+} // namespace elf
