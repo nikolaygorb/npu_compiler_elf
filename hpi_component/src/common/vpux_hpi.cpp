@@ -101,7 +101,7 @@ static ArchKind readArchKind(AccessManager *elfAccess) {
 } // namespace
 
 HostParsedInference::HostParsedInference(BufferManager *bufferMgr, AccessManager *accessMgr)
-    : bufferManager(bufferMgr) {
+    : bufferManager(bufferMgr), accessManager(accessMgr) {
     ArchKind arch = readArchKind(accessMgr);
     resRequirements = readResourcesFromElf(accessMgr);
 
@@ -165,6 +165,13 @@ NetworkMetadata HostParsedInference::getMetadata() {
 void HostParsedInference::applyInputOutput(std::vector<DeviceBuffer> &inputs, std::vector<DeviceBuffer> &outputs,
                                            std::vector<DeviceBuffer> &profiling) {
     return loader->applyJitRelocations(inputs, outputs, profiling);
+}
+
+// EISW-63032:
+// Buffer management of HostParsedInference and loader needs to be reworked to allow shared ownership of certain device buffers
+// between multple HostParsedInference objects
+HostParsedInference HostParsedInference::clone() {
+    return HostParsedInference(bufferManager, accessManager);
 }
 
 } // namespace elf
