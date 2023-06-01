@@ -102,26 +102,21 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t index) co
 }
 
 DeviceBuffer HostParsedInference_4000::allocateHostParsedInference(BufferManager *bufferManager) {
-    auto ptr = bufferManager->allocate(BufferSpecs(
+    return bufferManager->allocate(BufferSpecs(
         DEFAULT_ALIGN, utils::alignUp(sizeof(nn_public::VpuHostParsedInference), DEFAULT_ALIGN), SHF_EXECINSTR));
-
-    auto perfMetrics =
-        bufferManager->allocate(BufferSpecs(DEFAULT_ALIGN, sizeof(nn_public::VpuPerformanceMetrics), SHF_EXECINSTR));
-    reinterpret_cast<nn_public::VpuHostParsedInference *>(ptr.cpu_addr())->performance_metrics_.ptr =
-        reinterpret_cast<uint64_t>(perfMetrics.cpu_addr());
-
-    return ptr;
 }
 
 void HostParsedInference_4000::setHostParsedInference(DeviceBuffer &devBuffer, uint64_t mapped_entry,
                                                       ResourceRequirements resReq) {
     auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference *>(devBuffer.cpu_addr());
 
+    hpi->resource_requirements_ = {};
     hpi->resource_requirements_.nn_slice_count_ = resReq.nn_slice_count_;
     hpi->resource_requirements_.nn_barriers_ = resReq.nn_barriers_;
-    setDefaultPerformanceMetrics(*hpi->performance_metrics_);
+    setDefaultPerformanceMetrics(hpi->performance_metrics_);
 
-    hpi->mapped_ = *reinterpret_cast<nn_public::VpuMappedInference *>(mapped_entry);
+    hpi->mapped_.address = mapped_entry;
+    hpi->mapped_.count = 1;
 }
 
 } // namespace elf
