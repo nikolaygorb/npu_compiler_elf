@@ -106,13 +106,13 @@ enum OVNodeType {
 struct VPUX_ALIGNED_STRUCT(8) TensorRef {
     float strides[MAX_TENSOR_REF_STRIDES];
     uint32_t dimensions[MAX_TENSOR_REF_DIMS];
-    uint8_t pad0_[4];
+    uint8_t pad0_[4] = {0};
     TensorName name;
     uint64_t order;
     DType data_type;
     uint32_t dimensions_size;
     uint32_t strides_size;
-    uint8_t pad1_[4];
+    uint8_t pad1_[4] = {0};
 };
 
 static_assert(sizeof(TensorRef) == 352, "TensorRef size != 352");
@@ -136,7 +136,7 @@ struct VPUX_ALIGNED_STRUCT(8) OVNode {
     OVNodeType type;
     uint32_t shape_size;
     uint32_t tensor_names_count = 0;
-    uint8_t pad_[4];
+    uint8_t pad_[4] = {0};
 };
 
 static_assert(sizeof(OVNode) == 8784, "OVNode size != 8784");
@@ -144,7 +144,7 @@ static_assert(sizeof(OVNode) == 8784, "OVNode size != 8784");
 struct VPUX_ALIGNED_STRUCT(4) ResourceRequirements {
     uint32_t nn_slice_length_;
     uint32_t ddr_scratch_length_;
-    uint8_t pad_[2];
+    uint8_t pad_[2] = {0};
     uint8_t nn_slice_count_;
     uint8_t nn_barriers_;
 };
@@ -161,7 +161,7 @@ struct VPUX_ALIGNED_STRUCT(8) NetworkMetadata {
     BlobName blob_name;
 
     ResourceRequirements resource_requirements;
-    uint8_t pad0_[4];
+    uint8_t pad0_[4] = {0};
     TensorRef net_input[MAX_METADATA_IO];
     TensorRef net_output[MAX_METADATA_IO];
 
