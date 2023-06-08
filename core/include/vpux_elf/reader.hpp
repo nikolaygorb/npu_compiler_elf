@@ -80,24 +80,53 @@ public:
     };
 
 public:
-    Reader(AccessManager* accessor)
-            : m_accessor(accessor) {
-        VPUX_ELF_THROW_UNLESS(m_accessor, ArgsError, "Accessor pointer is null");
+    Reader(AccessManager* accessor) {
+        auto sanitizePointer = [](auto ptr, const char* errorMsg) {
+            VPUX_ELF_THROW_UNLESS(ptr, ArgsError, errorMsg);
+            return ptr;
+        };
+        auto sanitizeValue = [](auto value, auto lowerLimit, auto upperLimit, const char* errorMsg) {
+            VPUX_ELF_THROW_UNLESS((value >= lowerLimit) && (value <= upperLimit), ArgsError, errorMsg);
+            return value;
+        };
 
-        m_elfHeader = reinterpret_cast<const typename ElfTypes<B>::ELFHeader*>(
-            m_accessor->read(AccessorDescriptor{0, sizeof(typename ElfTypes<B>::ELFHeader)}));
+        m_accessor = sanitizePointer(accessor, "Invalid AccessManager pointer");
 
-        VPUX_ELF_THROW_UNLESS(utils::checkELFMagic(reinterpret_cast<const uint8_t*>(m_elfHeader)), HeaderError, "Incorrect ELF magic");
+        m_elfHeader = sanitizePointer(reinterpret_cast<const typename ElfTypes<B>::ELFHeader*>(m_accessor->read(
+                                              AccessorDescriptor{0, sizeof(typename ElfTypes<B>::ELFHeader)})),
+                                      "Invalid ELF header pointer");
 
-        m_sectionHeadersStart = reinterpret_cast<const typename ElfTypes<B>::SectionHeader*>(
-            m_accessor->read(AccessorDescriptor{m_elfHeader->e_shoff, (uint64_t)(m_elfHeader->e_shnum*m_elfHeader->e_shentsize)}));
-        m_programHeadersStart = reinterpret_cast<const typename ElfTypes<B>::ProgramHeader*>(
-            m_accessor->read(AccessorDescriptor{m_elfHeader->e_phoff, sizeof(typename ElfTypes<B>::ProgramHeader)}));
+        VPUX_ELF_THROW_UNLESS(utils::checkELFMagic(reinterpret_cast<const uint8_t*>(m_elfHeader)), HeaderError,
+                              "Incorrect ELF magic");
 
-        const auto secNames = reinterpret_cast<const typename ElfTypes<B>::SectionHeader*>(
-                                m_sectionHeadersStart + m_elfHeader->e_shstrndx);
-        m_sectionHeadersNames = reinterpret_cast<const char*>(
-            m_accessor->read(AccessorDescriptor{secNames->sh_offset, secNames->sh_size}));
+        m_sectionNumber = sanitizeValue(m_elfHeader->e_shnum, 0, m_MAX_SECTION_NUMBER, "Invalid number of sections");
+        m_segmentNumber = sanitizeValue(m_elfHeader->e_phnum, 0, m_MAX_SEGMENT_NUMBER, "Invalid number of segments");
+
+        auto e_shoff = sanitizeValue(m_elfHeader->e_shoff, 0, m_MAX_OFFSET, "Invalid section header table offset");
+        auto e_shentsize = sanitizeValue(m_elfHeader->e_shentsize, 0, sizeof(typename ElfTypes<B>::SectionHeader),
+                                         "Invalid section header size");
+        m_sectionHeadersStart = sanitizePointer(
+                reinterpret_cast<const typename ElfTypes<B>::SectionHeader*>(
+                        m_accessor->read(AccessorDescriptor{e_shoff, (uint64_t)(m_sectionNumber * e_shentsize)})),
+                "Invalid section header start pointer");
+
+        auto e_phoff = sanitizeValue(m_elfHeader->e_phoff, 0, m_MAX_OFFSET, "Invalid program header table offset");
+        m_programHeadersStart = sanitizePointer(
+                reinterpret_cast<const typename ElfTypes<B>::ProgramHeader*>(
+                        m_accessor->read(AccessorDescriptor{e_phoff, sizeof(typename ElfTypes<B>::ProgramHeader)})),
+                "Invalid program header start pointer");
+
+        auto e_shstrndx =
+                sanitizeValue(m_elfHeader->e_shstrndx, 0, m_MAX_SECTION_NUMBER - 1, "Invalid string section index");
+        const auto secNames = sanitizePointer(
+                reinterpret_cast<const typename ElfTypes<B>::SectionHeader*>(m_sectionHeadersStart + e_shstrndx),
+                "Invalid string section header pointer");
+
+        auto secNamesShOff = sanitizeValue(secNames->sh_offset, 0, m_MAX_OFFSET, "Invalid string section offset");
+        auto secNamesShSize = sanitizeValue(secNames->sh_size, 0, m_MAX_SECTION_SIZE, "Invalid string section size");
+        m_sectionHeadersNames = sanitizePointer(
+                reinterpret_cast<const char*>(m_accessor->read(AccessorDescriptor{secNamesShOff, secNamesShSize})),
+                "Invalid string section pointer");
     }
 
     const typename ElfTypes<B>::ELFHeader* getHeader() const {
@@ -105,11 +134,11 @@ public:
     }
 
     size_t getSectionsNum() const {
-        return m_elfHeader->e_shnum;
+        return m_sectionNumber;
     }
 
     size_t getSegmentsNum() const {
-        return m_elfHeader->e_phnum;
+        return m_segmentNumber;
     }
 
     const Section& getSection(size_t index) const {
@@ -146,6 +175,19 @@ private:
     const typename ElfTypes<B>::SectionHeader* m_sectionHeadersStart = nullptr;
     const typename ElfTypes<B>::ProgramHeader* m_programHeadersStart = nullptr;
     const char* m_sectionHeadersNames = nullptr;
+    size_t m_sectionNumber = 0;
+    size_t m_segmentNumber = 0;
+
+    // Reasonable limits for number of sections and segments.
+    // Given how the compiler packs contents in the ELF output, the current limits should
+    // be enough for all networks.
+    static constexpr size_t m_MAX_SECTION_NUMBER = 1000;
+    static constexpr size_t m_MAX_SEGMENT_NUMBER = 1000;
+
+    // Assuming reasonable 64 GB offset limit
+    static constexpr uint64_t m_MAX_OFFSET = 64000000000;
+    // Assuming reasonable 64 GB section size limit
+    static constexpr uint64_t m_MAX_SECTION_SIZE = 64000000000;
 
     mutable std::unordered_map<size_t, Section> m_sectionsCache;
 };
