@@ -1,7 +1,13 @@
+//
+// Copyright (C) 2023 Intel Corporation
+// SPDX-License-Identifier: Apache 2.0
+//
+
 #ifndef VPUX_ELF_LOG_UNIT_NAME
 #define VPUX_ELF_LOG_UNIT_NAME "VpuxHpi"
 #endif
 // clang-format off
+#include <vpux_loader/vpux_loader.hpp>
 #include <vpux_elf/utils/log.hpp>
 #include <vpux_elf/reader.hpp>
 #include <vpux_hpi.hpp>

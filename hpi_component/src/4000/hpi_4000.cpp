@@ -1,6 +1,15 @@
 
-#include <vpux_loader/vpux_loader.hpp>
+//
+// Copyright (C) 2023 Intel Corporation
+// SPDX-License-Identifier: Apache 2.0
+//
+
 #include <vpux_elf/utils/utils.hpp>
+#include <vpux_elf/utils/log.hpp>
+#include <vpux_elf/utils/error.hpp>
+#include <vpux_elf/types/section_header.hpp>
+#include <vpux_elf/types/vpu_extensions.hpp>
+#include <vpux_headers/array_ref.hpp>
 #include <hpi_4000.hpp>
 #include "nn_public.h"
 #include "vpu_cmx_info_lnl.h"
