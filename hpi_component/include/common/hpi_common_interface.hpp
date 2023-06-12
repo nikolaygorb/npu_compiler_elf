@@ -5,7 +5,11 @@
 
 #pragma once
 
-#include <vpux_loader/vpux_loader.hpp>
+#include <vpux_elf/types/symbol_entry.hpp>
+#include <vpux_headers/buffer_manager.hpp>
+#include <vpux_headers/device_buffer.hpp>
+#include <vpux_headers/array_ref.hpp>
+#include <vpux_headers/metadata.hpp>
 
 namespace elf {
 

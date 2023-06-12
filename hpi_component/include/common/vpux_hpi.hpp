@@ -1,10 +1,21 @@
+//
+// Copyright (C) 2023 Intel Corporation
+// SPDX-License-Identifier: Apache 2.0
+//
 
 #pragma once
 
 #include <memory>
-#include <vpux_loader/vpux_loader.hpp>
+#include <vpux_headers/buffer_manager.hpp>
+#include <vpux_headers/device_buffer.hpp>
+#include <vpux_headers/array_ref.hpp>
+#include <vpux_headers/metadata.hpp>
+#include <vpux_elf/accessor.hpp>
+
 
 namespace elf {
+
+class VPUXLoader;
 
 class HostParsedInference final {
 public:

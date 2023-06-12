@@ -6,7 +6,8 @@
 
 #pragma once
 
-#include <vpux_loader/vpux_loader.hpp>
+#include <vpux_headers/buffer_manager.hpp>
+#include <vpux_headers/device_buffer.hpp>
 #include <hpi_common_interface.hpp>
 
 namespace elf {
