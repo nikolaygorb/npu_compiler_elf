@@ -6,6 +6,7 @@
 //
 
 #include <vpux_loader/vpux_loader.hpp>
+#include <cstring>
 
 #ifndef VPUX_ELF_LOG_UNIT_NAME
 #define VPUX_ELF_LOG_UNIT_NAME "VpuxLoader"
@@ -18,6 +19,15 @@ namespace elf {
 namespace {
 
 const uint32_t LO_21_BIT_MASK = 0x001F'FFFF;
+
+template <typename T>
+void safeGet(T* dst, const T* src) {
+    VPUX_ELF_LOG(LogLevel::DEBUG, "copying to %p from %p amount %u",dst, src, sizeof(T));
+    memcpy(reinterpret_cast<void*>(dst), reinterpret_cast<const void*>(src), sizeof(T));
+    VPUX_ELF_LOG(LogLevel::DEBUG, "copy done");
+    return;
+}
+
 const uint32_t ADDRESS_MASK = ~0x00C0'0000u;
 const uint64_t SLICE_LENGTH = 2 * 1024 * 1024;
 
@@ -263,16 +273,19 @@ size_t AccessManager::getSize() const {
     return m_size;
 }
 
-VPUXLoader::VPUXLoader(AccessManager *accessor, BufferManager *bufferManager, ArrayRef<SymbolEntry> runtimeSymTabs)
-    : m_reader(new Reader<ELF_Bitness::Elf64>(accessor))
-    , m_bufferManager(bufferManager)
-    , m_runtimeSymTabs(runtimeSymTabs)
-    , m_allocatedZones()
-    , m_sectionToAddr()
-    , m_jitRelocations()
-    , m_userInputs()
-    , m_userOutputs()
-    , m_profOutputs() {
+VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, ArrayRef<SymbolEntry> runtimeSymTabs, bool symTabOverrideMode, ArrayRef<std::string> symbolNames)
+        : m_reader(new Reader<ELF_Bitness::Elf64>(accessor)),
+          m_bufferManager(bufferManager),
+          m_runtimeSymTabs(runtimeSymTabs),
+          m_allocatedZones(),
+          m_sectionToAddr(),
+          m_jitRelocations(),
+          m_userInputs(),
+          m_userOutputs(),
+          m_profOutputs(),
+          m_symTabOverrideMode(symTabOverrideMode),
+          m_explicitAllocations(symTabOverrideMode),
+          m_symbolNames(symbolNames) {
     load();
 };
 
@@ -341,125 +354,132 @@ void VPUXLoader::load() {
         VPUX_ELF_LOG(LogLevel::DEBUG, "    action: %u", (uint32_t)action);
 
         switch (action) {
-            case Action::AllocateAndLoad: {
-                VPUX_ELF_LOG(LogLevel::TRACE, "Allocate and loading %zu", sectionCtr);
-
-                auto sectionSize = sectionHeader->sh_size;
-                auto sectionAlignment = sectionHeader->sh_addralign;
-
-                DeviceBuffer devBuf =
-                    m_bufferManager->allocate(BufferSpecs(sectionAlignment, sectionSize, sectionFlags));
-
-                VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, AllocError,
-                                    "Failed to allocate for section");
-
-                m_bufferManager->lock(devBuf);
-                m_bufferManager->copy(devBuf, section.getData<uint8_t>(), sectionSize);
-                m_bufferManager->unlock(devBuf);
-
-                m_allocatedZones.push_back(devBuf);
-                m_sectionToAddr[sectionCtr] = devBuf;
-
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\tFor section %s Allocated %p of size  %llu and copied from %p to %p",
-                             section.getName(), devBuf.cpu_addr(), sectionSize, section.getData<uint8_t>(),
-                             section.getData<uint8_t>() + sectionSize);
+        case Action::AllocateAndLoad: {
+            bool isAllocateable = sectionFlags & SHF_ALLOC;
+            if(m_explicitAllocations && !isAllocateable) {
                 break;
             }
 
-            case Action::Allocate: {
-                VPUX_ELF_LOG(LogLevel::TRACE, "Allocating %zu", sectionCtr);
+            VPUX_ELF_LOG(LogLevel::TRACE, "Allocate and loading %zu", sectionCtr);
 
-                auto sectionSize = sectionHeader->sh_size;
-                auto sectionAlignment = sectionHeader->sh_addralign;
+            auto sectionSize = sectionHeader->sh_size;
+            auto sectionAlignment = sectionHeader->sh_addralign;
 
-                DeviceBuffer devBuf =
-                    m_bufferManager->allocate(BufferSpecs(sectionAlignment, sectionSize, sectionFlags));
-                VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, AllocError,
-                                    "Failed to allocate for section");
+            DeviceBuffer devBuf =
+                m_bufferManager->allocate(BufferSpecs(sectionAlignment, sectionSize, sectionFlags));
 
-                m_allocatedZones.push_back(devBuf);
-                m_sectionToAddr[sectionCtr] = devBuf;
+            VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, AllocError,
+                                "Failed to allocate for section");
 
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\tFor section %s Allocated %p of size %llu", section.getName(),
-                             devBuf.cpu_addr(), sectionSize);
+            m_bufferManager->lock(devBuf);
+            m_bufferManager->copy(devBuf, section.getData<uint8_t>(), sectionSize);
+            m_bufferManager->unlock(devBuf);
+
+            m_allocatedZones.push_back(devBuf);
+            m_sectionToAddr[sectionCtr] = devBuf;
+
+            VPUX_ELF_LOG(LogLevel::DEBUG,"\tFor section %s Allocated %p of size  %llu and copied from %p to %p", section.getName(), devBuf.cpu_addr(), sectionSize, section.getData<uint8_t>() , section.getData<uint8_t>() + sectionSize);
+            break;
+        }
+
+        case Action::Allocate: {
+            bool isAllocateable = sectionFlags & SHF_ALLOC;
+            if(m_explicitAllocations && !isAllocateable) {
                 break;
             }
 
-            case Action::Relocate: {
-                if (sectionFlags & VPU_SHF_JIT) {
-                    VPUX_ELF_LOG(LogLevel::DEBUG, "Registering JIT Relocation %zu", sectionCtr);
-                    m_jitRelocations.push_back(static_cast<int>(sectionCtr));
-                } else {
-                    relocationSectionIndexes.push_back(static_cast<int>(sectionCtr));
-                    VPUX_ELF_LOG(LogLevel::DEBUG, "Registering Relocation %zu", sectionCtr);
-                }
-                break;
+            VPUX_ELF_LOG(LogLevel::TRACE, "Allocating %zu", sectionCtr);
+
+            auto sectionSize = sectionHeader->sh_size;
+            auto sectionAlignment = sectionHeader->sh_addralign;
+
+            DeviceBuffer devBuf = m_bufferManager->allocate(BufferSpecs(sectionAlignment, sectionSize, sectionFlags));
+            VPUX_ELF_THROW_WHEN(devBuf.cpu_addr() == nullptr || devBuf.size() < sectionSize, AllocError, "Failed to allocate for section");
+
+            m_allocatedZones.push_back(devBuf);
+            m_sectionToAddr[sectionCtr] = devBuf;
+
+            VPUX_ELF_LOG(LogLevel::DEBUG,"\tFor section %s Allocated %p of size %llu", section.getName(), devBuf.cpu_addr(), sectionSize);
+            break;
+        }
+
+
+        case Action::Relocate: {
+            if (sectionFlags & VPU_SHF_JIT) {
+                VPUX_ELF_LOG(LogLevel::DEBUG, "Registering JIT Relocation %zu", sectionCtr);
+                m_jitRelocations.push_back(static_cast<int>(sectionCtr));
+            } else {
+                relocationSectionIndexes.push_back(static_cast<int>(sectionCtr));
+                VPUX_ELF_LOG(LogLevel::DEBUG, "Registering Relocation %zu", sectionCtr);
             }
+            break;
+        }
 
-            case Action::RegisterUserIO: {
-                VPUX_ELF_LOG(LogLevel::DEBUG, "Parsed symtab section with flags %llx", sectionFlags);
+        case Action::RegisterUserIO: {
+            VPUX_ELF_LOG(LogLevel::DEBUG, "Parsed symtab section with flags %llx", sectionFlags);
 
-                if (sectionFlags & VPU_SHF_USERINPUT) {
-                    VPUX_ELF_THROW_WHEN(m_userInputs.size(), SequenceError,
-                                        "User inputs already read.... potential more than one input section?");
+            if (sectionFlags & VPU_SHF_USERINPUT) {
+                VPUX_ELF_THROW_WHEN(m_userInputs.size(), SequenceError,
+                                    "User inputs already read.... potential more than one input section?");
 
-                    VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu inputs", section.getEntriesNum() - 1);
-                    registerUserIO(m_userInputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
-                } else if (sectionFlags & VPU_SHF_USEROUTPUT) {
-                    VPUX_ELF_THROW_WHEN(m_userOutputs.size(), SequenceError,
-                                        "User outputs already read.... potential more than one output section?");
+                VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu inputs", section.getEntriesNum() - 1);
+                registerUserIO(m_userInputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
+            } else if (sectionFlags & VPU_SHF_USEROUTPUT) {
+                VPUX_ELF_THROW_WHEN(m_userOutputs.size(), SequenceError,
+                                    "User outputs already read.... potential more than one output section?");
 
-                    VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu outputs", section.getEntriesNum() - 1);
-                    registerUserIO(m_userOutputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
-                } else if (sectionFlags & VPU_SHF_PROFOUTPUT) {
-                    VPUX_ELF_THROW_WHEN(m_profOutputs.size(), SequenceError,
-                                        "Profiling outputs already read.... potential more than one output section?");
+                VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu outputs", section.getEntriesNum() - 1);
+                registerUserIO(m_userOutputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
+            } else if (sectionFlags & VPU_SHF_PROFOUTPUT) {
+                VPUX_ELF_THROW_WHEN(m_profOutputs.size(), SequenceError,
+                                    "Profiling outputs already read.... potential more than one output section?");
 
-                    VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu prof outputs", section.getEntriesNum() - 1);
-                    registerUserIO(m_profOutputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
-                }
-                break;
+                VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu prof outputs", section.getEntriesNum() - 1);
+                registerUserIO(m_profOutputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
             }
+            break;
+        }
 
-            case Action::RegisterNetworkMetadata: {
-                VPUX_ELF_LOG(LogLevel::DEBUG, "Parsing the network metadata");
-                VPUX_ELF_LOG(LogLevel::DEBUG, "Resource Requirements:");
+        case Action::RegisterNetworkMetadata: {
+            VPUX_ELF_LOG(LogLevel::DEBUG, "Parsing the network metadata");
+            VPUX_ELF_LOG(LogLevel::DEBUG, "Resource Requirements:");
 
-                // only getting the top of the section which contains a structure with resource requirements
-                m_networkMetadata = *(section.getData<elf::NetworkMetadata>());
+            // only getting the top of the section which contains a structure with resource requirements
+            auto metadataPtr = section.getData<elf::NetworkMetadata>();
+            VPUX_ELF_LOG(LogLevel::DEBUG, "Addr of metadataPtr = %p",metadataPtr);
+            safeGet<elf::NetworkMetadata>(&m_networkMetadata, metadataPtr);
+            VPUX_ELF_LOG(LogLevel::DEBUG, "copy good");
+            // the number of available barriers is computed as follows:
+            // numClusters - (to be used) platform specific
+            // maxNumClustersForArch - platform specific
+            // maxBarriersPerInference - platrofm specific
+            // barriersPerCluster = maxBarriersPerInference / maxNumClustersForArch
+            // nn_barriers = min(maxBarriersPerInference, barriersPerCluster * numClusters)
+            VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_barriers %hhu", m_networkMetadata.resource_requirements.nn_barriers_);
+            VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_count_ %hhu",
+                         m_networkMetadata.resource_requirements.nn_slice_count_);
 
-                // the number of available barriers is computed as follows:
-                // numClusters - (to be used) platform specific
-                // maxNumClustersForArch - platform specific
-                // maxBarriersPerInference - platrofm specific
-                // barriersPerCluster = maxBarriersPerInference / maxNumClustersForArch
-                // nn_barriers = min(maxBarriersPerInference, barriersPerCluster * numClusters)
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_barriers %hhu",
-                             m_networkMetadata.resource_requirements.nn_barriers_);
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_count_ %hhu",
-                             m_networkMetadata.resource_requirements.nn_slice_count_);
+            // not uesd:
+            VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_length_ %u",
+                         m_networkMetadata.resource_requirements.nn_slice_length_);
+            VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tddr_scratch_length_ %u",
+                         m_networkMetadata.resource_requirements.ddr_scratch_length_);
+            break;
+        }
 
-                // not uesd:
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_length_ %u",
-                             m_networkMetadata.resource_requirements.nn_slice_length_);
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tddr_scratch_length_ %u",
-                             m_networkMetadata.resource_requirements.ddr_scratch_length_);
-                break;
-            }
+        case Action::Error: {
+            VPUX_ELF_THROW(SectionError, "Unexpected section type");
+            return;
+        }
 
-            case Action::Error: {
-                VPUX_ELF_THROW(SectionError, "Unexpected section type");
-                return;
-            }
+        case Action::None: {
+            break;
+        }
 
-            case Action::None: {
-                break;
-            }
-
-            default: {
-                VPUX_ELF_THROW(ImplausibleState, "Unhandled section type");
-                return;
-            }
+        default: {
+            VPUX_ELF_THROW(ImplausibleState, "Unhandled section type");
+            return;
+        }
         }
     }
 
@@ -480,7 +500,7 @@ void VPUXLoader::load() {
     }
 
     return;
-};
+}
 
 void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
     VPUX_ELF_LOG(LogLevel::TRACE, "apply relocations");
@@ -560,7 +580,24 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
             // deliberate copy so we don't modify the contents of the original elf.
             elf::SymbolEntry targetSymbol = symTabs[relSymIdx];
             auto symbolTargetSectionIdx = targetSymbol.st_shndx;
-            targetSymbol.st_value += (elf::Elf64_Addr)m_sectionToAddr[symbolTargetSectionIdx].vpu_addr();
+
+            if(auto symValue = m_sectionToAddr[symbolTargetSectionIdx].vpu_addr()) {
+                targetSymbol.st_value += symValue;
+            } else {
+                std::string sectionName = m_reader->getSection(symbolTargetSectionIdx).getName();
+
+                size_t index = -1;
+                for(index = 0; index < m_symbolNames.size(); ++ index) {
+                    if(m_symbolNames[index].compare(sectionName) ==0) {
+                        break;
+                    }
+                }
+
+                //error if index still -1
+
+                targetSymbol = m_runtimeSymTabs[index];
+
+            }
 
             VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tApplying Relocation at offset %llu symidx %u reltype %u addend %llu",
                          relOffset, relSymIdx, relType, addend);

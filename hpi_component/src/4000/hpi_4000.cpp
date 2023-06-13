@@ -17,28 +17,29 @@
 
 namespace elf {
 // TODO: EISW-79509
-static constexpr uint8_t N_TABS = 1; // as for now we don't support more than 1 tile
-static constexpr size_t SPECIAL_SYMTAB_SIZE = 8;
-static SymbolEntry symTab_[N_TABS][SPECIAL_SYMTAB_SIZE];
 
 namespace {
+
+std::vector<SymbolEntry> symTab_;
+std::vector<std::string> stringContainers_;
+
 // Base of frequency values used in tables (in MHz).
-static constexpr uint32_t FREQ_BASE = 700;
+constexpr uint32_t FREQ_BASE = 700;
 // Step of frequency for each entry in tables (in MHz).
-static constexpr uint32_t FREQ_STEP = 100;
+constexpr uint32_t FREQ_STEP = 100;
 // Base of bandwidth values used in tables (in MB/s).
-static constexpr uint32_t BW_BASE = 2000;
+constexpr uint32_t BW_BASE = 2000;
 // Step of bandwidth values used in tables (in MB/s).
-static constexpr uint32_t BW_STEP = 100;
+constexpr uint32_t BW_STEP = 100;
 
 // value in [0.0..1.0] range indicating scalability of network for a given DDR bandwidth.
-static const std::array<float, nn_public::VPU_SCALABILITY_VALUES_PER_FREQ> byBWScales({0.0F, 0.2F, 0.4F, 0.6F, 0.8F});
+const std::array<float, nn_public::VPU_SCALABILITY_VALUES_PER_FREQ> byBWScales({0.0F, 0.2F, 0.4F, 0.6F, 0.8F});
 // expected ticks (based on FRC @37.5MHz) an inference should take for a given DDR bandwidth.
-static const std::array<uint64_t, nn_public::VPU_SCALABILITY_VALUES_PER_FREQ> byBWTicks({10UL, 12UL, 14UL, 16UL, 18UL});
+const std::array<uint64_t, nn_public::VPU_SCALABILITY_VALUES_PER_FREQ> byBWTicks({10UL, 12UL, 14UL, 16UL, 18UL});
 
 } // namespace
 
-static void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics &metrics) {
+void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics &metrics) {
     metrics.bw_base = BW_BASE;
     metrics.bw_step = BW_STEP;
     metrics.freq_base = FREQ_BASE;
@@ -50,63 +51,134 @@ static void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics &metri
     }
 }
 
-ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t index) const {
+ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
     uintptr_t metadata = nn_public::VPU_METADATA_STORAGE_ADDR;
 
-    for (int j = 0; j < 1; ++j) {
-        for (size_t i = 0; i < SPECIAL_SYMTAB_SIZE; ++i) {
-            symTab_[j][i].st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
-            symTab_[j][i].st_other = STV_DEFAULT;
-            symTab_[j][i].st_shndx = 0;
-            symTab_[j][i].st_name = 0;
-        }
-
-        symTab_[j][VPU_NNRD_SYM_NNCXM_SLICE_BASE_ADDR].st_value = nn_public::VPU_WORKSPACE_ADDR;
-        symTab_[j][VPU_NNRD_SYM_NNCXM_SLICE_BASE_ADDR].st_size = nn_public::VPU_METADATA_SIZE;
-
+    {
         metadata = nn_public::align_storage(alignof(nn_public::VpuDPUInvariant), metadata);
-        symTab_[j][VPU_NNRD_SYM_RTM_IVAR].st_value = metadata;
-        symTab_[j][VPU_NNRD_SYM_RTM_IVAR].st_size = nn_public::VPU_INVARIANT_COUNT;
+
+        SymbolEntry dpuInvariantMetadata;
+        dpuInvariantMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
+        dpuInvariantMetadata.st_other = STV_DEFAULT;
+        dpuInvariantMetadata.st_shndx = 0;
+        dpuInvariantMetadata.st_value = reinterpret_cast<uint64_t>(metadata);
+        // TODO: What to write as size if amount of task in metadata buffer is defined by compiler?
+        // Supposed to be unused? Applies to other symbols below as well
+        dpuInvariantMetadata.st_size = 0;
+        dpuInvariantMetadata.st_name = 0;
+
+        symTab_.push_back(dpuInvariantMetadata);
+        stringContainers_.push_back("program.DPUInvariant.cmx.0.0");
+
         metadata += nn_public::VPU_INVARIANT_COUNT * sizeof(nn_public::VpuDPUInvariant);
-
-        // Not used here but must be considered for proper offsetting of the following areas
-        metadata = nn_public::align_storage(alignof(nn_public::VpuDPUVariant), metadata);
-        metadata += nn_public::VPU_VARIANT_COUNT * sizeof(nn_public::VpuDPUVariant);
-
-        metadata = nn_public::align_storage(alignof(nn_public::VpuActKernelRange), metadata);
-        symTab_[j][VPU_NNRD_SYM_RTM_ACT].st_value = metadata;
-        symTab_[j][VPU_NNRD_SYM_RTM_ACT].st_size = nn_public::VPU_KERNEL_RANGE_COUNT;
-        metadata += nn_public::VPU_KERNEL_RANGE_COUNT * sizeof(nn_public::VpuActKernelRange);
-
-        // Not used here but must be considered for proper offsetting of the following areas
-        metadata = nn_public::align_storage(alignof(nn_public::VpuActKernelInvocation), metadata);
-        metadata += nn_public::VPU_KERNEL_INVO_COUNT * sizeof(nn_public::VpuActKernelInvocation);
-
-        // DMA tasks should be further split into lists based on DDR/CMX origin
-        metadata = nn_public::align_storage(alignof(nn_public::VpuDMATask), metadata);
-        symTab_[j][VPU_NNRD_SYM_RTM_DMA0].st_value = metadata;
-        symTab_[j][VPU_NNRD_SYM_RTM_DMA0].st_size = nn_public::VPU_DMA_TASK_COUNT;
-        metadata += nn_public::VPU_DMA_TASK_COUNT * sizeof(nn_public::VpuDMATask);
-
-        symTab_[j][VPU_NNRD_SYM_RTM_DMA1].st_value = 0x0;
-        symTab_[j][VPU_NNRD_SYM_RTM_DMA1].st_size = 0;
-
-        symTab_[j][VPU_NNRD_SYM_FIFO_BASE].st_value = 0x0;
-        symTab_[j][VPU_NNRD_SYM_FIFO_BASE].st_size = 0;
-
-        symTab_[j][VPU_NNRD_SYM_BARRIERS_START].st_value = 0;
-        symTab_[j][VPU_NNRD_SYM_BARRIERS_START].st_size = 0;
-
-        symTab_[j][VPU_NNRD_SYM_HW_REGISTER].st_value = 0;
-        symTab_[j][VPU_NNRD_SYM_HW_REGISTER].st_size = 0;
     }
 
-    VPUX_ELF_THROW_UNLESS((index != 0 && index <= N_TABS), ArgsError, "The sym tab configuration is not supported!");
+    {
+        metadata = nn_public::align_storage(alignof(nn_public::VpuDPUVariant), metadata);
 
-    // Return configuration of index -1, because the configuration list begins at 0
-    // 0 - single tile
-    // 1 - multi tile
-    return ArrayRef<SymbolEntry>(symTab_[index - 1], SPECIAL_SYMTAB_SIZE);
+        SymbolEntry dpuVariantMetadata;
+        dpuVariantMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
+        dpuVariantMetadata.st_other = STV_DEFAULT;
+        dpuVariantMetadata.st_shndx = 0;
+        dpuVariantMetadata.st_value = reinterpret_cast<uint64_t>(metadata);
+        dpuVariantMetadata.st_size = 0;
+        dpuVariantMetadata.st_name = 0;
+
+        symTab_.push_back(dpuVariantMetadata);
+        stringContainers_.push_back("program.DPUVariant.cmx.0.0");
+
+        metadata += nn_public::VPU_VARIANT_COUNT * sizeof(nn_public::VpuDPUVariant);
+    }
+
+    {
+        metadata = nn_public::align_storage(alignof(nn_public::VpuActKernelRange), metadata);
+
+        SymbolEntry actKernelRangeMetadata;
+        actKernelRangeMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
+        actKernelRangeMetadata.st_other = STV_DEFAULT;
+        actKernelRangeMetadata.st_shndx = 0;
+        actKernelRangeMetadata.st_value = reinterpret_cast<uint64_t>(metadata);
+        actKernelRangeMetadata.st_size = 0;
+        actKernelRangeMetadata.st_name = 0;
+
+        symTab_.push_back(actKernelRangeMetadata);
+        stringContainers_.push_back("program.ActKernelRange.cmx.0.0");
+
+        metadata += nn_public::VPU_KERNEL_RANGE_COUNT * sizeof(nn_public::VpuActKernelRange);
+    }
+
+    {
+        metadata = nn_public::align_storage(alignof(nn_public::VpuActKernelInvocation), metadata);
+
+        SymbolEntry actKernelInvocationMetadata;
+        actKernelInvocationMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
+        actKernelInvocationMetadata.st_other = STV_DEFAULT;
+        actKernelInvocationMetadata.st_shndx = 0;
+        actKernelInvocationMetadata.st_value = reinterpret_cast<uint64_t>(metadata);
+        actKernelInvocationMetadata.st_size = 0;
+        actKernelInvocationMetadata.st_name = 0;
+
+        symTab_.push_back(actKernelInvocationMetadata);
+        stringContainers_.push_back("program.ActKernelInvocation.cmx.0.0");
+
+        metadata += nn_public::VPU_KERNEL_INVO_COUNT * sizeof(nn_public::VpuActKernelInvocation);
+    }
+
+    {
+        metadata = nn_public::align_storage(alignof(nn_public::VpuDMATask), metadata);
+
+        SymbolEntry dmaDDRMetadata;
+        dmaDDRMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
+        dmaDDRMetadata.st_other = STV_DEFAULT;
+        dmaDDRMetadata.st_shndx = 0;
+        dmaDDRMetadata.st_value = reinterpret_cast<uint64_t>(metadata);
+        dmaDDRMetadata.st_size = 0;
+        dmaDDRMetadata.st_name = 0;
+
+        symTab_.push_back(dmaDDRMetadata);
+        stringContainers_.push_back("program.DMA.cmx.0.0");
+
+        // TODO: short-term solution, 32 is hardcoded in compiler (VPU40XX::MappedInference::serialize) and here
+        metadata += 32 * sizeof(nn_public::VpuDMATask);
+    }
+
+    {
+        metadata = nn_public::align_storage(alignof(nn_public::VpuDMATask), metadata);
+
+        SymbolEntry dmaCMXMetadata;
+        dmaCMXMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
+        dmaCMXMetadata.st_other = STV_DEFAULT;
+        dmaCMXMetadata.st_shndx = 0;
+        dmaCMXMetadata.st_value = reinterpret_cast<uint64_t>(metadata);
+        dmaCMXMetadata.st_size = 0;
+        dmaCMXMetadata.st_name = 0;
+
+        symTab_.push_back(dmaCMXMetadata);
+        stringContainers_.push_back("program.DMA.cmx.0.1");
+
+        // TODO: short-term solution, 32 is hardcoded in compiler (VPU40XX::MappedInference::serialize) and here
+        metadata += 32 * sizeof(nn_public::VpuDMATask);
+    }
+
+    {
+        SymbolEntry cmxWorkspace;
+        cmxWorkspace.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
+        cmxWorkspace.st_other = STV_DEFAULT;
+        cmxWorkspace.st_shndx = 0;
+        cmxWorkspace.st_value = nn_public::VPU_WORKSPACE_ADDR;
+        cmxWorkspace.st_size = nn_public::VPU_WORKSPACE_SIZE;
+        cmxWorkspace.st_name = 0;
+
+        symTab_.push_back(cmxWorkspace);
+        stringContainers_.push_back("buffer.CMX_NN.0");
+    }
+
+    // For LNL we only have one symtab
+    return ArrayRef<SymbolEntry>(symTab_);
+}
+
+ArrayRef<std::string> HostParsedInference_4000::getSymbolNames() const {
+    return ArrayRef<std::string>(stringContainers_);
 }
 
 DeviceBuffer HostParsedInference_4000::allocateHostParsedInference(BufferManager *bufferManager) {

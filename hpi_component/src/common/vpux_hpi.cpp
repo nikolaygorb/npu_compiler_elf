@@ -131,8 +131,17 @@ HostParsedInference::HostParsedInference(BufferManager *bufferMgr, AccessManager
             break;
     }
 
+#if defined(CONFIG_TARGET_SOC_3720) || defined(HOST_BUILD)
     // EISW-73555
     loader = std::make_unique<VPUXLoader>(accessMgr, bufferManager, obj->getSymbolTable(resRequirements.nn_slice_count_));
+#endif
+#ifdef CONFIG_TARGET_SOC_4000
+    // EISW-73555c
+    const auto symbolTable = obj->getSymbolTable(resRequirements.nn_slice_count_);
+    const auto symbolNames = obj->getSymbolNames();
+    loader = std::make_unique<VPUXLoader>(accessMgr, bufferManager, symbolTable, /*symTabOverrideMode=*/true, symbolNames);
+#endif
+
 
     // DeviceBuffer getting a pointer to arch specific host parsed inference
     parsedInference = obj->allocateHostParsedInference(bufferManager);
