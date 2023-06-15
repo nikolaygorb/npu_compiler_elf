@@ -581,7 +581,8 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
             elf::SymbolEntry targetSymbol = symTabs[relSymIdx];
             auto symbolTargetSectionIdx = targetSymbol.st_shndx;
 
-            if(auto symValue = m_sectionToAddr[symbolTargetSectionIdx].vpu_addr()) {
+            auto symValue = m_sectionToAddr[symbolTargetSectionIdx].vpu_addr();
+            if (symValue || targetSymbol.st_value) {
                 targetSymbol.st_value += symValue;
             } else {
                 std::string sectionName = m_reader->getSection(symbolTargetSectionIdx).getName();
