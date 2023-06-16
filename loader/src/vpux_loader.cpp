@@ -582,7 +582,7 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
             auto symbolTargetSectionIdx = targetSymbol.st_shndx;
 
             auto symValue = m_sectionToAddr[symbolTargetSectionIdx].vpu_addr();
-            if (symValue || targetSymbol.st_value) {
+            if (symValue || symTabIdx == VPU_RT_SYMTAB) {
                 targetSymbol.st_value += symValue;
             } else {
                 std::string sectionName = m_reader->getSection(symbolTargetSectionIdx).getName();
