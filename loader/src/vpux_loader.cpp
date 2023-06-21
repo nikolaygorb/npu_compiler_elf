@@ -191,7 +191,8 @@ const auto VPU_LO_21_BIT_Relocation = [](void* targetAddr, const elf::SymbolEntr
     VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tLow 21 bits reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
 
     auto patchAddr = static_cast<uint32_t>(symVal + addend) & LO_21_BIT_MASK;
-    *addr = patchAddr;
+    *addr &= ~LO_21_BIT_MASK;
+    *addr |= patchAddr;
 };
 
 const auto VPU_LO_21_BIT_SUM_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
@@ -215,15 +216,28 @@ const auto VPU_LO_21_BIT_MULTICAST_BASE_Relocation = [](void* targetAddr, const 
     *addr = to_dpu_multicast_base(patchAddr);
 };
 
-const auto VPU_LO_17_BIT_RSHIFT_5_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+const auto VPU_16_BIT_LSB_17_RSHIFT_5_Relocation  = [](void* targetAddr, const elf::SymbolEntry& targetSym,
                                                     const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit Masked Shifted by 4 reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
+    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t16Bit Reloc: Low 17 bits, rshift by 5 reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
 
     const uint32_t mask = 0x0001'FFFF; // mask used to only keep last 17 bits
+    const uint32_t lsb_16_mask = 0xFFFF;
 
-    *addr = (static_cast<uint32_t>(symVal + addend) & mask) >> 5;
+    *addr &= ~lsb_16_mask;
+    *addr |= (static_cast<uint32_t>(symVal + addend) & mask) >> 5;
+};
+
+const auto VPU_LO_21_BIT_RSHIFT_4_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                                    const Elf_Sxword addend) -> void {
+    auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tLow 21 bits, rshift 4 reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
+
+    auto patchAddr = (static_cast<uint32_t>(symVal + addend) & LO_21_BIT_MASK) >> 4;
+    *addr &= ~LO_21_BIT_MASK;
+    *addr |= patchAddr;
 };
 
 }  // namespace
@@ -260,7 +274,8 @@ const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoade
     {R_VPU_LO_21, VPU_LO_21_BIT_Relocation},
     {R_VPU_LO_21_SUM, VPU_LO_21_BIT_SUM_Relocation},
     {R_VPU_LO_21_MULTICAST_BASE, VPU_LO_21_BIT_MULTICAST_BASE_Relocation},
-    {R_VPU_LO_17_RSHIFT_5, VPU_LO_17_BIT_RSHIFT_5_Relocation},
+    {R_VPU_16_LSB_17_RSHIFT_5, VPU_16_BIT_LSB_17_RSHIFT_5_Relocation},
+    {R_VPU_LO_21_RSHIFT_4, VPU_LO_21_BIT_RSHIFT_4_Relocation},
 };
 
 AccessorDescriptor::AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t procFlags, uint64_t alignment)
