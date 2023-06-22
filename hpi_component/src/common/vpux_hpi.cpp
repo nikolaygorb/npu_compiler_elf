@@ -90,7 +90,9 @@ static ArchKind readArchKind(AccessManager *elfAccess) {
         if (sectionType == elf::VPU_SHT_NETDESC) {
             char archName[MAX_STRING_LEN] = {};
             strncpy(archName, section.getData<NetworkMetadata>()->arch_name, MAX_STRING_LEN);
-            return knownArch.find(archName)->second;
+            auto retArch = knownArch.find(archName);
+            if (retArch != knownArch.end())
+                return retArch->second;
         }
     }
 
@@ -107,7 +109,8 @@ static ArchKind readArchKind(AccessManager *elfAccess) {
 } // namespace
 
 HostParsedInference::HostParsedInference(BufferManager *bufferMgr, AccessManager *accessMgr)
-    : bufferManager(bufferMgr), accessManager(accessMgr) {
+    : bufferManager(bufferMgr)
+    , accessManager(accessMgr) {
     ArchKind arch = readArchKind(accessMgr);
     resRequirements = readResourcesFromElf(accessMgr);
 
@@ -133,15 +136,16 @@ HostParsedInference::HostParsedInference(BufferManager *bufferMgr, AccessManager
 
 #if defined(CONFIG_TARGET_SOC_3720) || defined(HOST_BUILD)
     // EISW-73555
-    loader = std::make_unique<VPUXLoader>(accessMgr, bufferManager, obj->getSymbolTable(resRequirements.nn_slice_count_));
+    loader =
+        std::make_unique<VPUXLoader>(accessMgr, bufferManager, obj->getSymbolTable(resRequirements.nn_slice_count_));
 #endif
 #ifdef CONFIG_TARGET_SOC_4000
-    // EISW-73555c
+    // EISW-73555
     const auto symbolTable = obj->getSymbolTable(resRequirements.nn_slice_count_);
     const auto symbolNames = obj->getSymbolNames();
-    loader = std::make_unique<VPUXLoader>(accessMgr, bufferManager, symbolTable, /*symTabOverrideMode=*/true, symbolNames);
+    loader =
+        std::make_unique<VPUXLoader>(accessMgr, bufferManager, symbolTable, /*symTabOverrideMode=*/true, symbolNames);
 #endif
-
 
     // DeviceBuffer getting a pointer to arch specific host parsed inference
     parsedInference = obj->allocateHostParsedInference(bufferManager);
@@ -183,8 +187,8 @@ void HostParsedInference::applyInputOutput(std::vector<DeviceBuffer> &inputs, st
 }
 
 // EISW-63032:
-// Buffer management of HostParsedInference and loader needs to be reworked to allow shared ownership of certain device buffers
-// between multple HostParsedInference objects
+// Buffer management of HostParsedInference and loader needs to be reworked to allow shared ownership of certain device
+// buffers between multple HostParsedInference objects
 HostParsedInference HostParsedInference::clone() {
     return HostParsedInference(bufferManager, accessManager);
 }
