@@ -60,16 +60,6 @@ static ResourceRequirements readResourcesFromElf(AccessManager *elfAccess) {
         }
     }
 
-#ifdef CONFIG_TARGET_SOC_4000
-    ResourceRequirements res{};
-    // TODO: At this point we are not able to test
-    // the functionality with a proper generated ELF
-    // EISW-79514
-    res.nn_slice_count_ = 1;
-    res.nn_barriers_ = 16;
-    return res;
-#endif
-
     VPUX_ELF_THROW(HeaderError, "Failed to find a resource");
 }
 
@@ -95,13 +85,6 @@ static ArchKind readArchKind(AccessManager *elfAccess) {
                 return retArch->second;
         }
     }
-
-// TODO: At this point we are not able to test
-// the functionality with a proper generated ELF
-// EISW-79514
-#ifdef CONFIG_TARGET_SOC_4000
-    return knownArch.find("VPUX40XX")->second;
-#endif
 
     return ArchKind::UNKNOWN;
 }
