@@ -139,7 +139,11 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
         symTab_.push_back(dmaDDRMetadata);
         stringContainers_.push_back("program.DMA.cmx.0.0");
 
-        // TODO: short-term solution, 32 is hardcoded in compiler (VPU40XX::MappedInference::serialize) and here
+        // metadata buffers sizes for DMA tasks are hard-coded to the same value as in
+        // resolve-mapped-inference-task-locations (VPUx compiler)
+        // otherwise it must be written to the blob and extracted in Loader, passed here
+        // however we do not want to expose blob content details (mapped inference) to the loader
+        // E#81910
         metadata += 32 * sizeof(nn_public::VpuDMATask);
     }
 
@@ -157,7 +161,11 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
         symTab_.push_back(dmaCMXMetadata);
         stringContainers_.push_back("program.DMA.cmx.0.1");
 
-        // TODO: short-term solution, 32 is hardcoded in compiler (VPU40XX::MappedInference::serialize) and here
+        // metadata buffers sizes for DMA tasks are hard-coded to the same value as in
+        // resolve-mapped-inference-task-locations (VPUx compiler)
+        // otherwise it must be written to the blob and extracted in Loader, passed here
+        // however we do not want to expose blob content details (mapped inference) to the loader
+        // E#81910
         metadata += 32 * sizeof(nn_public::VpuDMATask);
     }
 
