@@ -11,9 +11,8 @@
 #include <vpux_elf/types/vpu_extensions.hpp>
 #include <vpux_headers/array_ref.hpp>
 #include <hpi_4000.hpp>
-#include "nn_public.h"
-#include "vpu_cmx_info_lnl.h"
-#include "nce_vpu4_hw.h"
+#include <api/vpu_nnrt_api_40xx.h>
+#include <api/vpu_cmx_info_40xx.h>
 #include <array>
 
 namespace elf {

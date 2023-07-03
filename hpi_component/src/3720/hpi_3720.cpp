@@ -10,8 +10,8 @@
 #include <vpux_elf/types/vpu_extensions.hpp>
 #include <vpux_headers/array_ref.hpp>
 #include <hpi_3720.hpp>
-#include <api/vpu_nnrt_api.h>
-#include "api/vpu_cmx_info_37xx.h"
+#include <api/vpu_nnrt_api_37xx.h>
+#include <api/vpu_cmx_info_37xx.h>
 #include <array>
 
 namespace elf {
