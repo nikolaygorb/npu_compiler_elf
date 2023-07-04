@@ -16,9 +16,8 @@
 #include <hpi_3720.hpp>
 #endif
 
-#ifdef CONFIG_TARGET_SOC_4000 // EISW-77741
+#if defined(CONFIG_TARGET_SOC_4000) || defined(HOST_BUILD)
 #include <hpi_4000.hpp>
-#include <MvStringSecure.h>
 #endif
 
 #include <string.h>
@@ -107,7 +106,7 @@ HostParsedInference::HostParsedInference(BufferManager *bufferMgr, AccessManager
             obj = std::make_unique<HostParsedInference_3720>();
             break;
 #endif
-#ifdef CONFIG_TARGET_SOC_4000 // EISW-77741
+#if defined(CONFIG_TARGET_SOC_4000) || defined(HOST_BUILD)
         case ArchKind::VPUX40XX:
             obj = std::make_unique<HostParsedInference_4000>();
             break;

@@ -13,6 +13,8 @@
 #include <hpi_4000.hpp>
 #include <api/vpu_nnrt_api_40xx.h>
 #include <api/vpu_cmx_info_40xx.h>
+#include <string>
+#include <vector>
 #include <array>
 
 namespace elf {
@@ -61,14 +63,14 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
         dpuInvariantMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
         dpuInvariantMetadata.st_other = STV_DEFAULT;
         dpuInvariantMetadata.st_shndx = 0;
-        dpuInvariantMetadata.st_value = reinterpret_cast<uint64_t>(metadata);
+        dpuInvariantMetadata.st_value = static_cast<uint64_t>(metadata);
         // TODO: What to write as size if amount of task in metadata buffer is defined by compiler?
         // Supposed to be unused? Applies to other symbols below as well
         dpuInvariantMetadata.st_size = 0;
         dpuInvariantMetadata.st_name = 0;
 
         symTab_.push_back(dpuInvariantMetadata);
-        stringContainers_.push_back("program.DPUInvariant.cmx.0.0");
+        stringContainers_.push_back(std::string("program.DPUInvariant.cmx.0.0"));
 
         metadata += nn_public::VPU_INVARIANT_COUNT * sizeof(nn_public::VpuDPUInvariant);
     }
@@ -80,12 +82,12 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
         dpuVariantMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
         dpuVariantMetadata.st_other = STV_DEFAULT;
         dpuVariantMetadata.st_shndx = 0;
-        dpuVariantMetadata.st_value = reinterpret_cast<uint64_t>(metadata);
+        dpuVariantMetadata.st_value = static_cast<uint64_t>(metadata);
         dpuVariantMetadata.st_size = 0;
         dpuVariantMetadata.st_name = 0;
 
         symTab_.push_back(dpuVariantMetadata);
-        stringContainers_.push_back("program.DPUVariant.cmx.0.0");
+        stringContainers_.push_back(std::string("program.DPUVariant.cmx.0.0"));
 
         metadata += nn_public::VPU_VARIANT_COUNT * sizeof(nn_public::VpuDPUVariant);
     }
@@ -97,12 +99,12 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
         actKernelRangeMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
         actKernelRangeMetadata.st_other = STV_DEFAULT;
         actKernelRangeMetadata.st_shndx = 0;
-        actKernelRangeMetadata.st_value = reinterpret_cast<uint64_t>(metadata);
+        actKernelRangeMetadata.st_value = static_cast<uint64_t>(metadata);
         actKernelRangeMetadata.st_size = 0;
         actKernelRangeMetadata.st_name = 0;
 
         symTab_.push_back(actKernelRangeMetadata);
-        stringContainers_.push_back("program.ActKernelRange.cmx.0.0");
+        stringContainers_.push_back(std::string("program.ActKernelRange.cmx.0.0"));
 
         metadata += nn_public::VPU_KERNEL_RANGE_COUNT * sizeof(nn_public::VpuActKernelRange);
     }
@@ -114,12 +116,12 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
         actKernelInvocationMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
         actKernelInvocationMetadata.st_other = STV_DEFAULT;
         actKernelInvocationMetadata.st_shndx = 0;
-        actKernelInvocationMetadata.st_value = reinterpret_cast<uint64_t>(metadata);
+        actKernelInvocationMetadata.st_value = static_cast<uint64_t>(metadata);
         actKernelInvocationMetadata.st_size = 0;
         actKernelInvocationMetadata.st_name = 0;
 
         symTab_.push_back(actKernelInvocationMetadata);
-        stringContainers_.push_back("program.ActKernelInvocation.cmx.0.0");
+        stringContainers_.push_back(std::string("program.ActKernelInvocation.cmx.0.0"));
 
         metadata += nn_public::VPU_KERNEL_INVO_COUNT * sizeof(nn_public::VpuActKernelInvocation);
     }
@@ -131,12 +133,12 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
         dmaDDRMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
         dmaDDRMetadata.st_other = STV_DEFAULT;
         dmaDDRMetadata.st_shndx = 0;
-        dmaDDRMetadata.st_value = reinterpret_cast<uint64_t>(metadata);
+        dmaDDRMetadata.st_value = static_cast<uint64_t>(metadata);
         dmaDDRMetadata.st_size = 0;
         dmaDDRMetadata.st_name = 0;
 
         symTab_.push_back(dmaDDRMetadata);
-        stringContainers_.push_back("program.DMA.cmx.0.0");
+        stringContainers_.push_back(std::string("program.DMA.cmx.0.0"));
 
         // metadata buffers sizes for DMA tasks are hard-coded to the same value as in
         // resolve-mapped-inference-task-locations (VPUx compiler)
@@ -153,12 +155,12 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
         dmaCMXMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
         dmaCMXMetadata.st_other = STV_DEFAULT;
         dmaCMXMetadata.st_shndx = 0;
-        dmaCMXMetadata.st_value = reinterpret_cast<uint64_t>(metadata);
+        dmaCMXMetadata.st_value = static_cast<uint64_t>(metadata);
         dmaCMXMetadata.st_size = 0;
         dmaCMXMetadata.st_name = 0;
 
         symTab_.push_back(dmaCMXMetadata);
-        stringContainers_.push_back("program.DMA.cmx.0.1");
+        stringContainers_.push_back(std::string("program.DMA.cmx.0.1"));
 
         // metadata buffers sizes for DMA tasks are hard-coded to the same value as in
         // resolve-mapped-inference-task-locations (VPUx compiler)
@@ -178,7 +180,7 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
         cmxWorkspace.st_name = 0;
 
         symTab_.push_back(cmxWorkspace);
-        stringContainers_.push_back("buffer.CMX_NN.0");
+        stringContainers_.push_back(std::string("buffer.CMX_NN.0"));
     }
 
     // For LNL we only have one symtab
