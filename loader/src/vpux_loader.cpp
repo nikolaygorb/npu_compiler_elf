@@ -22,9 +22,9 @@ const uint32_t LO_21_BIT_MASK = 0x001F'FFFF;
 
 template <typename T>
 void safeGet(T* dst, const T* src) {
-    VPUX_ELF_LOG(LogLevel::DEBUG, "copying to %p from %p amount %u",dst, src, sizeof(T));
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "copying to %p from %p amount %u",dst, src, sizeof(T));
     memcpy(reinterpret_cast<void*>(dst), reinterpret_cast<const void*>(src), sizeof(T));
-    VPUX_ELF_LOG(LogLevel::DEBUG, "copy done");
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "copy done");
     return;
 }
 
@@ -64,7 +64,7 @@ const auto VPU_64_BIT_Relocation = [](void *targetAddr, const elf::SymbolEntry &
                                       const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint64_t *>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t64Bit Reloc addr %p symval 0x%llx addnd %llu", addr, symVal, addend);
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t64Bit Reloc addr %p symval 0x%llx addnd %llu", addr, symVal, addend);
 
     *addr = symVal + addend;
 };
@@ -73,7 +73,7 @@ const auto VPU_64_BIT_OR_Relocation = [](void *targetAddr, const elf::SymbolEntr
                                          const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint64_t *>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t64Bit OR reloc, addr %p addrVal 0x%llx symVal 0x%llx addend %llu", addr, *addr,
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t64Bit OR reloc, addr %p addrVal 0x%llx symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
 
     *addr |= symVal + addend;
@@ -84,7 +84,7 @@ const auto VPU_64_BIT_LSHIFT_Relocation = [](void *targetAddr, const elf::Symbol
     (void)addend; // hush compiler warning;
     auto addr = reinterpret_cast<uint64_t *>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t64Bit LSHIFT reloc, addr %p addrVal 0x%llx symVal 0x%llx", addr, *addr, symVal);
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t64Bit LSHIFT reloc, addr %p addrVal 0x%llx symVal 0x%llx", addr, *addr, symVal);
 
     *addr <<= symVal;
 };
@@ -96,7 +96,7 @@ const auto VPU_DISP40_RTM_RELOCATION = [](void *targetAddr, const elf::SymbolEnt
     auto symSize = targetSym.st_size;
     uint64_t mask = 0xffffffffff;
     uint64_t maskedAddr = *addr & mask;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tDSIP40 reloc, addr %p symVal 0x%llx symSize %llu addend %llu", addr, symVal,
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tDSIP40 reloc, addr %p symVal 0x%llx symSize %llu addend %llu", addr, symVal,
                  symSize, addend);
 
     *addr |= (symVal + (addend * (maskedAddr & (symSize - 1)))) & mask;
@@ -106,7 +106,7 @@ const auto VPU_32_BIT_Relocation = [](void *targetAddr, const elf::SymbolEntry &
                                       const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint32_t *>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32Bit reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
 
     *addr = static_cast<uint32_t>(symVal + addend);
 };
@@ -116,7 +116,7 @@ const auto VPU_32_BIT_RTM_Relocation = [](void *targetAddr, const elf::SymbolEnt
     const auto addr = reinterpret_cast<uint32_t *>(targetAddr);
     auto symVal = targetSym.st_value;
     auto symSize = targetSym.st_size;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit RTM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32Bit RTM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
 
     *addr = static_cast<uint32_t>(symVal + (addend * (*addr & (symSize - 1))));
@@ -126,7 +126,7 @@ const auto VPU_32_BIT_SUM_Relocation = [](void *targetAddr, const elf::SymbolEnt
                                           const Elf_Sxword addend) -> void {
     const auto addr = reinterpret_cast<uint32_t *>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
 
     *addr += static_cast<uint32_t>(symVal + addend);
@@ -136,7 +136,7 @@ const auto VPU_32_MULTICAST_BASE_Relocation = [](void *targetAddr, const elf::Sy
                                                  const Elf_Sxword addend) -> void {
     const auto addr = reinterpret_cast<uint32_t *>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
 
     *addr = to_dpu_multicast_base(static_cast<uint32_t>(symVal + addend));
@@ -146,7 +146,7 @@ const auto VPU_32_MULTICAST_BASE_SUB_Relocation = [](void *targetAddr, const elf
                                                      const Elf_Sxword addend) -> void {
     const auto addr = reinterpret_cast<uint32_t *>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
 
     *addr = to_dpu_multicast_base(static_cast<uint32_t>(symVal + addend)) - *addr;
@@ -156,7 +156,7 @@ const auto VPU_DISP28_MULTICAST_OFFSET_Relocation = [](void *targetAddr, const e
                                                        const Elf_Sxword addend) -> void {
     const auto addr = reinterpret_cast<uint32_t *>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
 
     unsigned int offs[3] = {SLICE_LENGTH >> 4, SLICE_LENGTH >> 4,
@@ -172,7 +172,7 @@ const auto VPU_DISP4_MULTICAST_OFFSET_Relocation = [](void *targetAddr, const el
                                                       const Elf_Sxword addend) -> void {
     const auto addr = reinterpret_cast<uint32_t *>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
 
     unsigned int offs[3] = {SLICE_LENGTH >> 4, SLICE_LENGTH >> 4,
@@ -188,7 +188,7 @@ const auto VPU_LO_21_BIT_Relocation = [](void* targetAddr, const elf::SymbolEntr
                                                     const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tLow 21 bits reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tLow 21 bits reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
 
     auto patchAddr = static_cast<uint32_t>(symVal + addend) & LO_21_BIT_MASK;
     *addr &= ~LO_21_BIT_MASK;
@@ -199,7 +199,7 @@ const auto VPU_LO_21_BIT_SUM_Relocation = [](void* targetAddr, const elf::Symbol
                                                     const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit Masked SUM reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32Bit Masked SUM reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
 
     auto patchAddr = static_cast<uint32_t>(symVal + addend) & LO_21_BIT_MASK;
     *addr += patchAddr;
@@ -209,7 +209,7 @@ const auto VPU_LO_21_BIT_MULTICAST_BASE_Relocation = [](void* targetAddr, const 
                                                  const Elf_Sxword addend) -> void {
     const auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
 
     auto patchAddr = static_cast<uint32_t>(symVal + addend) & LO_21_BIT_MASK;
@@ -220,7 +220,7 @@ const auto VPU_16_BIT_LSB_17_RSHIFT_5_Relocation  = [](void* targetAddr, const e
                                                     const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t16Bit Reloc: Low 17 bits, rshift by 5 reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t16Bit Reloc: Low 17 bits, rshift by 5 reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
 
     const uint32_t mask = 0x0001'FFFF; // mask used to only keep last 17 bits
     const uint32_t lsb_16_mask = 0xFFFF;
@@ -233,7 +233,7 @@ const auto VPU_LO_21_BIT_RSHIFT_4_Relocation = [](void* targetAddr, const elf::S
                                                     const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tLow 21 bits, rshift 4 reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tLow 21 bits, rshift 4 reloc, addr %p symVal 0x%llx addend %llu", addr, symVal, addend);
 
     auto patchAddr = (static_cast<uint32_t>(symVal + addend) & LO_21_BIT_MASK) >> 4;
     *addr &= ~LO_21_BIT_MASK;
@@ -338,7 +338,7 @@ uint64_t VPUXLoader::getEntry() {
 void VPUXLoader::load() {
     VPUX_ELF_THROW_UNLESS(m_bufferManager, ArgsError, "null pointer passed for Buffer Manager");
 
-    VPUX_ELF_LOG(LogLevel::TRACE, "Starting LOAD process");
+    VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Starting LOAD process");
     auto numSections = m_reader->getSectionsNum();
 
     m_sectionToAddr.resize(numSections);
@@ -348,9 +348,9 @@ void VPUXLoader::load() {
     relocationSectionIndexes.reserve(numSections);
     m_jitRelocations.reserve(2);
 
-    VPUX_ELF_LOG(LogLevel::DEBUG, "Got elf with %zu sections", numSections);
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Got elf with %zu sections", numSections);
     for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
-        VPUX_ELF_LOG(LogLevel::DEBUG, "Solving section %zu", sectionCtr);
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Solving section %zu", sectionCtr);
 
         const auto &section = m_reader->getSection(sectionCtr);
 
@@ -363,10 +363,10 @@ void VPUXLoader::load() {
         auto sectionFlags = sectionHeader->sh_flags;
         auto action = searchAction->second;
 
-        VPUX_ELF_LOG(LogLevel::DEBUG, "    name  : %s", section.getName());
-        VPUX_ELF_LOG(LogLevel::DEBUG, "    type  : %u", sectionType);
-        VPUX_ELF_LOG(LogLevel::DEBUG, "    flags : 0x%llx", sectionFlags);
-        VPUX_ELF_LOG(LogLevel::DEBUG, "    action: %u", (uint32_t)action);
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "    name  : %s", section.getName());
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "    type  : %u", sectionType);
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "    flags : 0x%llx", sectionFlags);
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "    action: %u", (uint32_t)action);
 
         switch (action) {
         case Action::AllocateAndLoad: {
@@ -375,7 +375,7 @@ void VPUXLoader::load() {
                 break;
             }
 
-            VPUX_ELF_LOG(LogLevel::TRACE, "Allocate and loading %zu", sectionCtr);
+            VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Allocate and loading %zu", sectionCtr);
 
             auto sectionSize = sectionHeader->sh_size;
             auto sectionAlignment = sectionHeader->sh_addralign;
@@ -393,7 +393,7 @@ void VPUXLoader::load() {
             m_allocatedZones.push_back(devBuf);
             m_sectionToAddr[sectionCtr] = devBuf;
 
-            VPUX_ELF_LOG(LogLevel::DEBUG,"\tFor section %s Allocated %p of size  %llu and copied from %p to %p", section.getName(), devBuf.cpu_addr(), sectionSize, section.getData<uint8_t>() , section.getData<uint8_t>() + sectionSize);
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG,"\tFor section %s Allocated %p of size  %llu and copied from %p to %p", section.getName(), devBuf.cpu_addr(), sectionSize, section.getData<uint8_t>() , section.getData<uint8_t>() + sectionSize);
             break;
         }
 
@@ -403,7 +403,7 @@ void VPUXLoader::load() {
                 break;
             }
 
-            VPUX_ELF_LOG(LogLevel::TRACE, "Allocating %zu", sectionCtr);
+            VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Allocating %zu", sectionCtr);
 
             auto sectionSize = sectionHeader->sh_size;
             auto sectionAlignment = sectionHeader->sh_addralign;
@@ -414,70 +414,70 @@ void VPUXLoader::load() {
             m_allocatedZones.push_back(devBuf);
             m_sectionToAddr[sectionCtr] = devBuf;
 
-            VPUX_ELF_LOG(LogLevel::DEBUG,"\tFor section %s Allocated %p of size %llu", section.getName(), devBuf.cpu_addr(), sectionSize);
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG,"\tFor section %s Allocated %p of size %llu", section.getName(), devBuf.cpu_addr(), sectionSize);
             break;
         }
 
 
         case Action::Relocate: {
             if (sectionFlags & VPU_SHF_JIT) {
-                VPUX_ELF_LOG(LogLevel::DEBUG, "Registering JIT Relocation %zu", sectionCtr);
+                VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Registering JIT Relocation %zu", sectionCtr);
                 m_jitRelocations.push_back(static_cast<int>(sectionCtr));
             } else {
                 relocationSectionIndexes.push_back(static_cast<int>(sectionCtr));
-                VPUX_ELF_LOG(LogLevel::DEBUG, "Registering Relocation %zu", sectionCtr);
+                VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Registering Relocation %zu", sectionCtr);
             }
             break;
         }
 
         case Action::RegisterUserIO: {
-            VPUX_ELF_LOG(LogLevel::DEBUG, "Parsed symtab section with flags %llx", sectionFlags);
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Parsed symtab section with flags %llx", sectionFlags);
 
             if (sectionFlags & VPU_SHF_USERINPUT) {
                 VPUX_ELF_THROW_WHEN(m_userInputs.size(), SequenceError,
                                     "User inputs already read.... potential more than one input section?");
 
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu inputs", section.getEntriesNum() - 1);
+                VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRegistering %zu inputs", section.getEntriesNum() - 1);
                 registerUserIO(m_userInputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
             } else if (sectionFlags & VPU_SHF_USEROUTPUT) {
                 VPUX_ELF_THROW_WHEN(m_userOutputs.size(), SequenceError,
                                     "User outputs already read.... potential more than one output section?");
 
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu outputs", section.getEntriesNum() - 1);
+                VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRegistering %zu outputs", section.getEntriesNum() - 1);
                 registerUserIO(m_userOutputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
             } else if (sectionFlags & VPU_SHF_PROFOUTPUT) {
                 VPUX_ELF_THROW_WHEN(m_profOutputs.size(), SequenceError,
                                     "Profiling outputs already read.... potential more than one output section?");
 
-                VPUX_ELF_LOG(LogLevel::DEBUG, "\tRegistering %zu prof outputs", section.getEntriesNum() - 1);
+                VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRegistering %zu prof outputs", section.getEntriesNum() - 1);
                 registerUserIO(m_profOutputs, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
             }
             break;
         }
 
         case Action::RegisterNetworkMetadata: {
-            VPUX_ELF_LOG(LogLevel::DEBUG, "Parsing the network metadata");
-            VPUX_ELF_LOG(LogLevel::DEBUG, "Resource Requirements:");
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Parsing the network metadata");
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Resource Requirements:");
 
             // only getting the top of the section which contains a structure with resource requirements
             auto metadataPtr = section.getData<elf::NetworkMetadata>();
-            VPUX_ELF_LOG(LogLevel::DEBUG, "Addr of metadataPtr = %p",metadataPtr);
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Addr of metadataPtr = %p",metadataPtr);
             safeGet<elf::NetworkMetadata>(&m_networkMetadata, metadataPtr);
-            VPUX_ELF_LOG(LogLevel::DEBUG, "copy good");
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "copy good");
             // the number of available barriers is computed as follows:
             // numClusters - (to be used) platform specific
             // maxNumClustersForArch - platform specific
             // maxBarriersPerInference - platrofm specific
             // barriersPerCluster = maxBarriersPerInference / maxNumClustersForArch
             // nn_barriers = min(maxBarriersPerInference, barriersPerCluster * numClusters)
-            VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_barriers %hhu", m_networkMetadata.resource_requirements.nn_barriers_);
-            VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_count_ %hhu",
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tnn_barriers %hhu", m_networkMetadata.resource_requirements.nn_barriers_);
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tnn_slice_count_ %hhu",
                          m_networkMetadata.resource_requirements.nn_slice_count_);
 
             // not uesd:
-            VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tnn_slice_length_ %u",
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tnn_slice_length_ %u",
                          m_networkMetadata.resource_requirements.nn_slice_length_);
-            VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tddr_scratch_length_ %u",
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tddr_scratch_length_ %u",
                          m_networkMetadata.resource_requirements.ddr_scratch_length_);
             break;
         }
@@ -500,35 +500,35 @@ void VPUXLoader::load() {
 
     applyRelocations(relocationSectionIndexes);
 
-    VPUX_ELF_LOG(LogLevel::INFO, "Allocated %zu sections", m_allocatedZones.size());
-    VPUX_ELF_LOG(LogLevel::INFO, "Registered %zu inputs of sizes: ", m_userInputs.size());
+    VPUX_ELF_LOG(LogLevel::LOG_INFO, "Allocated %zu sections", m_allocatedZones.size());
+    VPUX_ELF_LOG(LogLevel::LOG_INFO, "Registered %zu inputs of sizes: ", m_userInputs.size());
     for (size_t inputCtr = 0; inputCtr < m_userInputs.size(); ++inputCtr) {
-        VPUX_ELF_LOG(LogLevel::INFO, "\t %zu : %zu", inputCtr, m_userInputs[inputCtr].size());
+        VPUX_ELF_LOG(LogLevel::LOG_INFO, "\t %zu : %zu", inputCtr, m_userInputs[inputCtr].size());
     }
-    VPUX_ELF_LOG(LogLevel::INFO, "Registered %zu outputs of sizes: ", m_userOutputs.size());
+    VPUX_ELF_LOG(LogLevel::LOG_INFO, "Registered %zu outputs of sizes: ", m_userOutputs.size());
     for (size_t outputCtr = 0; outputCtr < m_userOutputs.size(); ++outputCtr) {
-        VPUX_ELF_LOG(LogLevel::INFO, "\t %zu : %zu", outputCtr, m_userOutputs[outputCtr].size());
+        VPUX_ELF_LOG(LogLevel::LOG_INFO, "\t %zu : %zu", outputCtr, m_userOutputs[outputCtr].size());
     }
-    VPUX_ELF_LOG(LogLevel::INFO, "Registered %zu prof outputs of sizes: ", m_profOutputs.size());
+    VPUX_ELF_LOG(LogLevel::LOG_INFO, "Registered %zu prof outputs of sizes: ", m_profOutputs.size());
     for (size_t outputCtr = 0; outputCtr < m_profOutputs.size(); ++outputCtr) {
-        VPUX_ELF_LOG(LogLevel::INFO, "\t %zu : %zu", outputCtr, m_profOutputs[outputCtr].size());
+        VPUX_ELF_LOG(LogLevel::LOG_INFO, "\t %zu : %zu", outputCtr, m_profOutputs[outputCtr].size());
     }
 
     return;
 }
 
 void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
-    VPUX_ELF_LOG(LogLevel::TRACE, "apply relocations");
+    VPUX_ELF_LOG(LogLevel::LOG_TRACE, "apply relocations");
     for (const auto &relocationSectionIdx : relocationSectionIndexes) {
-        VPUX_ELF_LOG(LogLevel::DEBUG, "applying relocation section %u", relocationSectionIdx);
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "applying relocation section %u", relocationSectionIdx);
 
         const auto &relocSection = m_reader->getSection(relocationSectionIdx);
         auto relocations = relocSection.getData<elf::RelocationAEntry>();
         auto relocSecHdr = relocSection.getHeader();
         auto numRelocs = relocSection.getEntriesNum();
 
-        VPUX_ELF_LOG(LogLevel::DEBUG, "\tRelA section with %zu elements at addr %p", numRelocs, relocations);
-        VPUX_ELF_LOG(LogLevel::DEBUG, "\tRelA section info, link flags 0x%x %u 0x%llx", relocSecHdr->sh_info,
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRelA section with %zu elements at addr %p", numRelocs, relocations);
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRelA section info, link flags 0x%x %u 0x%llx", relocSecHdr->sh_info,
                      relocSecHdr->sh_link, relocSecHdr->sh_flags);
 
         // find the links to this relocation section
@@ -572,7 +572,7 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
         m_bufferManager->lock(targetSectionDevBuf);
         auto targetSectionAddr = targetSectionDevBuf.cpu_addr();
 
-        VPUX_ELF_LOG(LogLevel::DEBUG, "\tTargetsectionAddr %p", targetSectionAddr);
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tTargetsectionAddr %p", targetSectionAddr);
 
         // apply the actual relocations
         for (size_t relocIdx = 0; relocIdx < numRelocs; ++relocIdx) {
@@ -604,7 +604,7 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
 
                 size_t index = -1;
                 for(index = 0; index < m_symbolNames.size(); ++ index) {
-                    if(m_symbolNames[index].compare(sectionName) ==0) {
+                    if(m_symbolNames[index].compare(sectionName) == 0) {
                         break;
                     }
                 }
@@ -615,7 +615,7 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
 
             }
 
-            VPUX_ELF_LOG(LogLevel::DEBUG, "\t\tApplying Relocation at offset %llu symidx %u reltype %u addend %llu",
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tApplying Relocation at offset %llu symidx %u reltype %u addend %llu",
                          relOffset, relSymIdx, relType, addend);
 
             relocFunc((void *)relocationTargetAddr, targetSymbol, addend);
@@ -630,17 +630,17 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
 // TODO(E#30069) : a lot of shared logic with applyRelocations.... refactor to share code.... duplicate for WIP purposes
 void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer> &inputs, std::vector<DeviceBuffer> &outputs,
                                      std::vector<DeviceBuffer> &profiling) {
-    VPUX_ELF_LOG(LogLevel::TRACE, "apply JITrelocations");
+    VPUX_ELF_LOG(LogLevel::LOG_TRACE, "apply JITrelocations");
     for (const auto &relocationSectionIdx : m_jitRelocations) {
-        VPUX_ELF_LOG(LogLevel::DEBUG, "\tapplying JITrelocation section %u", relocationSectionIdx);
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tapplying JITrelocation section %u", relocationSectionIdx);
 
         const auto &relocSection = m_reader->getSection(relocationSectionIdx);
         auto relocations = relocSection.getData<elf::RelocationAEntry>();
         auto relocSecHdr = relocSection.getHeader();
         auto numRelocs = relocSection.getEntriesNum();
 
-        VPUX_ELF_LOG(LogLevel::DEBUG, "\tJitRelA section with %zu elements at addr %p", numRelocs, relocations);
-        VPUX_ELF_LOG(LogLevel::DEBUG, "\tJitRelA section info, link flags 0x%x %u 0x%llx", relocSecHdr->sh_info,
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tJitRelA section with %zu elements at addr %p", numRelocs, relocations);
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tJitRelA section info, link flags 0x%x %u 0x%llx", relocSecHdr->sh_info,
                      relocSecHdr->sh_link, relocSecHdr->sh_flags);
 
         auto symTabIdx = relocSecHdr->sh_link;
@@ -657,7 +657,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer> &inputs, std::vec
         auto symTabSize = symTabSection.getEntriesNum();
         auto symTabs = symTabSection.getData<elf::SymbolEntry>();
 
-        VPUX_ELF_LOG(LogLevel::DEBUG, "\tSymTabIdx %u symTabSize %zu at %p", symTabIdx, symTabSize, symTabs);
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tSymTabIdx %u symTabSize %zu at %p", symTabIdx, symTabSize, symTabs);
 
         auto relocSecFlags = relocSecHdr->sh_flags;
         auto getUserAddrs = [&]() -> ArrayRef<DeviceBuffer> {
@@ -692,11 +692,11 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer> &inputs, std::vec
         m_bufferManager->lock(targetSectionDevBuf);
         auto targetSectionAddr = targetSectionDevBuf.cpu_addr();
 
-        VPUX_ELF_LOG(LogLevel::DEBUG, "\t targetSectionAddr %p", targetSectionAddr);
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t targetSectionAddr %p", targetSectionAddr);
 
         // apply the actual relocations
         for (size_t relocIdx = 0; relocIdx < numRelocs; ++relocIdx) {
-            VPUX_ELF_LOG(LogLevel::DEBUG, "\t Solving Reloc at %p %zu", relocations, relocIdx);
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t Solving Reloc at %p %zu", relocations, relocIdx);
 
             const elf::RelocationAEntry &relocation = relocations[relocIdx];
 
@@ -705,7 +705,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer> &inputs, std::vec
             auto relType = elf64RType(relocation.r_info);
             auto addend = relocation.r_addend;
 
-            VPUX_ELF_LOG(LogLevel::DEBUG, "\t\t applying Reloc offset symidx reltype addend %llu %u %u %llu", offset,
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t applying Reloc offset symidx reltype addend %llu %u %u %llu", offset,
                          symIdx, relType, addend);
             auto reloc = relocationMap.find(static_cast<RelocationType>(relType));
             VPUX_ELF_THROW_WHEN(reloc == relocationMap.end() || reloc->second == nullptr, RelocError,
@@ -714,7 +714,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer> &inputs, std::vec
             auto relocFunc = reloc->second;
             auto targetAddr = targetSectionAddr + offset;
 
-            VPUX_ELF_LOG(LogLevel::DEBUG, "\t targetsectionAddr %p offs %llu result %p userAddr 0x%x symIdx %u",
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t targetsectionAddr %p offs %llu result %p userAddr 0x%x symIdx %u",
                          targetSectionAddr, offset, targetAddr, (uint32_t)userAddrs[symIdx - 1].vpu_addr(), symIdx - 1);
 
             elf::SymbolEntry origSymbol = symTabs[symIdx];
@@ -741,7 +741,7 @@ ArrayRef<DeviceBuffer> VPUXLoader::getAllocatedBuffers() const {
 void VPUXLoader::registerUserIO(details::FixedVector<DeviceBuffer> &userIO, const elf::SymbolEntry *symbols,
                                 size_t symbolCount) const {
     if (symbolCount <= 1) {
-        VPUX_ELF_LOG(LogLevel::WARN, "Have a USER_IO symbols section with no symbols");
+        VPUX_ELF_LOG(LogLevel::LOG_WARN, "Have a USER_IO symbols section with no symbols");
         return;
     }
 

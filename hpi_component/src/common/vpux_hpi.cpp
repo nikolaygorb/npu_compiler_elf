@@ -96,7 +96,7 @@ HostParsedInference::HostParsedInference(BufferManager *bufferMgr, AccessManager
     ArchKind arch = readArchKind(accessMgr);
     resRequirements = readResourcesFromElf(accessMgr);
 
-    VPUX_ELF_LOG(LogLevel::DEBUG, "Creating specialized HPI for arch %u", arch);
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Creating specialized HPI for arch %u", arch);
 
     // TODO: EISW-79344
     std::unique_ptr<HostParsedInferenceCommon> obj;
