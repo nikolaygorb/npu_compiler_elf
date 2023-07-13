@@ -56,120 +56,21 @@ void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics& metrics) {
 }
 
 ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
-    uintptr_t metadata = nn_public::VPU_METADATA_STORAGE_ADDR;
-
     {
-        metadata = nn_public::align_storage(alignof(nn_public::VpuDPUInvariant), metadata);
+        const auto metadataStart = nn_public::align_storage(alignof(nn_public::VpuDPUInvariant), nn_public::VPU_METADATA_STORAGE_ADDR);
 
-        SymbolEntry dpuInvariantMetadata;
-        dpuInvariantMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
-        dpuInvariantMetadata.st_other = STV_DEFAULT;
-        dpuInvariantMetadata.st_shndx = 0;
-        dpuInvariantMetadata.st_value = static_cast<uint64_t>(metadata);
+        SymbolEntry metadata;
+        metadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
+        metadata.st_other = STV_DEFAULT;
+        metadata.st_shndx = 0;
+        metadata.st_value = static_cast<uint64_t>(metadataStart);
         // TODO: What to write as size if amount of task in metadata buffer is defined by compiler?
         // Supposed to be unused? Applies to other symbols below as well
-        dpuInvariantMetadata.st_size = 0;
-        dpuInvariantMetadata.st_name = 0;
+        metadata.st_size = 0;
+        metadata.st_name = 0;
 
-        symTab_.push_back(dpuInvariantMetadata);
-        stringContainers_.push_back(std::string("program.DPUInvariant.cmx.0.0"));
-
-        metadata += nn_public::VPU_INVARIANT_COUNT * sizeof(nn_public::VpuDPUInvariant);
-    }
-
-    {
-        metadata = nn_public::align_storage(alignof(nn_public::VpuDPUVariant), metadata);
-
-        SymbolEntry dpuVariantMetadata;
-        dpuVariantMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
-        dpuVariantMetadata.st_other = STV_DEFAULT;
-        dpuVariantMetadata.st_shndx = 0;
-        dpuVariantMetadata.st_value = static_cast<uint64_t>(metadata);
-        dpuVariantMetadata.st_size = 0;
-        dpuVariantMetadata.st_name = 0;
-
-        symTab_.push_back(dpuVariantMetadata);
-        stringContainers_.push_back(std::string("program.DPUVariant.cmx.0.0"));
-
-        metadata += nn_public::VPU_VARIANT_COUNT * sizeof(nn_public::VpuDPUVariant);
-    }
-
-    {
-        metadata = nn_public::align_storage(alignof(nn_public::VpuActKernelRange), metadata);
-
-        SymbolEntry actKernelRangeMetadata;
-        actKernelRangeMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
-        actKernelRangeMetadata.st_other = STV_DEFAULT;
-        actKernelRangeMetadata.st_shndx = 0;
-        actKernelRangeMetadata.st_value = static_cast<uint64_t>(metadata);
-        actKernelRangeMetadata.st_size = 0;
-        actKernelRangeMetadata.st_name = 0;
-
-        symTab_.push_back(actKernelRangeMetadata);
-        stringContainers_.push_back(std::string("program.ActKernelRange.cmx.0.0"));
-
-        metadata += nn_public::VPU_KERNEL_RANGE_COUNT * sizeof(nn_public::VpuActKernelRange);
-    }
-
-    {
-        metadata = nn_public::align_storage(alignof(nn_public::VpuActKernelInvocation), metadata);
-
-        SymbolEntry actKernelInvocationMetadata;
-        actKernelInvocationMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
-        actKernelInvocationMetadata.st_other = STV_DEFAULT;
-        actKernelInvocationMetadata.st_shndx = 0;
-        actKernelInvocationMetadata.st_value = static_cast<uint64_t>(metadata);
-        actKernelInvocationMetadata.st_size = 0;
-        actKernelInvocationMetadata.st_name = 0;
-
-        symTab_.push_back(actKernelInvocationMetadata);
-        stringContainers_.push_back(std::string("program.ActKernelInvocation.cmx.0.0"));
-
-        metadata += nn_public::VPU_KERNEL_INVO_COUNT * sizeof(nn_public::VpuActKernelInvocation);
-    }
-
-    {
-        metadata = nn_public::align_storage(alignof(nn_public::VpuDMATask), metadata);
-
-        SymbolEntry dmaDDRMetadata;
-        dmaDDRMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
-        dmaDDRMetadata.st_other = STV_DEFAULT;
-        dmaDDRMetadata.st_shndx = 0;
-        dmaDDRMetadata.st_value = static_cast<uint64_t>(metadata);
-        dmaDDRMetadata.st_size = 0;
-        dmaDDRMetadata.st_name = 0;
-
-        symTab_.push_back(dmaDDRMetadata);
-        stringContainers_.push_back(std::string("program.DMA.cmx.0.0"));
-
-        // metadata buffers sizes for DMA tasks are hard-coded to the same value as in
-        // resolve-mapped-inference-task-locations (VPUx compiler)
-        // otherwise it must be written to the blob and extracted in Loader, passed here
-        // however we do not want to expose blob content details (mapped inference) to the loader
-        // E#81910
-        metadata += 32 * sizeof(nn_public::VpuDMATask);
-    }
-
-    {
-        metadata = nn_public::align_storage(alignof(nn_public::VpuDMATask), metadata);
-
-        SymbolEntry dmaCMXMetadata;
-        dmaCMXMetadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
-        dmaCMXMetadata.st_other = STV_DEFAULT;
-        dmaCMXMetadata.st_shndx = 0;
-        dmaCMXMetadata.st_value = static_cast<uint64_t>(metadata);
-        dmaCMXMetadata.st_size = 0;
-        dmaCMXMetadata.st_name = 0;
-
-        symTab_.push_back(dmaCMXMetadata);
-        stringContainers_.push_back(std::string("program.DMA.cmx.0.1"));
-
-        // metadata buffers sizes for DMA tasks are hard-coded to the same value as in
-        // resolve-mapped-inference-task-locations (VPUx compiler)
-        // otherwise it must be written to the blob and extracted in Loader, passed here
-        // however we do not want to expose blob content details (mapped inference) to the loader
-        // E#81910
-        metadata += 32 * sizeof(nn_public::VpuDMATask);
+        symTab_.push_back(metadata);
+        stringContainers_.push_back(std::string("program.metadata.buffers.cmx"));
     }
 
     {
