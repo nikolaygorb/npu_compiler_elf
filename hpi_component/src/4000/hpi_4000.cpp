@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: Apache 2.0
 //
 
+// clang-format off
 #include <vpux_elf/utils/utils.hpp>
 #include <vpux_elf/utils/log.hpp>
 #include <vpux_elf/utils/error.hpp>
@@ -16,6 +17,7 @@
 #include <string>
 #include <vector>
 #include <array>
+// clang-format on
 
 namespace elf {
 // TODO: EISW-79509
@@ -39,9 +41,9 @@ const std::array<float, nn_public::VPU_SCALABILITY_VALUES_PER_FREQ> byBWScales({
 // expected ticks (based on FRC @37.5MHz) an inference should take for a given DDR bandwidth.
 const std::array<uint64_t, nn_public::VPU_SCALABILITY_VALUES_PER_FREQ> byBWTicks({10UL, 12UL, 14UL, 16UL, 18UL});
 
-} // namespace
+}  // namespace
 
-void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics &metrics) {
+void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics& metrics) {
     metrics.bw_base = BW_BASE;
     metrics.bw_step = BW_STEP;
     metrics.freq_base = FREQ_BASE;
@@ -191,14 +193,14 @@ ArrayRef<std::string> HostParsedInference_4000::getSymbolNames() const {
     return ArrayRef<std::string>(stringContainers_);
 }
 
-DeviceBuffer HostParsedInference_4000::allocateHostParsedInference(BufferManager *bufferManager) {
-    return bufferManager->allocate(BufferSpecs(
-        DEFAULT_ALIGN, utils::alignUp(sizeof(nn_public::VpuHostParsedInference), DEFAULT_ALIGN), SHF_EXECINSTR));
+BufferSpecs HostParsedInference_4000::getParsedInferenceBufferSpecs() {
+    return BufferSpecs(DEFAULT_ALIGN, utils::alignUp(sizeof(nn_public::VpuHostParsedInference), DEFAULT_ALIGN),
+                       SHF_EXECINSTR);
 }
 
-void HostParsedInference_4000::setHostParsedInference(DeviceBuffer &devBuffer, uint64_t mapped_entry,
+void HostParsedInference_4000::setHostParsedInference(DeviceBuffer& devBuffer, uint64_t mapped_entry,
                                                       ResourceRequirements resReq) {
-    auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference *>(devBuffer.cpu_addr());
+    auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference*>(devBuffer.cpu_addr());
 
     hpi->resource_requirements_ = {};
     hpi->resource_requirements_.nn_slice_count_ = resReq.nn_slice_count_;
@@ -209,4 +211,4 @@ void HostParsedInference_4000::setHostParsedInference(DeviceBuffer &devBuffer, u
     hpi->mapped_.count = 1;
 }
 
-} // namespace elf
+}  // namespace elf
