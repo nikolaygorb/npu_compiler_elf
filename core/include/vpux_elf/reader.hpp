@@ -39,6 +39,8 @@ public:
         }
 
         size_t getEntriesNum() const {
+            VPUX_ELF_THROW_UNLESS(m_header->sh_entsize, SectionError,
+                                    "sh_entsize=0 represents a section that does not hold a table of fixed-size entries. This feature is not suported.")
             return static_cast<size_t>(m_header->sh_size / m_header->sh_entsize);
         }
 

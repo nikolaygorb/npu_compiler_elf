@@ -345,7 +345,7 @@ VPUXLoader::~VPUXLoader() {
 }
 
 uint64_t VPUXLoader::getEntry() {
-    // this is very very temporary version
+    // this is very very temporary version EISW-73309
     auto numSections = m_reader->getSectionsNum();
 
     for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
@@ -605,6 +605,9 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
 
             auto relOffset = relocation.r_offset;
             auto relSymIdx = elf64RSym(relocation.r_info);
+
+            VPUX_ELF_THROW_WHEN(relSymIdx > m_runtimeSymTabs.size(), RelocError, "SymTab index out of bounds!");
+
             auto relType = elf64RType(relocation.r_info);
             auto addend = relocation.r_addend;
 
@@ -730,6 +733,9 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
 
             auto offset = relocation.r_offset;
             auto symIdx = elf64RSym(relocation.r_info);
+
+            VPUX_ELF_THROW_WHEN(symIdx > m_runtimeSymTabs.size(), RelocError, "SymTab index out of bounds!");
+
             auto relType = elf64RType(relocation.r_info);
             auto addend = relocation.r_addend;
 

@@ -25,6 +25,10 @@ ElfDDRAccessManager::ElfDDRAccessManager(const uint8_t* blob, size_t size) {
 const uint8_t* ElfDDRAccessManager::read(const AccessorDescriptor& descriptor) {
     VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t offset: %llu, size: %llu, procFlags: %llu, alignment: %llu",
                  descriptor.offset, descriptor.size, descriptor.procFlags, descriptor.alignment);
+
+    VPUX_ELF_THROW_WHEN(descriptor.offset + descriptor.size > m_size, AccessError,
+                        "Offset out of bounds!");
+
     return m_blob + descriptor.offset;
 }
 
@@ -47,8 +51,8 @@ const uint8_t* ElfFSAccessManager::read(const AccessorDescriptor& descriptor) {
     VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t offset: %llu, size: %llu, procFlags: %llu, alignment: %llu",
                  descriptor.offset, descriptor.size, descriptor.procFlags, descriptor.alignment);
 
-    VPUX_ELF_THROW_WHEN(descriptor.size > m_size || (descriptor.offset + descriptor.size > m_size), ArgsError,
-                        "Invalid read specs requested");
+    VPUX_ELF_THROW_WHEN(descriptor.offset + descriptor.size > m_size, AccessError,
+                        "Offset out of bounds!");
 
     m_elfStream.seekg(descriptor.offset, m_elfStream.beg);
     m_elfStream.read(&m_readBuffer[descriptor.offset], descriptor.size);
