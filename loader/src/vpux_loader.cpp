@@ -559,13 +559,14 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
         auto symTabIdx = relocSecHdr->sh_link;
 
         // by convention, we will assume symTabIdx==VPU_RT_SYMTAB to be the "built-in" symtab
-        auto getSymTab = [&]() -> const SymbolEntry* {
+        auto getSymTab = [&](size_t &symTabEntries) -> const SymbolEntry* {
             if (symTabIdx == VPU_RT_SYMTAB) {
                 return m_runtimeSymTabs.data();
             }
 
             const auto& symTabSection = m_reader->getSectionNoData(symTabIdx);
             auto symTabSectionHdr = symTabSection.getHeader();
+            symTabEntries = symTabSection.getEntriesNum();
 
             VPUX_ELF_THROW_UNLESS(checkSectionType(symTabSectionHdr, elf::SHT_SYMTAB), RelocError,
                                   "Reloc section pointing to snon-symtab");
@@ -573,7 +574,8 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
             return symTabSection.getData<elf::SymbolEntry>();
         };
 
-        auto symTabs = getSymTab();
+        size_t symTabEntries = 0;
+        auto symTabs = getSymTab(symTabEntries);
 
         auto relocSecFlags = relocSecHdr->sh_flags;
         Elf_Word targetSectionIdx = 0;
@@ -606,7 +608,8 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
             auto relOffset = relocation.r_offset;
             auto relSymIdx = elf64RSym(relocation.r_info);
 
-            VPUX_ELF_THROW_WHEN(relSymIdx > m_runtimeSymTabs.size(), RelocError, "SymTab index out of bounds!");
+            VPUX_ELF_THROW_WHEN((relSymIdx > symTabEntries && symTabIdx != VPU_RT_SYMTAB) ||
+                                 (relSymIdx > m_runtimeSymTabs.size() && symTabIdx == VPU_RT_SYMTAB), RelocError, "SymTab index out of bounds!");
 
             auto relType = elf64RType(relocation.r_info);
             auto addend = relocation.r_addend;
@@ -734,7 +737,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
             auto offset = relocation.r_offset;
             auto symIdx = elf64RSym(relocation.r_info);
 
-            VPUX_ELF_THROW_WHEN(symIdx > m_runtimeSymTabs.size(), RelocError, "SymTab index out of bounds!");
+            VPUX_ELF_THROW_WHEN(symIdx > symTabSize, RelocError, "SymTab index out of bounds!");
 
             auto relType = elf64RType(relocation.r_info);
             auto addend = relocation.r_addend;
