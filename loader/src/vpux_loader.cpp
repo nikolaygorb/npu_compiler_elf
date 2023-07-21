@@ -608,6 +608,11 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
             auto relOffset = relocation.r_offset;
             auto relSymIdx = elf64RSym(relocation.r_info);
 
+            // there are two types of relocation that can be suported at this point
+            //    - special relocation that would use the runtime symbols
+            // received from the user
+            //    - relocations on the symbols defined in the symbol table inside the ELF file.
+            // In this case the section has a specific number of entries (need to use the getEntriesNum method of this section)
             VPUX_ELF_THROW_WHEN((relSymIdx > symTabEntries && symTabIdx != VPU_RT_SYMTAB) ||
                                  (relSymIdx > m_runtimeSymTabs.size() && symTabIdx == VPU_RT_SYMTAB), RelocError, "SymTab index out of bounds!");
 
