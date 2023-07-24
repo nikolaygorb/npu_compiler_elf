@@ -123,7 +123,12 @@ public:
 
         const auto secHeader = m_sectionHeadersStart + index;
         const auto name = m_sectionHeadersNames + secHeader->sh_name;
-        const auto data = m_accessor->read(AccessorDescriptor{secHeader->sh_offset, secHeader->sh_size, secHeader->sh_flags, secHeader->sh_addralign});
+        const auto data = m_accessor->read(AccessorDescriptor{secHeader->sh_offset,
+                                                              // EISW-73309 SHT_NOBITS sections can have a size greater than the file
+                                                              // which will cause offset out of bounds.
+                                                              secHeader->sh_type == SHT_NOBITS ? 0 : secHeader->sh_size,
+                                                              secHeader->sh_flags, secHeader->sh_addralign});
+
         auto section = Section(m_accessor, secHeader, name, data);
         m_sectionsCache[index] = section;
 

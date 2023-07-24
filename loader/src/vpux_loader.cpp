@@ -381,6 +381,10 @@ void VPUXLoader::load() {
     for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Solving section %zu", sectionCtr);
 
+        // EISW-73309
+        // Check type of section
+        // in case of SHT_NOBITS, section does not contain data.
+        // call getSectionNoData
         const auto& section = m_reader->getSection(sectionCtr);
 
         const auto sectionHeader = section.getHeader();
