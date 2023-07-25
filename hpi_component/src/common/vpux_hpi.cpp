@@ -20,6 +20,12 @@
 #include <hpi_4000.hpp>
 #endif
 
+//to be removed with EISW-88139:
+//temporary fix to support VPU5 arch
+#if defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)
+#include <hpi_4000.hpp>
+#endif
+
 #include <string.h>
 // clang-format on
 
@@ -58,7 +64,10 @@ static ResourceRequirements readResourcesFromElf(AccessManager* elfAccess) {
 }
 
 const static std::unordered_map<std::string, ArchKind> knownArch = {{"VPUX37XX", ArchKind::VPUX37XX},
-                                                                    {"VPUX40XX", ArchKind::VPUX40XX}};
+                                                                    {"VPUX40XX", ArchKind::VPUX40XX},
+                                                                    //to be removed with EISW-88139:
+                                                                    //temporary fix to support VPU5 arch
+                                                                    {"VPUX50XX", ArchKind::VPUX40XX}};
 
 static std::string readArchKind(AccessManager* elfAccess) {
     Reader<ELF_Bitness::Elf64> reader(elfAccess);
@@ -103,7 +112,10 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::
         archSpecificHPI = std::make_unique<HostParsedInference_3720>();
         break;
 #endif
-#if defined(CONFIG_TARGET_SOC_4000) || defined(HOST_BUILD)
+
+//to be updated with EISW-88139:
+//temporary fix to support VPU5 arch
+#if defined(CONFIG_TARGET_SOC_4000) || (CONFIG_TARGET_SOC_5000)|| defined(HOST_BUILD)
     case ArchKind::VPUX40XX:
         archSpecificHPI = std::make_unique<HostParsedInference_4000>();
         break;
