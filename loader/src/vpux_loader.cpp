@@ -418,7 +418,7 @@ void VPUXLoader::load() {
             }
             auto sharedDevBuf = m_bufferContainer.createSharedDeviceBuffer(
                     sectionCtr, BufferSpecs(sectionAlignment, sectionSize, sectionFlags),
-                    AllocatedDeviceBuffer::DataInfo::HAS_DATA, sharedInfo);
+                    AllocatedDeviceBuffer::DataInfo::ELF_HAS_DATA, sharedInfo);
             sharedDevBuf->loadWithLock(section.getData<uint8_t>(), sectionSize);
 
             VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tFor section %s Allocated %p of size  %llu and copied from %p to %p",

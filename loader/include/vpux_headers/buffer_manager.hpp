@@ -50,8 +50,8 @@ public:
     };
 
     enum class DataInfo {
-        HAS_DATA = 0,
-        NO_DATA,
+        ELF_HAS_DATA = 0,
+        ELF_NO_DATA,
     };
 
 private:
@@ -62,7 +62,7 @@ private:
     SharedInfo shared;
 
 public:
-    AllocatedDeviceBuffer(BufferManager* bManager, BufferSpecs bSpecs, DataInfo dataInfo = DataInfo::NO_DATA,
+    AllocatedDeviceBuffer(BufferManager* bManager, BufferSpecs bSpecs, DataInfo dataInfo = DataInfo::ELF_NO_DATA,
                           SharedInfo sharedInfo = SharedInfo::NOT_SHARED)
             : bufferSpecs(bSpecs) {
         VPUX_ELF_THROW_UNLESS(bManager, ArgsError, "Invalid BufferManager pointer");
@@ -97,7 +97,7 @@ public:
         return (shared == SharedInfo::IS_SHARED);
     }
     bool hasData() const {
-        return (data == DataInfo::HAS_DATA);
+        return (data == DataInfo::ELF_HAS_DATA);
     }
     void lock() {
         bufferManager->lock(devBuffer);
