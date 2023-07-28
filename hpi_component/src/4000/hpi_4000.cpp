@@ -70,7 +70,7 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
         metadata.st_name = 0;
 
         symTab_.push_back(metadata);
-        stringContainers_.push_back(std::string("program.metadata.buffers.cmx"));
+        stringContainers_.push_back(std::string("program.metadata.cmx"));
     }
 
     {
