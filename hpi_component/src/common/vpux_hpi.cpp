@@ -131,18 +131,12 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::
 static std::unique_ptr<VPUXLoader> getLoader(BufferManager* bufferMgr, AccessManager* accessMgr,
                                              HostParsedInferenceCommon& hpiCommon,
                                              const ResourceRequirements& resRequirements) {
-#if defined(CONFIG_TARGET_SOC_3720) || defined(HOST_BUILD)
-    // EISW-73555
-    auto loader = std::make_unique<VPUXLoader>(accessMgr, bufferMgr,
-                                               hpiCommon.getSymbolTable(resRequirements.nn_slice_count_));
-#endif
-#ifdef CONFIG_TARGET_SOC_4000
     // EISW-73555
     const auto symbolTable = hpiCommon.getSymbolTable(resRequirements.nn_slice_count_);
     const auto symbolNames = hpiCommon.getSymbolNames();
+    auto symTabOverrideMode = hpiCommon.getSymbolNames().size() == 0 ? false : true;
     auto loader =
-            std::make_unique<VPUXLoader>(accessMgr, bufferMgr, symbolTable, /*symTabOverrideMode=*/true, symbolNames);
-#endif
+            std::make_unique<VPUXLoader>(accessMgr, bufferMgr, symbolTable, symTabOverrideMode, symbolNames);
     return loader;
 }
 
