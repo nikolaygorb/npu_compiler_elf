@@ -98,7 +98,7 @@ private:
 
 public:
     VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, ArrayRef<SymbolEntry> runtimeSymTabs,
-               bool symTabOverrideMode = false, ArrayRef<std::string> symbolnames = ArrayRef<std::string>());
+               bool symTabOverrideMode = false, ArrayRef<elf::Elf_Word> symbolSectionTypes = ArrayRef<elf::Elf_Word>());
     VPUXLoader(const VPUXLoader& other);
     VPUXLoader(VPUXLoader&& other) = delete;
     VPUXLoader& operator=(const VPUXLoader&) = delete;
@@ -140,7 +140,7 @@ private:
 
     const bool m_symTabOverrideMode;
     const bool m_explicitAllocations;
-    ArrayRef<std::string> m_symbolNames;
+    ArrayRef<elf::Elf_Word> m_symbolSectionTypes;
 };
 
 }  // namespace elf

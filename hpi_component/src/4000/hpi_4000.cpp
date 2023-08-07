@@ -25,7 +25,7 @@ namespace elf {
 namespace {
 
 std::vector<SymbolEntry> symTab_;
-std::vector<std::string> stringContainers_;
+std::vector<elf::Elf_Word> secTypeContainers_;
 
 // Base of frequency values used in tables (in MHz).
 constexpr uint32_t FREQ_BASE = 700;
@@ -70,7 +70,7 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
         metadata.st_name = 0;
 
         symTab_.push_back(metadata);
-        stringContainers_.push_back(std::string("program.metadata.cmx"));
+        secTypeContainers_.push_back(elf::VPU_SHT_CMX_METADATA);
     }
 
     {
@@ -83,15 +83,15 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
         cmxWorkspace.st_name = 0;
 
         symTab_.push_back(cmxWorkspace);
-        stringContainers_.push_back(std::string("buffer.CMX_NN.0"));
+        secTypeContainers_.push_back(elf::VPU_SHT_CMX_WORKSPACE);
     }
 
     // For LNL we only have one symtab
     return ArrayRef<SymbolEntry>(symTab_);
 }
 
-ArrayRef<std::string> HostParsedInference_4000::getSymbolNames() const {
-    return ArrayRef<std::string>(stringContainers_);
+ArrayRef<elf::Elf_Word> HostParsedInference_4000::getSymbolSectionTypes() const {
+    return ArrayRef<elf::Elf_Word>(secTypeContainers_);
 }
 
 BufferSpecs HostParsedInference_4000::getParsedInferenceBufferSpecs() {

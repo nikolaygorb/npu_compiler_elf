@@ -118,6 +118,16 @@ constexpr Elf_Word R_VPU_LO_21_RSHIFT_4 = 15;
 // Dst = (S + A) >> 5
 constexpr Elf_Word R_VPU_32_RSHIFT_5 = 16;
 
+// Used for tile select relocations
+// Formula:
+// Dst |= (S + A) & ~B21_B26_MASK
+constexpr Elf_Word R_VPU_32_BIT_OR_B21_B26_UNSET = 17;
+
+// Used for tile select relocations
+// Formula:
+// Dst |= (S + A) & ~B21_B26_MASK
+constexpr Elf_Word R_VPU_64_BIT_OR_B21_B26_UNSET = 18;
+
 //
 // Symbol types
 //
@@ -128,8 +138,11 @@ constexpr uint8_t VPU_STT_ENTRY = STT_LOOS;
 // Section types
 //
 
-constexpr Elf_Word VPU_SHT_NETDESC   = 0x8aaaaaaa;
-constexpr Elf_Word VPU_SHT_PROF      = 0x8aaaaaab;
+constexpr Elf_Word VPU_SHT_NETDESC        = 0x8aaaaaaa;
+constexpr Elf_Word VPU_SHT_PROF           = 0x8aaaaaab;
+constexpr Elf_Word VPU_SHT_CMX_METADATA   = 0x8aaaaaac;
+constexpr Elf_Word VPU_SHT_CMX_WORKSPACE  = 0x8aaaaaad;
+
 //
 // Section flags
 //
