@@ -559,8 +559,13 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRelA section info, link flags 0x%x %u 0x%llx", relocSecHdr->sh_info,
                      relocSecHdr->sh_link, relocSecHdr->sh_flags);
 
-        // find the links to this relocation section
+        // At this point we assume that all the section indexes passed to this method
+        // are containing a section of sh_type == SHT_RELA. So, the sh_link
+        // must point only to a section header index of the associated symbol table or to the reserved
+        // symbol range of sections.
         auto symTabIdx = relocSecHdr->sh_link;
+        VPUX_ELF_THROW_UNLESS((symTabIdx < m_reader->getSectionsNum() ||
+                              (symTabIdx == VPU_RT_SYMTAB)) , RangeError, "sh_link exceeds the number of entries.")
 
         // by convention, we will assume symTabIdx==VPU_RT_SYMTAB to be the "built-in" symtab
         auto getSymTab = [&](size_t &symTabEntries) -> const SymbolEntry* {
@@ -685,7 +690,11 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tJitRelA section info, link flags 0x%x %u 0x%llx", relocSecHdr->sh_info,
                      relocSecHdr->sh_link, relocSecHdr->sh_flags);
 
+        // At this point we assume that all the section indexes passed to this method
+        // are containing a section of sh_type == SHT_RELA. So, the sh_link
+        // must point only to a section header index of the associated symbol table.
         auto symTabIdx = relocSecHdr->sh_link;
+        VPUX_ELF_THROW_UNLESS(symTabIdx < m_reader->getSectionsNum(), RangeError, "sh_link exceeds the number of entries.");
 
         // in JitRelocations case, we will expect to point to either "VPUX_USER_INPUT" or "VPUX_USER_INPUT" symtabs
         VPUX_ELF_THROW_WHEN(symTabIdx == VPU_RT_SYMTAB, RelocError, "JitReloc pointing to runtime symtab idx");
