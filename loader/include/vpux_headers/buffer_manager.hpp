@@ -38,7 +38,7 @@ public:
     /// @param devAddress - DeviceBuffer reference
     virtual void unlock(DeviceBuffer& devAddress) = 0;
     virtual size_t copy(DeviceBuffer& to, const uint8_t* from, size_t count) = 0;
-    virtual ~BufferManager(){};
+    virtual ~BufferManager() = default;
 };
 
 // TODO: comment what classes need to be public
@@ -75,7 +75,8 @@ public:
     }
     AllocatedDeviceBuffer(const AllocatedDeviceBuffer& other) = delete;
     AllocatedDeviceBuffer(const AllocatedDeviceBuffer&& other) = delete;
-    AllocatedDeviceBuffer operator=(const AllocatedDeviceBuffer& rhs) = delete;
+    AllocatedDeviceBuffer& operator=(const AllocatedDeviceBuffer& rhs) = delete;
+    AllocatedDeviceBuffer& operator=(const AllocatedDeviceBuffer&& rhs) = delete;
     ~AllocatedDeviceBuffer() {
         bufferManager->deallocate(devBuffer);
         bufferManager = nullptr;

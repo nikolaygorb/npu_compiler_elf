@@ -56,6 +56,11 @@ public:
             }
         }
     }
+    DeviceBufferContainer(const DeviceBufferContainer&&);
+    DeviceBufferContainer& operator=(const DeviceBufferContainer&) = delete;
+    DeviceBufferContainer& operator=(const DeviceBufferContainer&&) = delete;
+
+    ~DeviceBufferContainer() = default;
 
     template <typename... BufferArgs>
     SharedPtrT createSharedDeviceBuffer(uint64_t index, BufferArgs... args) {
@@ -96,6 +101,8 @@ public:
                bool symTabOverrideMode = false, ArrayRef<std::string> symbolnames = ArrayRef<std::string>());
     VPUXLoader(const VPUXLoader& other);
     VPUXLoader(VPUXLoader&& other) = delete;
+    VPUXLoader& operator=(const VPUXLoader&) = delete;
+    VPUXLoader& operator=(const VPUXLoader&&) = delete;
     ~VPUXLoader();
 
     uint64_t getEntry();

@@ -58,6 +58,10 @@ private:
 class ElfFSAccessManager : public AccessManager {
 public:
     ElfFSAccessManager(const std::string& elfFileName);
+    ElfFSAccessManager(const ElfFSAccessManager&) = delete;
+    ElfFSAccessManager(const ElfFSAccessManager&&) = delete;
+    ElfFSAccessManager& operator=(const ElfFSAccessManager&) = delete;
+    ElfFSAccessManager& operator=(const ElfFSAccessManager&&) = delete;
 
     const uint8_t* read(const AccessorDescriptor& descriptor) override;
 
