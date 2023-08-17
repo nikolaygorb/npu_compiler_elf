@@ -249,11 +249,11 @@ const auto VPU_32_RSHIFT_5_Relocation = [](void* targetAddr, const elf::SymbolEn
                                            const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tRshift 5 reloc, addr %p symVal 0x%llx addend %llu", addr,
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tRshift 5 reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
 
-    auto patchAddr = static_cast<uint32_t>(symVal + addend)  >> 5;
-    *addr |= patchAddr;
+    auto patchAddr = static_cast<uint32_t>(symVal + addend) >> 5;
+    *addr = patchAddr;
 };
 
 }  // namespace
