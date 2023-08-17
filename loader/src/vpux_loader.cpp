@@ -245,6 +245,17 @@ const auto VPU_LO_21_BIT_RSHIFT_4_Relocation = [](void* targetAddr, const elf::S
     *addr |= patchAddr;
 };
 
+const auto VPU_32_RSHIFT_5_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                           const Elf_Sxword addend) -> void {
+    auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tRshift 5 reloc, addr %p symVal 0x%llx addend %llu", addr,
+                 symVal, addend);
+
+    auto patchAddr = static_cast<uint32_t>(symVal + addend)  >> 5;
+    *addr |= patchAddr;
+};
+
 }  // namespace
 
 const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
@@ -281,6 +292,7 @@ const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoade
         {R_VPU_LO_21_MULTICAST_BASE, VPU_LO_21_BIT_MULTICAST_BASE_Relocation},
         {R_VPU_16_LSB_17_RSHIFT_5, VPU_16_BIT_LSB_17_RSHIFT_5_Relocation},
         {R_VPU_LO_21_RSHIFT_4, VPU_LO_21_BIT_RSHIFT_4_Relocation},
+        {R_VPU_32_RSHIFT_5, VPU_32_RSHIFT_5_Relocation},
 };
 
 AccessorDescriptor::AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t procFlags, uint64_t alignment)

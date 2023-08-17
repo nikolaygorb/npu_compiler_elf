@@ -113,6 +113,11 @@ constexpr Elf_Word R_VPU_16_LSB_17_RSHIFT_5 = 14;
 // Dst = ((S + A) & LO_21_BIT_MASK) >> 4
 constexpr Elf_Word R_VPU_LO_21_RSHIFT_4 = 15;
 
+// Originalted from hwp_cmx_mem_addr field of DPU Invariant
+// Formula:
+// Dst = (S + A) >> 5
+constexpr Elf_Word R_VPU_32_RSHIFT_5 = 16;
+
 //
 // Symbol types
 //
