@@ -11,6 +11,8 @@ set(LIB_NAME vpux_elf)
 
 project(${LIB_NAME})
 
+include( ./cmake/FindFirmwareHeaders.cmake )
+
 include(TestBigEndian)
 TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
 if(IS_BIG_ENDIAN)
@@ -44,6 +46,11 @@ target_link_options(${LIB_NAME} PRIVATE
     $<$<CONFIG:Release>:${UMD_LINKER_OPTIONS_RELEASE}>
     $<$<CONFIG:Debug>:${UMD_LINKER_OPTIONS_DEBUG}>
     $<$<CONFIG:RelWithDebInfo>:${UMD_LINKER_OPTIONS_RELEASE}>)
+
+# Add external deps
+if(EXTERNAL_DEPS)
+    target_link_libraries(${LIB_NAME} PUBLIC ${EXTERNAL_DEPS})
+endif(EXTERNAL_DEPS)
 
 if(NOT BUILD_SHARED_LIBS)
     install(TARGETS ${LIB_NAME}
