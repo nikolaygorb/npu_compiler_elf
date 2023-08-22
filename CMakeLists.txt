@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 
 include( ./cmake/compiler_linker_options.cmake )
 
-set(LIB_NAME vpux_elf)
+set(LIB_NAME npu_elf)
 
 project(${LIB_NAME})
 
