@@ -50,6 +50,15 @@ target_link_options(${LIB_NAME} PRIVATE
 # Add external deps
 if(EXTERNAL_DEPS)
     target_link_libraries(${LIB_NAME} PUBLIC ${EXTERNAL_DEPS})
+    add_subdirectory(loader)
+    if (UNIX)
+        # we need for fPIC flags because `vpux_elf` is used for dynamic libraries linkage.
+        # it seems that this option is set implicitly somewhere due to compile flags overriding...
+        # Since `vpux-elf` is expected to be a standalone submodule, we add this option by a purpose
+        target_compile_options(${LIB_NAME} PRIVATE
+                                                -fpermissive
+                                                -fPIC)
+    endif()
 endif(EXTERNAL_DEPS)
 
 if(NOT BUILD_SHARED_LIBS)
