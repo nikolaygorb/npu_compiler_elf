@@ -23,10 +23,19 @@ list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/example/.*")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS} ${SOURCES})
 
 add_library(${LIB_NAME} STATIC ${SOURCES})
+add_library(vpux_elf STATIC ${SOURCES})
 
 target_compile_definitions(${LIB_NAME} PUBLIC HOST_BUILD)
+target_compile_definitions(vpux_elf PUBLIC HOST_BUILD)
 
 target_include_directories(${LIB_NAME} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/loader/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/3720>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/4000>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/common>)
+
+target_include_directories(vpux_elf PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/loader/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/3720>
@@ -39,14 +48,24 @@ target_compile_options(${LIB_NAME} PRIVATE
     $<$<CONFIG:Debug>:${UMD_COMPILER_OPTIONS_DEBUG}>
     $<$<CONFIG:RelWithDebInfo>:${UMD_COMPILER_OPTIONS_RELEASE}>)
 
+target_compile_options(vpux_elf PRIVATE
+    $<$<CONFIG:Release>:${UMD_COMPILER_OPTIONS_RELEASE}>
+    $<$<CONFIG:Debug>:${UMD_COMPILER_OPTIONS_DEBUG}>
+    $<$<CONFIG:RelWithDebInfo>:${UMD_COMPILER_OPTIONS_RELEASE}>)
+
 # Set linker options
 target_link_options(${LIB_NAME} PRIVATE
     $<$<CONFIG:Release>:${UMD_LINKER_OPTIONS_RELEASE}>
     $<$<CONFIG:Debug>:${UMD_LINKER_OPTIONS_DEBUG}>
     $<$<CONFIG:RelWithDebInfo>:${UMD_LINKER_OPTIONS_RELEASE}>)
 
+target_link_options(vpux_elf PRIVATE
+    $<$<CONFIG:Release>:${UMD_LINKER_OPTIONS_RELEASE}>
+    $<$<CONFIG:Debug>:${UMD_LINKER_OPTIONS_DEBUG}>
+    $<$<CONFIG:RelWithDebInfo>:${UMD_LINKER_OPTIONS_RELEASE}>)
+
 if(NOT BUILD_SHARED_LIBS)
-    install(TARGETS ${LIB_NAME}
+    install(TARGETS ${LIB_NAME} vpux_elf
             RUNTIME DESTINATION ${IE_CPACK_RUNTIME_PATH} COMPONENT ${VPUX_PLUGIN_COMPONENT}
             ARCHIVE DESTINATION ${IE_CPACK_ARCHIVE_PATH} COMPONENT ${VPUX_PLUGIN_COMPONENT}
             LIBRARY DESTINATION ${IE_CPACK_LIBRARY_PATH} COMPONENT ${VPUX_PLUGIN_COMPONENT})
