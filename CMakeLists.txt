@@ -42,6 +42,12 @@ target_include_directories(vpux_elf PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/4000>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/common>)
 
+if (DEFINED IE_MAIN_VPUX_PLUGIN_SOURCE_DIR)
+    target_include_directories(vpux_elf PUBLIC
+        "${IE_MAIN_VPUX_PLUGIN_SOURCE_DIR}/src/vpux_compiler/include/vpux/compiler/dialect/VPU37XX"
+        "${IE_MAIN_VPUX_PLUGIN_SOURCE_DIR}/src/vpux_compiler/include/vpux/compiler/dialect/VPU40XX")
+endif()
+
 # Set compiler options
 target_compile_options(${LIB_NAME} PRIVATE
     $<$<CONFIG:Release>:${UMD_COMPILER_OPTIONS_RELEASE}>
