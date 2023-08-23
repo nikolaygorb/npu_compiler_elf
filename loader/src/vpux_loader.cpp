@@ -628,7 +628,9 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
 
             auto relOffset = relocation.r_offset;
 
-            VPUX_ELF_THROW_WHEN(relOffset > targetSectionBuf->getBuffer().size(), RelocError, "RelocOffset outside of the section size");
+            // TODO(E#30069): shared logic with. Also required a long term solution
+            // for relocation checks E#91649
+            VPUX_ELF_THROW_UNLESS(relOffset < targetSectionBuf->getBuffer().size(), RelocError, "RelocOffset outside of the section size");
 
             auto relSymIdx = elf64RSym(relocation.r_info);
 
@@ -769,7 +771,9 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
 
             auto relOffset = relocation.r_offset;
 
-            VPUX_ELF_THROW_WHEN(relOffset > targetSectionBuf->getBuffer().size(), RelocError, "RelocOffset outside of the section size");
+            // TODO(E#30069): shared logic with. Also required a long term solution
+            // for relocation check E#91649
+            VPUX_ELF_THROW_UNLESS(relOffset < targetSectionBuf->getBuffer().size(), RelocError, "RelocOffset outside of the section size");
 
             auto symIdx = elf64RSym(relocation.r_info);
 
