@@ -11,7 +11,7 @@ set(LIB_NAME vpux_elf)
 
 project(${LIB_NAME})
 
-include( ./cmake/FindFirmwareHeaders.cmake )
+include(cmake/FindFirmwareHeaders.cmake)
 
 include(TestBigEndian)
 TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
