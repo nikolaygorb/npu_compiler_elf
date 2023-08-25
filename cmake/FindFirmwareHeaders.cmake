@@ -1,3 +1,8 @@
+#
+# Copyright (C) 2022 Intel Corporation.
+# SPDX-License-Identifier: Apache 2.0
+#
+
 if (FIRMWARE_PACKAGE_SEARCH_PATH)
     message(AUTHOR_WARNING "Experimental option is enabled, search headers in: ${FIRMWARE_PACKAGE_SEARCH_PATH}")
     list(APPEND CMAKE_PREFIX_PATH ${FIRMWARE_PACKAGE_SEARCH_PATH})

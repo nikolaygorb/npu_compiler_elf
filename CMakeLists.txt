@@ -55,9 +55,7 @@ if(EXTERNAL_DEPS)
         # we need for fPIC flags because `vpux_elf` is used for dynamic libraries linkage.
         # it seems that this option is set implicitly somewhere due to compile flags overriding...
         # Since `vpux-elf` is expected to be a standalone submodule, we add this option by a purpose
-        target_compile_options(${LIB_NAME} PRIVATE
-                                                -fpermissive
-                                                -fPIC)
+        set_property(TARGET ${LIB_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
     endif()
 endif(EXTERNAL_DEPS)
 
