@@ -11,6 +11,8 @@ set(LIB_NAME npu_elf)
 
 project(${LIB_NAME})
 
+include(cmake/FindFirmwareHeaders.cmake)
+
 include(TestBigEndian)
 TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
 if(IS_BIG_ENDIAN)
@@ -64,6 +66,20 @@ target_link_options(${LIB_NAME} PRIVATE
     $<$<CONFIG:Release>:${UMD_LINKER_OPTIONS_RELEASE}>
     $<$<CONFIG:Debug>:${UMD_LINKER_OPTIONS_DEBUG}>
     $<$<CONFIG:RelWithDebInfo>:${UMD_LINKER_OPTIONS_RELEASE}>)
+
+# Add external deps
+if(EXTERNAL_DEPS)
+    target_link_libraries(${LIB_NAME} PUBLIC ${EXTERNAL_DEPS})
+    target_link_libraries(vpux_elf PUBLIC ${EXTERNAL_DEPS})
+    add_subdirectory(loader)
+    if (UNIX)
+        # we need for fPIC flags because `npu_elf` is used for dynamic libraries linkage.
+        # it seems that this option is set implicitly somewhere due to compile flags overriding...
+        # Since `vpux-elf` is expected to be a standalone submodule, we add this option by a purpose
+        set_property(TARGET ${LIB_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
+        set_property(TARGET vpux_elf PROPERTY POSITION_INDEPENDENT_CODE ON)
+    endif()
+endif(EXTERNAL_DEPS)
 
 target_link_options(vpux_elf PRIVATE
     $<$<CONFIG:Release>:${UMD_LINKER_OPTIONS_RELEASE}>
