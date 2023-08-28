@@ -17,14 +17,13 @@ add_library(${TARGET_NAME} STATIC ${Loader_Library_SRCS})
 
 target_link_libraries(${TARGET_NAME}
     PUBLIC
-        vpux_elf
+        npu_elf
 )
 
-target_compile_definitions(vpux_elf PUBLIC HOST_BUILD)
-
+target_compile_definitions(npu_elf PUBLIC HOST_BUILD)
 
 #--------------------------------------------------------------------------------------------
-# vpux_elf lib + loader lib
+# npu_elf lib + loader lib
 #--------------------------------------------------------------------------------------------
 #
 # loader folder | -> include/ | -> vpux_headers/ -> 1 hpp
@@ -148,17 +147,17 @@ install(TARGETS VPUXLoader
         RUNTIME DESTINATION cid/vpux_elf/lib/RelWithDebInfo COMPONENT ${CID_COMPONENT})
 
 # elf lib
-install(TARGETS vpux_elf
+install(TARGETS npu_elf
         CONFIGURATIONS Release
         LIBRARY DESTINATION cid/vpux_elf/lib/Release COMPONENT ${CID_COMPONENT}
         ARCHIVE DESTINATION cid/vpux_elf/lib/Release COMPONENT ${CID_COMPONENT}
         RUNTIME DESTINATION cid/vpux_elf/lib/Release COMPONENT ${CID_COMPONENT})
-install(TARGETS vpux_elf
+install(TARGETS npu_elf
         CONFIGURATIONS Debug
         LIBRARY DESTINATION cid/vpux_elf/lib/Debug COMPONENT ${CID_COMPONENT}
         ARCHIVE DESTINATION cid/vpux_elf/lib/Debug COMPONENT ${CID_COMPONENT}
         RUNTIME DESTINATION cid/vpux_elf/lib/Debug COMPONENT ${CID_COMPONENT})
-install(TARGETS vpux_elf
+install(TARGETS npu_elf
         CONFIGURATIONS RelWithDebInfo
         LIBRARY DESTINATION cid/vpux_elf/lib/RelWithDebInfo COMPONENT ${CID_COMPONENT}
         ARCHIVE DESTINATION cid/vpux_elf/lib/RelWithDebInfo COMPONENT ${CID_COMPONENT}
