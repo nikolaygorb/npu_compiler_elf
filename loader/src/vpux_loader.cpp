@@ -627,6 +627,11 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
             const elf::RelocationAEntry& relocation = relocations[relocIdx];
 
             auto relOffset = relocation.r_offset;
+
+            // TODO(E#30069): shared logic with. Also required a long term solution
+            // for relocation checks E#91649
+            VPUX_ELF_THROW_UNLESS(relOffset < targetSectionBuf->getBuffer().size(), RelocError, "RelocOffset outside of the section size");
+
             auto relSymIdx = elf64RSym(relocation.r_info);
 
             // there are two types of relocation that can be suported at this point
@@ -764,7 +769,12 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
 
             const elf::RelocationAEntry& relocation = relocations[relocIdx];
 
-            auto offset = relocation.r_offset;
+            auto relOffset = relocation.r_offset;
+
+            // TODO(E#30069): shared logic with. Also required a long term solution
+            // for relocation check E#91649
+            VPUX_ELF_THROW_UNLESS(relOffset < targetSectionBuf->getBuffer().size(), RelocError, "RelocOffset outside of the section size");
+
             auto symIdx = elf64RSym(relocation.r_info);
 
             VPUX_ELF_THROW_WHEN(symIdx > symTabSize, RelocError, "SymTab index out of bounds!");
@@ -773,16 +783,16 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
             auto addend = relocation.r_addend;
 
             VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t applying Reloc offset symidx reltype addend %llu %u %u %llu",
-                         offset, symIdx, relType, addend);
+                         relOffset, symIdx, relType, addend);
             auto reloc = relocationMap.find(static_cast<RelocationType>(relType));
             VPUX_ELF_THROW_WHEN(reloc == relocationMap.end() || reloc->second == nullptr, RelocError,
                                 "Invalid relocation type detected");
 
             auto relocFunc = reloc->second;
-            auto targetAddr = targetSectionAddr + offset;
+            auto targetAddr = targetSectionAddr + relOffset;
 
             VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t targetsectionAddr %p offs %llu result %p userAddr 0x%x symIdx %u",
-                         targetSectionAddr, offset, targetAddr, (uint32_t)userAddrs[symIdx - 1].vpu_addr(), symIdx - 1);
+                         targetSectionAddr, relOffset, targetAddr, (uint32_t)userAddrs[symIdx - 1].vpu_addr(), symIdx - 1);
 
             elf::SymbolEntry origSymbol = symTabs[symIdx];
 
