@@ -344,7 +344,7 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
                 VPUX_ELF_THROW_UNLESS(sectionSize == sharedDevBufSize, RuntimeError,
                                       "Mismatch between section size and allocated device buffer size");
                 sharedDevBuf->loadWithLock(section.getData<uint8_t>(), sectionSize);
-                VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Loading with lock %lu bytes from %p to %p", sectionSize,
+                VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Loading with lock %llu bytes from %p to %p", sectionSize,
                              section.getData<uint8_t>(), sharedDevBuf->getBuffer().cpu_addr());
             }
         }
