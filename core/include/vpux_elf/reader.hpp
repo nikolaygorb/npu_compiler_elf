@@ -15,6 +15,7 @@
 #include <vpux_elf/utils/error.hpp>
 #include <vpux_elf/utils/utils.hpp>
 #include <vpux_elf/utils/log.hpp>
+#include <vpux_elf/types/vpu_extensions.hpp>
 
 #include <vpux_elf/accessor.hpp>
 
@@ -123,11 +124,18 @@ public:
 
         const auto secHeader = m_sectionHeadersStart + index;
         const auto name = m_sectionHeadersNames + secHeader->sh_name;
-        const auto data = m_accessor->read(AccessorDescriptor{secHeader->sh_offset,
-                                                              // EISW-73309 SHT_NOBITS sections can have a size greater than the file
-                                                              // which will cause offset out of bounds.
-                                                              secHeader->sh_type == SHT_NOBITS ? 0 : secHeader->sh_size,
-                                                              secHeader->sh_flags, secHeader->sh_addralign});
+        const auto data = m_accessor->read(
+            AccessorDescriptor{secHeader->sh_offset,
+                               // EISW-73309
+                               // SHT_NOBITS - sections can have a size greater than the file
+                               // which will cause offset out of bounds.
+                               // VPU_SHT_CMX_METADATA - does not contain data in the binary file, so avoid reading
+                               // VPU_SHT_CMX_WORKSPACE - does not contain data in the binary file, so avoid reading
+                               ((secHeader->sh_type == SHT_NOBITS) || (secHeader->sh_type == VPU_SHT_CMX_METADATA) ||
+                                secHeader->sh_type == VPU_SHT_CMX_WORKSPACE)
+                                   ? 0
+                                   : secHeader->sh_size,
+                               secHeader->sh_flags, secHeader->sh_addralign});
 
         auto section = Section(m_accessor, secHeader, name, data);
         m_sectionsCache[index] = section;
