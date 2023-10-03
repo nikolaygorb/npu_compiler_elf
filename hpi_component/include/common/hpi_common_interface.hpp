@@ -19,7 +19,7 @@ class HostParsedInferenceCommon {
 public:
     virtual ~HostParsedInferenceCommon() = default;
     virtual ArrayRef<SymbolEntry> getSymbolTable(uint8_t index) const = 0;
-    virtual ArrayRef<std::string> getSymbolNames() const;
+    virtual ArrayRef<elf::Elf_Word> getSymbolSectionTypes() const;
 
     /**
      * Get buffer specs of host parsed inference for specific architecture

@@ -19,6 +19,7 @@ namespace elf {
 namespace {
 
 const uint32_t LO_21_BIT_MASK = 0x001F'FFFF;
+const uint32_t B21_B26_MASK = 0x07E0'0000;
 
 template <typename T>
 void safeGet(T* dst, const T* src) {
@@ -256,6 +257,30 @@ const auto VPU_32_RSHIFT_5_Relocation = [](void* targetAddr, const elf::SymbolEn
     *addr = patchAddr;
 };
 
+const auto VPU_32_BIT_OR_B21_B26_UNSET_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                                  const Elf_Sxword addend) -> void {
+    auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32 bits OR reloc with b21-26 unset, addr %p, before value: %p symVal 0x%llx addend %llu", addr, *addr,
+                 symVal, addend);
+
+    uint32_t B21_B26_UNSET_MASK = ~B21_B26_MASK;
+    auto patchAddr = static_cast<uint32_t>(symVal + addend) & B21_B26_UNSET_MASK;
+    *addr |= patchAddr;
+};
+
+const auto VPU_64_BIT_OR_B21_B26_UNSET_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                                  const Elf_Sxword addend) -> void {
+    auto addr = reinterpret_cast<uint64_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t64 bits OR reloc with b21-26 unset, addr %p, before value: %p symVal 0x%llx addend %llu", addr, *addr,
+                 symVal, addend);
+
+    uint64_t B21_B26_UNSET_MASK = ~B21_B26_MASK;
+    auto patchAddr = static_cast<uint64_t>(symVal + addend) & B21_B26_UNSET_MASK;
+    *addr |= patchAddr;
+};
+
 }  // namespace
 
 const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
@@ -273,6 +298,8 @@ const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
         {SHT_DYNSYM, Action::Error},
         {VPU_SHT_NETDESC, Action::RegisterNetworkMetadata},
         {VPU_SHT_PROF, Action::None},
+        {VPU_SHT_CMX_METADATA, Action::None},
+        {VPU_SHT_CMX_WORKSPACE, Action::None},
 };
 
 const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoader::relocationMap = {
@@ -293,6 +320,8 @@ const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoade
         {R_VPU_16_LSB_17_RSHIFT_5, VPU_16_BIT_LSB_17_RSHIFT_5_Relocation},
         {R_VPU_LO_21_RSHIFT_4, VPU_LO_21_BIT_RSHIFT_4_Relocation},
         {R_VPU_32_RSHIFT_5, VPU_32_RSHIFT_5_Relocation},
+        {R_VPU_32_BIT_OR_B21_B26_UNSET, VPU_32_BIT_OR_B21_B26_UNSET_Relocation},
+        {R_VPU_64_BIT_OR_B21_B26_UNSET, VPU_64_BIT_OR_B21_B26_UNSET_Relocation},
 };
 
 AccessorDescriptor::AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t procFlags, uint64_t alignment)
@@ -300,7 +329,7 @@ AccessorDescriptor::AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t 
 }
 
 VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, ArrayRef<SymbolEntry> runtimeSymTabs,
-                       bool symTabOverrideMode, ArrayRef<std::string> symbolNames)
+                       bool symTabOverrideMode, ArrayRef<elf::Elf_Word> symbolSectionTypes)
         : m_bufferContainer(bufferManager),
           m_runtimeSymTabs(runtimeSymTabs),
           m_relocationSectionIndexes(std::make_shared<std::vector<int>>()),
@@ -311,7 +340,7 @@ VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, Ar
           m_networkMetadata(std::make_shared<NetworkMetadata>()),
           m_symTabOverrideMode(symTabOverrideMode),
           m_explicitAllocations(symTabOverrideMode),
-          m_symbolNames(symbolNames) {
+          m_symbolSectionTypes(symbolSectionTypes) {
     VPUX_ELF_THROW_UNLESS(bufferManager, ArgsError, "Invalid BufferManager pointer");
     m_bufferManager = bufferManager;
     m_reader = std::make_shared<Reader<ELF_Bitness::Elf64>>(accessor);
@@ -331,7 +360,7 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
           m_networkMetadata(other.m_networkMetadata),
           m_symTabOverrideMode(other.m_symTabOverrideMode),
           m_explicitAllocations(other.m_explicitAllocations),
-          m_symbolNames(other.m_symbolNames) {
+          m_symbolSectionTypes(other.m_symbolSectionTypes) {
     auto numSections = m_reader->getSectionsNum();
     for (size_t sectionIndex = 0; sectionIndex < numSections; ++sectionIndex) {
         if (m_bufferContainer.hasBufferAtIndex(sectionIndex)) {
@@ -614,13 +643,15 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
         VPUX_ELF_THROW_WHEN(targetSectionIdx == 0 || targetSectionIdx > m_reader->getSectionsNum(), RelocError,
                             "invalid target section from rela section");
 
+        auto targetSection = m_reader->getSection(targetSectionIdx);
+
         // at this point we assume that all sections have an address, to which we can apply a simple lookup
         // auto targetSectionDevBuf = m_sectionToAddr[targetSectionIdx];
         auto targetSectionBuf = m_bufferContainer.getFromIndex(targetSectionIdx);
         targetSectionBuf->lock();
         auto targetSectionAddr = targetSectionBuf->getBuffer().cpu_addr();
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Relocations are targeting section at addr %p named %s", targetSectionAddr, targetSection.getName());
 
-        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tTargetsectionAddr %p", targetSectionAddr);
 
         // apply the actual relocations
         for (size_t relocIdx = 0; relocIdx < numRelocs; ++relocIdx) {
@@ -665,11 +696,11 @@ void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
             if (symValue || symTabIdx == VPU_RT_SYMTAB) {
                 targetSymbol.st_value += symValue;
             } else {
-                std::string sectionName = m_reader->getSection(symbolTargetSectionIdx).getName();
+                auto sectionType = m_reader->getSection(symbolTargetSectionIdx).getHeader()->sh_type;
 
                 size_t index = -1;
-                for (index = 0; index < m_symbolNames.size(); ++index) {
-                    if (m_symbolNames[index].compare(sectionName) == 0) {
+                for (index = 0; index < m_symbolSectionTypes.size(); ++index) {
+                    if (m_symbolSectionTypes[index] == sectionType) {
                         break;
                     }
                 }

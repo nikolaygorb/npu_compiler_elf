@@ -7,7 +7,7 @@
 
 namespace elf {
 
-ArrayRef<std::string> HostParsedInferenceCommon::getSymbolNames() const {
+ArrayRef<elf::Elf_Word> HostParsedInferenceCommon::getSymbolSectionTypes() const {
     return {};
 }
 

@@ -133,10 +133,10 @@ static std::unique_ptr<VPUXLoader> getLoader(BufferManager* bufferMgr, AccessMan
                                              const ResourceRequirements& resRequirements) {
     // EISW-73555
     const auto symbolTable = hpiCommon.getSymbolTable(resRequirements.nn_slice_count_);
-    const auto symbolNames = hpiCommon.getSymbolNames();
-    auto symTabOverrideMode = hpiCommon.getSymbolNames().size() == 0 ? false : true;
+    const auto symbolSectionTypes = hpiCommon.getSymbolSectionTypes();
+    auto symTabOverrideMode = hpiCommon.getSymbolSectionTypes().size() == 0 ? false : true;
     auto loader =
-            std::make_unique<VPUXLoader>(accessMgr, bufferMgr, symbolTable, symTabOverrideMode, symbolNames);
+            std::make_unique<VPUXLoader>(accessMgr, bufferMgr, symbolTable, symTabOverrideMode, symbolSectionTypes);
     return loader;
 }
 
