@@ -116,7 +116,7 @@ constexpr Elf_Word R_VPU_LO_21_RSHIFT_4 = 15;
 // Originated from hwp_cmx_mem_addr field of DPU Invariant
 // Formula:
 // Dst = ((S + A) & ~B21_B26_MASK) >> 5
-constexpr Elf_Word R_VPU_32_BIT_CLEAR_B21_B26_RSHIFT_5 = 16;
+constexpr Elf_Word R_VPU_CMX_LOCAL_RSHIFT_5 = 16;
 
 // Used for tile select relocations
 // Formula:
