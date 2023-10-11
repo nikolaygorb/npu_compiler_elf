@@ -246,14 +246,15 @@ const auto VPU_LO_21_BIT_RSHIFT_4_Relocation = [](void* targetAddr, const elf::S
     *addr |= patchAddr;
 };
 
-const auto VPU_32_RSHIFT_5_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
-                                           const Elf_Sxword addend) -> void {
+const auto VPU_CMX_LOCAL_RSHIFT_5_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                                  const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tRshift 5 reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tCMX local rshift 5 reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
 
-    auto patchAddr = static_cast<uint32_t>(symVal + addend) >> 5;
+    uint32_t CMX_TILE_SELECT_MASK = ~B21_B26_MASK;
+    auto patchAddr = (static_cast<uint32_t>(symVal + addend) & CMX_TILE_SELECT_MASK) >> 5;
     *addr = patchAddr;
 };
 
@@ -319,7 +320,7 @@ const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoade
         {R_VPU_LO_21_MULTICAST_BASE, VPU_LO_21_BIT_MULTICAST_BASE_Relocation},
         {R_VPU_16_LSB_17_RSHIFT_5, VPU_16_BIT_LSB_17_RSHIFT_5_Relocation},
         {R_VPU_LO_21_RSHIFT_4, VPU_LO_21_BIT_RSHIFT_4_Relocation},
-        {R_VPU_32_RSHIFT_5, VPU_32_RSHIFT_5_Relocation},
+        {R_VPU_CMX_LOCAL_RSHIFT_5, VPU_CMX_LOCAL_RSHIFT_5_Relocation},
         {R_VPU_32_BIT_OR_B21_B26_UNSET, VPU_32_BIT_OR_B21_B26_UNSET_Relocation},
         {R_VPU_64_BIT_OR_B21_B26_UNSET, VPU_64_BIT_OR_B21_B26_UNSET_Relocation},
 };
