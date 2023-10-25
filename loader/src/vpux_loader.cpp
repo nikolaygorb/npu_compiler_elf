@@ -262,7 +262,7 @@ const auto VPU_32_BIT_OR_B21_B26_UNSET_Relocation = [](void* targetAddr, const e
                                                   const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32 bits OR reloc with b21-26 unset, addr %p, before value: %p symVal 0x%llx addend %llu", addr, *addr,
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32 bits OR reloc with b21-26 unset, addr %p, before value: 0x%x symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
 
     uint32_t B21_B26_UNSET_MASK = ~B21_B26_MASK;
@@ -274,7 +274,7 @@ const auto VPU_64_BIT_OR_B21_B26_UNSET_Relocation = [](void* targetAddr, const e
                                                   const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint64_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t64 bits OR reloc with b21-26 unset, addr %p, before value: %p symVal 0x%llx addend %llu", addr, *addr,
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t64 bits OR reloc with b21-26 unset, addr %p, before value: 0x%llx symVal 0x%llx addend %llu", addr, *addr,
                  symVal, addend);
 
     uint64_t B21_B26_UNSET_MASK = ~B21_B26_MASK;
