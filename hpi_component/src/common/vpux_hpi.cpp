@@ -225,19 +225,19 @@ DeviceBuffer HostParsedInference::getParsedInference() const {
     return parsedInference->getBuffer();
 }
 
-ArrayRef<DeviceBuffer> HostParsedInference::getAllocatedBuffers() const {
+std::vector<DeviceBuffer> HostParsedInference::getAllocatedBuffers() const {
     return loader->getAllocatedBuffers();
 }
 
-ArrayRef<DeviceBuffer> HostParsedInference::getInputBuffers() const {
+std::vector<DeviceBuffer> HostParsedInference::getInputBuffers() const {
     return loader->getInputBuffers();
 }
 
-ArrayRef<DeviceBuffer> HostParsedInference::getOutputBuffers() const {
+std::vector<DeviceBuffer> HostParsedInference::getOutputBuffers() const {
     return loader->getOutputBuffers();
 }
 
-ArrayRef<DeviceBuffer> HostParsedInference::getProfBuffers() const {
+std::vector<DeviceBuffer> HostParsedInference::getProfBuffers() const {
     return loader->getProfBuffers();
 }
 

@@ -7,7 +7,7 @@
 
 #include <memory>
 #include <vpux_elf/accessor.hpp>
-#include <vpux_headers/array_ref.hpp>
+#include <vector>
 #include <vpux_headers/buffer_manager.hpp>
 #include <vpux_headers/device_buffer.hpp>
 #include <vpux_headers/metadata.hpp>
@@ -27,10 +27,10 @@ public:
     HostParsedInference& operator=(HostParsedInference&& rhs);
 
     DeviceBuffer getParsedInference() const;
-    ArrayRef<DeviceBuffer> getAllocatedBuffers() const;
-    ArrayRef<DeviceBuffer> getInputBuffers() const;
-    ArrayRef<DeviceBuffer> getOutputBuffers() const;
-    ArrayRef<DeviceBuffer> getProfBuffers() const;
+    std::vector<DeviceBuffer> getAllocatedBuffers() const;
+    std::vector<DeviceBuffer> getInputBuffers() const;
+    std::vector<DeviceBuffer> getOutputBuffers() const;
+    std::vector<DeviceBuffer> getProfBuffers() const;
     NetworkMetadata getMetadata();
     void applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,
                           std::vector<DeviceBuffer>& profiling);

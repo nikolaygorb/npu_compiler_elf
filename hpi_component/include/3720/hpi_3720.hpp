@@ -12,7 +12,7 @@
 namespace elf {
 class HostParsedInference_3720 : public HostParsedInferenceCommon {
 public:
-    ArrayRef<SymbolEntry> getSymbolTable(uint8_t index) const override;
+    std::vector<SymbolEntry> getSymbolTable(uint8_t index) const override;
     BufferSpecs getParsedInferenceBufferSpecs() override;
     void setHostParsedInference(DeviceBuffer& devBuffer, uint64_t mapped_entry, ResourceRequirements resReq) override;
 };

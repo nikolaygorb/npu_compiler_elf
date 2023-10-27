@@ -6,7 +6,7 @@
 #pragma once
 
 #include <vpux_elf/types/symbol_entry.hpp>
-#include <vpux_headers/array_ref.hpp>
+#include <vector>
 #include <vpux_headers/buffer_manager.hpp>
 #include <vpux_headers/device_buffer.hpp>
 #include <vpux_headers/metadata.hpp>
@@ -18,8 +18,8 @@ constexpr auto DEFAULT_ALIGN = 64;
 class HostParsedInferenceCommon {
 public:
     virtual ~HostParsedInferenceCommon() = default;
-    virtual ArrayRef<SymbolEntry> getSymbolTable(uint8_t index) const = 0;
-    virtual ArrayRef<elf::Elf_Word> getSymbolSectionTypes() const;
+    virtual std::vector<SymbolEntry> getSymbolTable(uint8_t index) const = 0;
+    virtual std::vector<elf::Elf_Word> getSymbolSectionTypes() const;
 
     /**
      * Get buffer specs of host parsed inference for specific architecture

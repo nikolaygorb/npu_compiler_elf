@@ -10,7 +10,7 @@
 #include <vpux_elf/utils/error.hpp>
 #include <vpux_elf/types/section_header.hpp>
 #include <vpux_elf/types/vpu_extensions.hpp>
-#include <vpux_headers/array_ref.hpp>
+#include <vector>
 #include <hpi_4000.hpp>
 #include <api/vpu_nnrt_api_40xx.h>
 #include <api/vpu_cmx_info_40xx.h>
@@ -55,7 +55,7 @@ void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics& metrics) {
     }
 }
 
-ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
+std::vector<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
     {
         const auto metadataStart = nn_public::align_storage(alignof(nn_public::VpuDPUInvariant), nn_public::VPU_METADATA_STORAGE_ADDR);
 
@@ -87,11 +87,11 @@ ArrayRef<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
     }
 
     // For LNL we only have one symtab
-    return ArrayRef<SymbolEntry>(symTab_);
+    return symTab_;
 }
 
-ArrayRef<elf::Elf_Word> HostParsedInference_4000::getSymbolSectionTypes() const {
-    return ArrayRef<elf::Elf_Word>(secTypeContainers_);
+std::vector<elf::Elf_Word> HostParsedInference_4000::getSymbolSectionTypes() const {
+    return secTypeContainers_;
 }
 
 BufferSpecs HostParsedInference_4000::getParsedInferenceBufferSpecs() {

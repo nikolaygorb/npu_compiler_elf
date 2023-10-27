@@ -9,7 +9,7 @@
 #include <vpux_elf/utils/error.hpp>
 #include <vpux_elf/types/section_header.hpp>
 #include <vpux_elf/types/vpu_extensions.hpp>
-#include <vpux_headers/array_ref.hpp>
+#include <vector>
 #include <hpi_3720.hpp>
 #include <api/vpu_nnrt_api_37xx.h>
 #include <api/vpu_cmx_info_37xx.h>
@@ -51,7 +51,7 @@ static void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics& metri
     }
 }
 
-ArrayRef<SymbolEntry> HostParsedInference_3720::getSymbolTable(uint8_t index) const {
+std::vector<SymbolEntry> HostParsedInference_3720::getSymbolTable(uint8_t index) const {
     uint32_t inv_addr[] = {nn_public::METADATA0_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapSingle, inv_storage),
                            nn_public::METADATA0_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapDual0, inv_storage)};
 
@@ -102,7 +102,7 @@ ArrayRef<SymbolEntry> HostParsedInference_3720::getSymbolTable(uint8_t index) co
     // Return configuration of index -1, because the configuration list begins at 0
     // 0 - single tile
     // 1 - multi tile
-    return ArrayRef<SymbolEntry>(symTab_[index - 1], SPECIAL_SYMTAB_SIZE);
+    return std::vector<SymbolEntry>(symTab_[index - 1], symTab_[index - 1] + SPECIAL_SYMTAB_SIZE);
 }
 
 BufferSpecs HostParsedInference_3720::getParsedInferenceBufferSpecs() {

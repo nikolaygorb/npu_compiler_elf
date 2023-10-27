@@ -12,8 +12,8 @@
 namespace elf {
 class HostParsedInference_4000 : public HostParsedInferenceCommon {
 public:
-    ArrayRef<SymbolEntry> getSymbolTable(uint8_t index) const override;
-    ArrayRef<elf::Elf_Word> getSymbolSectionTypes() const override;
+    std::vector<SymbolEntry> getSymbolTable(uint8_t index) const override;
+    std::vector<elf::Elf_Word> getSymbolSectionTypes() const override;
     BufferSpecs getParsedInferenceBufferSpecs() override;
     void setHostParsedInference(DeviceBuffer& devBuffer, uint64_t mapped_entry, ResourceRequirements resReq) override;
 };

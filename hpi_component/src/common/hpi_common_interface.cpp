@@ -7,7 +7,7 @@
 
 namespace elf {
 
-ArrayRef<elf::Elf_Word> HostParsedInferenceCommon::getSymbolSectionTypes() const {
+std::vector<elf::Elf_Word> HostParsedInferenceCommon::getSymbolSectionTypes() const {
     return {};
 }
 

@@ -329,12 +329,12 @@ AccessorDescriptor::AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t 
         : offset(offset), size(size), procFlags(procFlags), alignment(alignment) {
 }
 
-VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, ArrayRef<SymbolEntry> runtimeSymTabs,
-                       bool symTabOverrideMode, ArrayRef<elf::Elf_Word> symbolSectionTypes)
+VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, const std::vector<SymbolEntry>& runtimeSymTabs,
+                       bool symTabOverrideMode, const std::vector<elf::Elf_Word>& symbolSectionTypes)
         : m_bufferContainer(bufferManager),
           m_runtimeSymTabs(runtimeSymTabs),
-          m_relocationSectionIndexes(std::make_shared<std::vector<int>>()),
-          m_jitRelocations(std::make_shared<std::vector<int>>()),
+          m_relocationSectionIndexes(std::make_shared<std::vector<std::size_t>>()),
+          m_jitRelocations(std::make_shared<std::vector<std::size_t>>()),
           m_userInputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_userOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_profOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
@@ -381,6 +381,50 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
     }
 
     applyRelocations(*m_relocationSectionIndexes);
+}
+
+VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other)
+{
+    if(this == &other)
+    {
+        return *this;
+    }
+
+    m_bufferManager = other.m_bufferManager;
+    m_reader = other.m_reader;
+    m_bufferContainer = other.m_bufferContainer;
+    m_runtimeSymTabs = other.m_runtimeSymTabs;
+    m_relocationSectionIndexes = other.m_relocationSectionIndexes;
+    m_jitRelocations = other.m_jitRelocations;
+    m_userInputsDescriptors = other.m_userInputsDescriptors;
+    m_userOutputsDescriptors = other.m_userOutputsDescriptors;
+    m_profOutputsDescriptors = other.m_profOutputsDescriptors;
+    m_networkMetadata = other.m_networkMetadata;
+    m_symTabOverrideMode = other.m_symTabOverrideMode;
+    m_explicitAllocations = other.m_explicitAllocations;
+    m_symbolSectionTypes = other.m_symbolSectionTypes;
+
+    auto numSections = m_reader->getSectionsNum();
+    for (size_t sectionIndex = 0; sectionIndex < numSections; ++sectionIndex) {
+        if (m_bufferContainer.hasBufferAtIndex(sectionIndex)) {
+            auto sharedDevBuf = m_bufferContainer.getFromIndex(sectionIndex);
+            if (sharedDevBuf->hasData() && !sharedDevBuf->isShared()) {
+                auto sharedDevBufSize = sharedDevBuf->getBufferSpecs().size;
+                auto section = m_reader->getSection(sectionIndex);
+                auto sectionSize = section.getHeader()->sh_size;
+
+                VPUX_ELF_THROW_UNLESS(sectionSize == sharedDevBufSize, RuntimeError,
+                                      "Mismatch between section size and allocated device buffer size");
+                sharedDevBuf->loadWithLock(section.getData<uint8_t>(), sectionSize);
+                VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Loading with lock %lu bytes from %p to %p", sectionSize,
+                             section.getData<uint8_t>(), sharedDevBuf->getBuffer().cpu_addr());
+            }
+        }
+    }
+
+    applyRelocations(*m_relocationSectionIndexes);
+
+    return *this;
 }
 
 VPUXLoader::~VPUXLoader() {
@@ -587,7 +631,7 @@ void VPUXLoader::load() {
     return;
 }
 
-void VPUXLoader::applyRelocations(ArrayRef<int> relocationSectionIndexes) {
+void VPUXLoader::applyRelocations(const std::vector<std::size_t> &relocationSectionIndexes) {
     VPUX_ELF_LOG(LogLevel::LOG_TRACE, "apply relocations");
     for (const auto& relocationSectionIdx : relocationSectionIndexes) {
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "applying relocation section %u", relocationSectionIdx);
@@ -760,16 +804,16 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tSymTabIdx %u symTabSize %zu at %p", symTabIdx, symTabSize, symTabs);
 
         auto relocSecFlags = relocSecHdr->sh_flags;
-        auto getUserAddrs = [&]() -> ArrayRef<DeviceBuffer> {
+        auto getUserAddrs = [&]() -> std::vector<DeviceBuffer> {
             if (relocSecFlags & VPU_SHF_USERINPUT) {
-                return ArrayRef<DeviceBuffer>(inputs);
+                return std::vector<DeviceBuffer>(inputs);
             } else if (relocSecFlags & VPU_SHF_USEROUTPUT) {
-                return ArrayRef<DeviceBuffer>(outputs);
+                return std::vector<DeviceBuffer>(outputs);
             } else if (relocSecFlags & VPU_SHF_PROFOUTPUT) {
-                return ArrayRef<DeviceBuffer>(profiling);
+                return std::vector<DeviceBuffer>(profiling);
             } else {
                 VPUX_ELF_THROW(RelocError, "Jit reloc section pointing neither to userInput nor userOutput");
-                return ArrayRef<DeviceBuffer>(outputs);
+                return std::vector<DeviceBuffer>(outputs);
             }
         };
 
@@ -843,8 +887,8 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
     }
 }
 
-ArrayRef<DeviceBuffer> VPUXLoader::getAllocatedBuffers() const {
-    return m_bufferContainer.getBuffersAsArrayRef();
+std::vector<DeviceBuffer> VPUXLoader::getAllocatedBuffers() const {
+    return m_bufferContainer.getBuffersAsVector();
 }
 
 void VPUXLoader::registerUserIO(std::vector<DeviceBuffer>& userIO, const elf::SymbolEntry* symbols,
@@ -863,16 +907,16 @@ void VPUXLoader::registerUserIO(std::vector<DeviceBuffer>& userIO, const elf::Sy
     }
 }
 
-ArrayRef<DeviceBuffer> VPUXLoader::getInputBuffers() const {
-    return ArrayRef<DeviceBuffer>(m_userInputsDescriptors->data(), m_userInputsDescriptors->size());
+std::vector<DeviceBuffer> VPUXLoader::getInputBuffers() const {
+    return *m_userInputsDescriptors.get();
 };
 
-ArrayRef<DeviceBuffer> VPUXLoader::getOutputBuffers() const {
-    return ArrayRef<DeviceBuffer>(m_userOutputsDescriptors->data(), m_userOutputsDescriptors->size());
+std::vector<DeviceBuffer> VPUXLoader::getOutputBuffers() const {
+    return *m_userOutputsDescriptors.get();
 };
 
-ArrayRef<DeviceBuffer> VPUXLoader::getProfBuffers() const {
-    return ArrayRef<DeviceBuffer>(m_profOutputsDescriptors->data(), m_profOutputsDescriptors->size());
+std::vector<DeviceBuffer> VPUXLoader::getProfBuffers() const {
+    return *m_profOutputsDescriptors.get();
 };
 
 bool VPUXLoader::checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const {
