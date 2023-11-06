@@ -23,10 +23,6 @@ namespace elf {
 // TODO: EISW-79509
 
 namespace {
-
-std::vector<SymbolEntry> symTab_;
-std::vector<elf::Elf_Word> secTypeContainers_;
-
 // Base of frequency values used in tables (in MHz).
 constexpr uint32_t FREQ_BASE = 700;
 // Step of frequency for each entry in tables (in MHz).
@@ -55,7 +51,10 @@ void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics& metrics) {
     }
 }
 
-std::vector<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
+HostParsedInference_4000::HostParsedInference_4000()
+{
+    symTab_.reserve(2);
+    secTypeContainers_.reserve(2);
     {
         const auto metadataStart = nn_public::align_storage(alignof(nn_public::VpuDPUInvariant), nn_public::VPU_METADATA_STORAGE_ADDR);
 
@@ -85,7 +84,9 @@ std::vector<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const
         symTab_.push_back(cmxWorkspace);
         secTypeContainers_.push_back(elf::VPU_SHT_CMX_WORKSPACE);
     }
+}
 
+std::vector<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
     // For LNL we only have one symtab
     return symTab_;
 }
