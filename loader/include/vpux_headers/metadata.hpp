@@ -17,7 +17,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <cstddef>
 
 namespace elf {
 
@@ -106,6 +105,7 @@ enum OVNodeType {
 
 struct VPUX_ALIGNED_STRUCT(8) TensorRef {
     float strides[MAX_TENSOR_REF_STRIDES];
+    uint64_t bit_strides[MAX_TENSOR_REF_STRIDES];
     uint32_t dimensions[MAX_TENSOR_REF_DIMS];
     uint8_t pad0_[4] = {0};
     TensorName name;
@@ -116,7 +116,7 @@ struct VPUX_ALIGNED_STRUCT(8) TensorRef {
     uint8_t pad1_[4] = {0};
 };
 
-static_assert(sizeof(TensorRef) == 352, "TensorRef size != 352");
+static_assert(sizeof(TensorRef) == 424, "TensorRef size != 424");
 static_assert(offsetof(TensorRef, name) % 8 == 0, "Alignment error");
 
 struct VPUX_ALIGNED_STRUCT(4) PreprocessingInfo {
@@ -186,7 +186,7 @@ struct VPUX_ALIGNED_STRUCT(8) NetworkMetadata {
     uint32_t pre_process_info_count = 0;
 };
 
-static_assert(sizeof(NetworkMetadata) == 627632, "NetworkMetadata size != 627632");
+static_assert(sizeof(NetworkMetadata) == 639152, "NetworkMetadata size != 639152");
 static_assert(offsetof(NetworkMetadata, arch_name) % 8 == 0, "Alignment error");
 static_assert(offsetof(NetworkMetadata, blob_name) % 8 == 0, "Alignment error");
 static_assert(offsetof(NetworkMetadata, resource_requirements) % 4 == 0, "Alignment error");
