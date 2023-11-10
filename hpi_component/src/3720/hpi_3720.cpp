@@ -20,7 +20,6 @@ namespace elf {
 
 static constexpr uint8_t N_TABS = nn_public::VPU_MAX_TILES;
 static constexpr size_t SPECIAL_SYMTAB_SIZE = 8;
-static SymbolEntry symTab_[N_TABS][SPECIAL_SYMTAB_SIZE];
 
 namespace {
 // Base of frequency values used in tables (in MHz).
@@ -52,6 +51,9 @@ static void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics& metri
 }
 
 std::vector<SymbolEntry> HostParsedInference_3720::getSymbolTable(uint8_t index) const {
+
+    SymbolEntry symTab_[N_TABS][SPECIAL_SYMTAB_SIZE];
+
     uint32_t inv_addr[] = {nn_public::METADATA0_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapSingle, inv_storage),
                            nn_public::METADATA0_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapDual0, inv_storage)};
 
