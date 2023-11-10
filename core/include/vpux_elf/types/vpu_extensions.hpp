@@ -128,6 +128,17 @@ constexpr Elf_Word R_VPU_32_BIT_OR_B21_B26_UNSET = 17;
 // Dst |= (S + A) & ~B21_B26_MASK
 constexpr Elf_Word R_VPU_64_BIT_OR_B21_B26_UNSET = 18;
 
+// Special Reloc for Variant to Invariant link
+// Formula:
+// Dst[13:15] = (((S + A) & 0x0001'FFFF) >> 5) << 16
+constexpr Elf_Word R_VPU_16_LSB_17_RSHIFT_5_LSHIFT_16 = 19;
+
+// Special Reloc for preemtion work around
+// Formula:
+// Dst[31:17] = ((((S + A) & 0x0001'FFFF) >> 5) & ~1) << 16
+// Dst[14] =    ((((S + A) & 0x0001'FFFF) >> 5) &  1) << 14
+constexpr Elf_Word R_VPU_16_PREEMTION_WA_LSB_17_RSHIFT_5_LSHIFT_CUSTOM = 20;
+
 //
 // Symbol types
 //
