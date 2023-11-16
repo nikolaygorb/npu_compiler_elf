@@ -137,7 +137,7 @@ constexpr Elf_Word R_VPU_16_LSB_17_RSHIFT_5_LSHIFT_16 = 19;
 // Formula:
 // Dst[31:17] = ((((S + A) & 0x0001'FFFF) >> 5) & ~1) << 16
 // Dst[14] =    ((((S + A) & 0x0001'FFFF) >> 5) &  1) << 14
-constexpr Elf_Word R_VPU_16_PREEMTION_WA_LSB_17_RSHIFT_5_LSHIFT_CUSTOM = 20;
+constexpr Elf_Word R_VPU_16_LSB_17_RSHIFT_5_LSHIFT_CUSTOM = 20;
 
 //
 // Symbol types

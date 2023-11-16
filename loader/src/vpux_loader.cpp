@@ -297,7 +297,7 @@ const auto VPU_16_BIT_LSB_17_RSHIFT_5_LSHIFT_16_Relocation = [](void* targetAddr
     *addr |= ((static_cast<uint32_t>(symVal + addend) & mask) >> 5) << 16;
 };
 
-const auto VPU_16_BIT_PREEMTION_WA_LSB_17_RSHIFT_5_LSHIFT_CUSTOM_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+const auto VPU_16_BIT_LSB_17_RSHIFT_5_LSHIFT_CUSTOM_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
                                                                    const Elf_Sxword addend) -> void {
     // more details in ticket #E-97614
     auto addr = reinterpret_cast<uint32_t*>(targetAddr);
@@ -369,7 +369,7 @@ const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoade
         {R_VPU_32_BIT_OR_B21_B26_UNSET, VPU_32_BIT_OR_B21_B26_UNSET_Relocation},
         {R_VPU_64_BIT_OR_B21_B26_UNSET, VPU_64_BIT_OR_B21_B26_UNSET_Relocation},
         {R_VPU_16_LSB_17_RSHIFT_5_LSHIFT_16, VPU_16_BIT_LSB_17_RSHIFT_5_LSHIFT_16_Relocation},
-        {R_VPU_16_PREEMTION_WA_LSB_17_RSHIFT_5_LSHIFT_CUSTOM, VPU_16_BIT_PREEMTION_WA_LSB_17_RSHIFT_5_LSHIFT_CUSTOM_Relocation},
+        {R_VPU_16_LSB_17_RSHIFT_5_LSHIFT_CUSTOM, VPU_16_BIT_LSB_17_RSHIFT_5_LSHIFT_CUSTOM_Relocation},
 };
 
 AccessorDescriptor::AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t procFlags, uint64_t alignment)
