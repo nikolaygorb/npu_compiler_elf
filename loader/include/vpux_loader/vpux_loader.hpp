@@ -136,7 +136,7 @@ public:
     std::vector<DeviceBuffer> getOutputBuffers() const;
     std::vector<DeviceBuffer> getProfBuffers() const;
     const elf::ResourceRequirements getResourceRequirements() const;
-    const elf::NetworkMetadata getNetworkMetadata() const;
+    std::shared_ptr<const elf::NetworkMetadata> getNetworkMetadata() const;
 
 private:
     bool checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const;

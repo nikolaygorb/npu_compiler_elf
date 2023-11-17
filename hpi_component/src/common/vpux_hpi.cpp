@@ -241,7 +241,7 @@ std::vector<DeviceBuffer> HostParsedInference::getProfBuffers() const {
     return loader->getProfBuffers();
 }
 
-NetworkMetadata HostParsedInference::getMetadata() {
+std::shared_ptr<const elf::NetworkMetadata> HostParsedInference::getMetadata() {
     return loader->getNetworkMetadata();
 }
 

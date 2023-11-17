@@ -923,8 +923,8 @@ bool VPUXLoader::checkSectionType(const elf::SectionHeader* section, Elf_Word se
     return section->sh_type == secType;
 }
 
-const elf::NetworkMetadata VPUXLoader::getNetworkMetadata() const {
-    return *m_networkMetadata;
+std::shared_ptr<const elf::NetworkMetadata> VPUXLoader::getNetworkMetadata() const {
+    return m_networkMetadata;
 }
 
 const elf::ResourceRequirements VPUXLoader::getResourceRequirements() const {

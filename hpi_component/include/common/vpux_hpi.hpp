@@ -31,7 +31,7 @@ public:
     std::vector<DeviceBuffer> getInputBuffers() const;
     std::vector<DeviceBuffer> getOutputBuffers() const;
     std::vector<DeviceBuffer> getProfBuffers() const;
-    NetworkMetadata getMetadata();
+    std::shared_ptr<const elf::NetworkMetadata> getMetadata();
     void applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,
                           std::vector<DeviceBuffer>& profiling);
 
