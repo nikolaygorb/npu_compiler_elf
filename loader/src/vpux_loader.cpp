@@ -282,6 +282,51 @@ const auto VPU_64_BIT_OR_B21_B26_UNSET_Relocation = [](void* targetAddr, const e
     *addr |= patchAddr;
 };
 
+const auto VPU_16_BIT_LSB_17_RSHIFT_5_LSHIFT_16_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                                      const Elf_Sxword addend) -> void {
+    auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG,
+                 "\t\t16Bit Reloc: Low 17 bits, rshift by 5 reloc, addr %p symVal 0x%llx addend %llu", addr, symVal,
+                 addend);
+
+    const uint32_t mask = 0x0001'FFFF;  // mask used to only keep last 17 bits
+    const uint32_t msb_16_mask = 0xFFFF0000;
+
+    *addr &= ~msb_16_mask;
+    *addr |= ((static_cast<uint32_t>(symVal + addend) & mask) >> 5) << 16;
+};
+
+const auto VPU_16_BIT_LSB_17_RSHIFT_5_LSHIFT_CUSTOM_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                                                   const Elf_Sxword addend) -> void {
+    // more details in ticket #E-97614
+    auto addr = reinterpret_cast<uint32_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(
+            LogLevel::LOG_DEBUG,
+            "\t\t16Bit Reloc preemtion workaround: Low 17 bits, rshift by 5 reloc, addr %p symVal 0x%llx addend %llu",
+            addr, symVal, addend);
+
+    const uint32_t mask = 0x0001'FFFF;                          // mask used to only keep last 17 bits
+    const uint32_t preemtion_work_around_16_mask = 0xFFFE4000;  // 1111 1111 1111 1110 0100 0000 0000 0000
+
+    *addr &= ~preemtion_work_around_16_mask;
+
+    auto src_value = (static_cast<uint32_t>(symVal + addend) & mask) >> 5;
+    // need to convert value from this view: 0000 0000 0000 0000 1111 1111 1111 1111
+    // to                                    1111 1111 1111 1110 0100 0000 0000 0000
+
+    // set [17:31] bits
+    auto converted_value = (src_value & ~1) << 16;
+    // format                                1111 1111 1111 1110 0000 0000 0000 0000
+
+    // set [14] bit
+    converted_value |= (src_value & 1) << 14;
+    // format                                1111 1111 1111 1110 0100 0000 0000 0000
+
+    *addr |= converted_value;
+};
+
 }  // namespace
 
 const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
@@ -323,6 +368,8 @@ const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoade
         {R_VPU_CMX_LOCAL_RSHIFT_5, VPU_CMX_LOCAL_RSHIFT_5_Relocation},
         {R_VPU_32_BIT_OR_B21_B26_UNSET, VPU_32_BIT_OR_B21_B26_UNSET_Relocation},
         {R_VPU_64_BIT_OR_B21_B26_UNSET, VPU_64_BIT_OR_B21_B26_UNSET_Relocation},
+        {R_VPU_16_LSB_17_RSHIFT_5_LSHIFT_16, VPU_16_BIT_LSB_17_RSHIFT_5_LSHIFT_16_Relocation},
+        {R_VPU_16_LSB_17_RSHIFT_5_LSHIFT_CUSTOM, VPU_16_BIT_LSB_17_RSHIFT_5_LSHIFT_CUSTOM_Relocation},
 };
 
 AccessorDescriptor::AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t procFlags, uint64_t alignment)
