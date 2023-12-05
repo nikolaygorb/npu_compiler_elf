@@ -126,7 +126,7 @@ public:
         const auto name = m_sectionHeadersNames + secHeader->sh_name;
         const auto data = m_accessor->read(
             AccessorDescriptor{secHeader->sh_offset,
-                               // EISW-73309
+                               // E#73309
                                // SHT_NOBITS - sections can have a size greater than the file
                                // which will cause offset out of bounds.
                                // VPU_SHT_CMX_METADATA - does not contain data in the binary file, so avoid reading

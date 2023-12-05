@@ -20,8 +20,8 @@
 #include <hpi_4000.hpp>
 #endif
 
-//to be removed with EISW-88139:
-//temporary fix to support VPU5 arch
+//to be removed with E#88139:
+//temporary fix to support NPU 5000 arch
 #if defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)
 #include <hpi_4000.hpp>
 #endif
@@ -41,7 +41,7 @@ static ResourceRequirements readResourcesFromElf(AccessManager* elfAccess) {
     // The loader must be initialized with a pre-generated symtab.
     // To generate a symtab for a configuration (one cluster/two clusters), the resource
     // requirements shoud be read before the loader starts to apply relocations.
-    // Issue should be addressed with EISW-73309
+    // Issue should be addressed with E#73309
 
     Reader<ELF_Bitness::Elf64> reader(elfAccess);
 
@@ -65,8 +65,8 @@ static ResourceRequirements readResourcesFromElf(AccessManager* elfAccess) {
 
 const static std::unordered_map<std::string, ArchKind> knownArch = {{"VPUX37XX", ArchKind::VPUX37XX},
                                                                     {"VPUX40XX", ArchKind::VPUX40XX},
-                                                                    //to be removed with EISW-88139:
-                                                                    //temporary fix to support VPU5 arch
+                                                                    //to be removed with E#88139:
+                                                                    //temporary fix to support NPU 5000 arch
                                                                     {"VPUX50XX", ArchKind::VPUX40XX}};
 
 static std::string readArchKind(AccessManager* elfAccess) {
@@ -113,8 +113,8 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::
         break;
 #endif
 
-//to be updated with EISW-88139:
-//temporary fix to support VPU5 arch
+//to be updated with E#88139:
+//temporary fix to support NPU 5000 arch
 #if defined(CONFIG_TARGET_SOC_4000) || (CONFIG_TARGET_SOC_5000)|| defined(HOST_BUILD)
     case ArchKind::VPUX40XX:
         archSpecificHPI = std::make_unique<HostParsedInference_4000>();
@@ -131,7 +131,7 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::
 static std::unique_ptr<VPUXLoader> getLoader(BufferManager* bufferMgr, AccessManager* accessMgr,
                                              HostParsedInferenceCommon& hpiCommon,
                                              const ResourceRequirements& resRequirements) {
-    // EISW-73555
+    // E#73555
     const auto symbolTable = hpiCommon.getSymbolTable(resRequirements.nn_slice_count_);
     const auto symbolSectionTypes = hpiCommon.getSymbolSectionTypes();
     auto symTabOverrideMode = hpiCommon.getSymbolSectionTypes().size() == 0 ? false : true;
@@ -147,7 +147,7 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     auto archName = readArchKind(accessManager);
     resRequirements = readResourcesFromElf(accessManager);
 
-    // TODO: EISW-79344
+    // TODO: E#79344
     auto archSpecificHpi = getArchSpecificHPI(archName);
     loader = getLoader(bufferManager, accessManager, *archSpecificHpi, resRequirements);
     parsedInference =
@@ -162,7 +162,7 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
           resRequirements(other.resRequirements) {
     auto archName = readArchKind(accessManager);
 
-    // TODO: EISW-79344
+    // TODO: E#79344
     auto archSpecificHpi = getArchSpecificHPI(archName);
     // Use clone semantics here by copy-constructing the loader object
     loader = std::make_unique<VPUXLoader>(*other.loader);
@@ -195,7 +195,7 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
 
     auto archName = readArchKind(accessManager);
 
-    // TODO: EISW-79344
+    // TODO: E#79344
     auto archSpecificHpi = getArchSpecificHPI(archName);
     // Use clone semantics here by copy-constructing the loader object
     loader = std::make_unique<VPUXLoader>(*rhs.loader);

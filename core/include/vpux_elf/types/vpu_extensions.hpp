@@ -85,7 +85,7 @@ constexpr Elf_Word R_VPU_DISP28_MULTICAST_OFFSET = 9;
 constexpr Elf_Word R_VPU_DISP4_MULTICAST_OFFSET_CMP = 10;
 
 //
-// VPU40XX specific DPU relocs
+// NPU 4000 specific DPU relocs
 //
 
 // Originated from act_offset field of DPU invariant

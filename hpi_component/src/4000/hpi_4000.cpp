@@ -20,7 +20,7 @@
 // clang-format on
 
 namespace elf {
-// TODO: EISW-79509
+// TODO: E#79509
 
 namespace {
 // Base of frequency values used in tables (in MHz).
@@ -87,7 +87,7 @@ HostParsedInference_4000::HostParsedInference_4000()
 }
 
 std::vector<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
-    // For LNL we only have one symtab
+    // For NPU 4000 we only have one symtab
     return symTab_;
 }
 

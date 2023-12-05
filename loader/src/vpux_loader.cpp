@@ -478,7 +478,7 @@ VPUXLoader::~VPUXLoader() {
 }
 
 uint64_t VPUXLoader::getEntry() {
-    // this is very very temporary version EISW-73309
+    // this is very very temporary version E#73309
     auto numSections = m_reader->getSectionsNum();
 
     for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
@@ -514,7 +514,7 @@ void VPUXLoader::load() {
     for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Solving section %zu", sectionCtr);
 
-        // EISW-73309
+        // E#73309
         // Check type of section
         // in case of SHT_NOBITS, section does not contain data.
         // call getSectionNoData
