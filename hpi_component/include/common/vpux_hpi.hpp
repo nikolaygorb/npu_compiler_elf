@@ -6,8 +6,8 @@
 #pragma once
 
 #include <memory>
-#include <vpux_elf/accessor.hpp>
 #include <vector>
+#include <vpux_elf/accessor.hpp>
 #include <vpux_headers/buffer_manager.hpp>
 #include <vpux_headers/device_buffer.hpp>
 #include <vpux_headers/metadata.hpp>
@@ -31,14 +31,14 @@ public:
     std::vector<DeviceBuffer> getInputBuffers() const;
     std::vector<DeviceBuffer> getOutputBuffers() const;
     std::vector<DeviceBuffer> getProfBuffers() const;
-    std::shared_ptr<const elf::NetworkMetadata> getMetadata();
+    std::shared_ptr<const NetworkMetadata> getMetadata();
     void applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,
                           std::vector<DeviceBuffer>& profiling);
 
 private:
     BufferManager* bufferManager;
     AccessManager* accessManager;
-    ResourceRequirements resRequirements;
+    std::shared_ptr<NetworkMetadata> metadata;
     std::unique_ptr<VPUXLoader> loader;
     std::shared_ptr<AllocatedDeviceBuffer> parsedInference;
 };

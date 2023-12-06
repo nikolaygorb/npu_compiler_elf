@@ -250,8 +250,8 @@ const auto VPU_CMX_LOCAL_RSHIFT_5_Relocation = [](void* targetAddr, const elf::S
                                                   const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tCMX local rshift 5 reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr, *addr,
-                 symVal, addend);
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tCMX local rshift 5 reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu",
+                 addr, *addr, symVal, addend);
 
     uint32_t CMX_TILE_SELECT_MASK = ~B21_B26_MASK;
     auto patchAddr = (static_cast<uint32_t>(symVal + addend) & CMX_TILE_SELECT_MASK) >> 5;
@@ -259,11 +259,12 @@ const auto VPU_CMX_LOCAL_RSHIFT_5_Relocation = [](void* targetAddr, const elf::S
 };
 
 const auto VPU_32_BIT_OR_B21_B26_UNSET_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
-                                                  const Elf_Sxword addend) -> void {
+                                                       const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32 bits OR reloc with b21-26 unset, addr %p, before value: 0x%x symVal 0x%llx addend %llu", addr, *addr,
-                 symVal, addend);
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG,
+                 "\t\t32 bits OR reloc with b21-26 unset, addr %p, before value: 0x%x symVal 0x%llx addend %llu", addr,
+                 *addr, symVal, addend);
 
     uint32_t B21_B26_UNSET_MASK = ~B21_B26_MASK;
     auto patchAddr = static_cast<uint32_t>(symVal + addend) & B21_B26_UNSET_MASK;
@@ -271,11 +272,12 @@ const auto VPU_32_BIT_OR_B21_B26_UNSET_Relocation = [](void* targetAddr, const e
 };
 
 const auto VPU_64_BIT_OR_B21_B26_UNSET_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
-                                                  const Elf_Sxword addend) -> void {
+                                                       const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint64_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t64 bits OR reloc with b21-26 unset, addr %p, before value: 0x%llx symVal 0x%llx addend %llu", addr, *addr,
-                 symVal, addend);
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG,
+                 "\t\t64 bits OR reloc with b21-26 unset, addr %p, before value: 0x%llx symVal 0x%llx addend %llu",
+                 addr, *addr, symVal, addend);
 
     uint64_t B21_B26_UNSET_MASK = ~B21_B26_MASK;
     auto patchAddr = static_cast<uint64_t>(symVal + addend) & B21_B26_UNSET_MASK;
@@ -283,7 +285,7 @@ const auto VPU_64_BIT_OR_B21_B26_UNSET_Relocation = [](void* targetAddr, const e
 };
 
 const auto VPU_16_BIT_LSB_17_RSHIFT_5_LSHIFT_16_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
-                                                      const Elf_Sxword addend) -> void {
+                                                                const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
     VPUX_ELF_LOG(LogLevel::LOG_DEBUG,
@@ -298,7 +300,7 @@ const auto VPU_16_BIT_LSB_17_RSHIFT_5_LSHIFT_16_Relocation = [](void* targetAddr
 };
 
 const auto VPU_16_BIT_LSB_17_RSHIFT_5_LSHIFT_CUSTOM_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
-                                                                   const Elf_Sxword addend) -> void {
+                                                                    const Elf_Sxword addend) -> void {
     // more details in ticket #E-97614
     auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
@@ -376,8 +378,9 @@ AccessorDescriptor::AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t 
         : offset(offset), size(size), procFlags(procFlags), alignment(alignment) {
 }
 
-VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, const std::vector<SymbolEntry>& runtimeSymTabs,
-                       bool symTabOverrideMode, const std::vector<elf::Elf_Word>& symbolSectionTypes)
+VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager,
+                       const std::vector<SymbolEntry>& runtimeSymTabs, bool symTabOverrideMode,
+                       const std::vector<elf::Elf_Word>& symbolSectionTypes)
         : m_bufferContainer(bufferManager),
           m_runtimeSymTabs(runtimeSymTabs),
           m_relocationSectionIndexes(std::make_shared<std::vector<std::size_t>>()),
@@ -432,10 +435,8 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
     applyRelocations(*m_relocationSectionIndexes);
 }
 
-VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other)
-{
-    if(this == &other)
-    {
+VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other) {
+    if (this == &other) {
         return *this;
     }
 
@@ -622,11 +623,9 @@ void VPUXLoader::load() {
             VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Parsing the network metadata");
             VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Resource Requirements:");
 
-            // only getting the top of the section which contains a structure with resource requirements
-            auto metadataPtr = section.getData<elf::NetworkMetadata>();
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Addr of metadataPtr = %p", metadataPtr);
-            safeGet<elf::NetworkMetadata>(&(*m_networkMetadata), metadataPtr);
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "copy good");
+            m_networkMetadata =
+                    MetadataSerialization::deserialize(section.getData<uint8_t>(), section.getHeader()->sh_size);
+
             // the number of available barriers is computed as follows:
             // numClusters - (to be used) platform specific
             // maxNumClustersForArch - platform specific
@@ -634,15 +633,15 @@ void VPUXLoader::load() {
             // barriersPerCluster = maxBarriersPerInference / maxNumClustersForArch
             // nn_barriers = min(maxBarriersPerInference, barriersPerCluster * numClusters)
             VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tnn_barriers %hhu",
-                         m_networkMetadata->resource_requirements.nn_barriers_);
+                         m_networkMetadata->mResourceRequirements.nn_barriers_);
             VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tnn_slice_count_ %hhu",
-                         m_networkMetadata->resource_requirements.nn_slice_count_);
+                         m_networkMetadata->mResourceRequirements.nn_slice_count_);
 
             // not uesd:
             VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tnn_slice_length_ %u",
-                         m_networkMetadata->resource_requirements.nn_slice_length_);
+                         m_networkMetadata->mResourceRequirements.nn_slice_length_);
             VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tddr_scratch_length_ %u",
-                         m_networkMetadata->resource_requirements.ddr_scratch_length_);
+                         m_networkMetadata->mResourceRequirements.ddr_scratch_length_);
             break;
         }
 
@@ -653,7 +652,7 @@ void VPUXLoader::load() {
             VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Addr of ELF ABI Version = %p", versionStructPtr);
 
             safeGet<elf::elf_note::Elf_AbiVersionNote>(&(*m_elfABIVersion), versionStructPtr);
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "copy good");
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "ELF ABI Version read and copied successfully");
             break;
         }
 
@@ -692,7 +691,7 @@ void VPUXLoader::load() {
     return;
 }
 
-void VPUXLoader::applyRelocations(const std::vector<std::size_t> &relocationSectionIndexes) {
+void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSectionIndexes) {
     VPUX_ELF_LOG(LogLevel::LOG_TRACE, "apply relocations");
     for (const auto& relocationSectionIdx : relocationSectionIndexes) {
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "applying relocation section %u", relocationSectionIdx);
@@ -711,11 +710,11 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t> &relocationSect
         // must point only to a section header index of the associated symbol table or to the reserved
         // symbol range of sections.
         auto symTabIdx = relocSecHdr->sh_link;
-        VPUX_ELF_THROW_UNLESS((symTabIdx < m_reader->getSectionsNum() ||
-                              (symTabIdx == VPU_RT_SYMTAB)) , RangeError, "sh_link exceeds the number of entries.")
+        VPUX_ELF_THROW_UNLESS((symTabIdx < m_reader->getSectionsNum() || (symTabIdx == VPU_RT_SYMTAB)), RangeError,
+                              "sh_link exceeds the number of entries.")
 
         // by convention, we will assume symTabIdx==VPU_RT_SYMTAB to be the "built-in" symtab
-        auto getSymTab = [&](size_t &symTabEntries) -> const SymbolEntry* {
+        auto getSymTab = [&](size_t& symTabEntries) -> const SymbolEntry* {
             if (symTabIdx == VPU_RT_SYMTAB) {
                 return m_runtimeSymTabs.data();
             }
@@ -756,8 +755,8 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t> &relocationSect
         auto targetSectionBuf = m_bufferContainer.getFromIndex(targetSectionIdx);
         targetSectionBuf->lock();
         auto targetSectionAddr = targetSectionBuf->getBuffer().cpu_addr();
-        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Relocations are targeting section at addr %p named %s", targetSectionAddr, targetSection.getName());
-
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Relocations are targeting section at addr %p named %s", targetSectionAddr,
+                     targetSection.getName());
 
         // apply the actual relocations
         for (size_t relocIdx = 0; relocIdx < numRelocs; ++relocIdx) {
@@ -767,7 +766,8 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t> &relocationSect
 
             // TODO(E#30069): shared logic with. Also required a long term solution
             // for relocation checks E#91649
-            VPUX_ELF_THROW_UNLESS(relOffset < targetSectionBuf->getBuffer().size(), RelocError, "RelocOffset outside of the section size");
+            VPUX_ELF_THROW_UNLESS(relOffset < targetSectionBuf->getBuffer().size(), RelocError,
+                                  "RelocOffset outside of the section size");
 
             auto relSymIdx = elf64RSym(relocation.r_info);
 
@@ -775,9 +775,11 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t> &relocationSect
             //    - special relocation that would use the runtime symbols
             // received from the user
             //    - relocations on the symbols defined in the symbol table inside the ELF file.
-            // In this case the section has a specific number of entries (need to use the getEntriesNum method of this section)
+            // In this case the section has a specific number of entries (need to use the getEntriesNum method of this
+            // section)
             VPUX_ELF_THROW_WHEN((relSymIdx > symTabEntries && symTabIdx != VPU_RT_SYMTAB) ||
-                                 (relSymIdx > m_runtimeSymTabs.size() && symTabIdx == VPU_RT_SYMTAB), RelocError, "SymTab index out of bounds!");
+                                        (relSymIdx > m_runtimeSymTabs.size() && symTabIdx == VPU_RT_SYMTAB),
+                                RelocError, "SymTab index out of bounds!");
 
             auto relType = elf64RType(relocation.r_info);
             auto addend = relocation.r_addend;
@@ -848,7 +850,8 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
         // are containing a section of sh_type == SHT_RELA. So, the sh_link
         // must point only to a section header index of the associated symbol table.
         auto symTabIdx = relocSecHdr->sh_link;
-        VPUX_ELF_THROW_UNLESS(symTabIdx < m_reader->getSectionsNum(), RangeError, "sh_link exceeds the number of entries.");
+        VPUX_ELF_THROW_UNLESS(symTabIdx < m_reader->getSectionsNum(), RangeError,
+                              "sh_link exceeds the number of entries.");
 
         // in JitRelocations case, we will expect to point to either "VPUX_USER_INPUT" or "VPUX_USER_INPUT" symtabs
         VPUX_ELF_THROW_WHEN(symTabIdx == VPU_RT_SYMTAB, RelocError, "JitReloc pointing to runtime symtab idx");
@@ -910,7 +913,8 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
 
             // TODO(E#30069): shared logic with. Also required a long term solution
             // for relocation check E#91649
-            VPUX_ELF_THROW_UNLESS(relOffset < targetSectionBuf->getBuffer().size(), RelocError, "RelocOffset outside of the section size");
+            VPUX_ELF_THROW_UNLESS(relOffset < targetSectionBuf->getBuffer().size(), RelocError,
+                                  "RelocOffset outside of the section size");
 
             auto symIdx = elf64RSym(relocation.r_info);
 
@@ -929,7 +933,8 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
             auto targetAddr = targetSectionAddr + relOffset;
 
             VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t targetsectionAddr %p offs %llu result %p userAddr 0x%x symIdx %u",
-                         targetSectionAddr, relOffset, targetAddr, (uint32_t)userAddrs[symIdx - 1].vpu_addr(), symIdx - 1);
+                         targetSectionAddr, relOffset, targetAddr, (uint32_t)userAddrs[symIdx - 1].vpu_addr(),
+                         symIdx - 1);
 
             elf::SymbolEntry origSymbol = symTabs[symIdx];
 
@@ -993,7 +998,7 @@ const elf::elf_note::Elf_AbiVersionNote VPUXLoader::getElfABIVersion() const {
 }
 
 const elf::ResourceRequirements VPUXLoader::getResourceRequirements() const {
-    return m_networkMetadata->resource_requirements;
+    return m_networkMetadata->mResourceRequirements;
 }
 
 }  // namespace elf

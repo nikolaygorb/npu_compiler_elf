@@ -87,7 +87,7 @@ const elf::ElfVersion readElfABIVersion(AccessManager* elfAccess) {
     VPUX_ELF_THROW(RuntimeError, "Could not read ELF ABI Version");
 }
 
-static ResourceRequirements readResourcesFromElf(AccessManager* elfAccess) {
+static std::shared_ptr<NetworkMetadata> readMetadata(AccessManager* elfAccess) {
     /* TODO: Temporary solution copied from InferenceManagerDemo */
     // Temporary solution:
     // The loader must be initialized with a pre-generated symtab.
@@ -106,9 +106,9 @@ static ResourceRequirements readResourcesFromElf(AccessManager* elfAccess) {
         auto sectionType = sectionHeader->sh_type;
 
         if (sectionType == elf::VPU_SHT_NETDESC) {
-            ResourceRequirements res{};
-            memcpy(&res, &section.getData<NetworkMetadata>()->resource_requirements, sizeof(res));
-            return res;
+            uint8_t* metadataBufferPtr = const_cast<uint8_t*>(section.getData<uint8_t>());
+            uint64_t metadataBufferSize = section.getHeader()->sh_size;
+            return MetadataSerialization::deserialize(metadataBufferPtr, metadataBufferSize);
         }
     }
 
@@ -120,28 +120,6 @@ const static std::unordered_map<std::string, ArchKind> knownArch = {{"VPUX37XX",
                                                                     //to be removed with E#88139:
                                                                     //temporary fix to support NPU 5000 arch
                                                                     {"VPUX50XX", ArchKind::VPUX40XX}};
-
-static std::string readArchKind(AccessManager* elfAccess) {
-    Reader<ELF_Bitness::Elf64> reader(elfAccess);
-
-    auto nSections = reader.getSectionsNum();
-
-    for (size_t i = 0; i < nSections; i++) {
-        const auto& section = reader.getSection(i);
-
-        const auto sectionHeader = section.getHeader();
-        auto sectionType = sectionHeader->sh_type;
-
-        if (sectionType == elf::VPU_SHT_NETDESC) {
-            char archName[MAX_STRING_LEN] = {};
-            strncpy(archName, section.getData<NetworkMetadata>()->arch_name, MAX_STRING_LEN);
-            return std::string(archName);
-        }
-    }
-
-    VPUX_ELF_THROW(RuntimeError, "Could not locate arch name");
-    return std::string("UNKNOWN");
-}
 
 static ArchKind mapArchStringToArchKind(const std::string& archName) {
     auto retArch = knownArch.find(archName);
@@ -196,25 +174,22 @@ static std::unique_ptr<VPUXLoader> getLoader(BufferManager* bufferMgr, AccessMan
 
 HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr)
         : bufferManager(bufferMgr), accessManager(accessMgr) {
-    auto archName = readArchKind(accessManager);
-    resRequirements = readResourcesFromElf(accessManager);
+    metadata = readMetadata(accessManager);
+    auto archName = std::string(metadata->mIdentification.arch_name);
 
     // TODO: E#79344
     auto archSpecificHpi = getArchSpecificHPI(archName);
     checkELFLibABICompatibility(archSpecificHpi->getELFLibABIVersion(), readElfABIVersion(accessManager));
-    loader = getLoader(bufferManager, accessManager, *archSpecificHpi, resRequirements);
-
+    loader = getLoader(bufferManager, accessManager, *archSpecificHpi, metadata->mResourceRequirements);
     parsedInference =
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
     auto parsedInferenceBuffer = parsedInference->getBuffer();
-    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), resRequirements);
+    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements);
 }
 
 HostParsedInference::HostParsedInference(const HostParsedInference& other)
-        : bufferManager(other.bufferManager),
-          accessManager(other.accessManager),
-          resRequirements(other.resRequirements) {
-    auto archName = readArchKind(accessManager);
+        : bufferManager(other.bufferManager), accessManager(other.accessManager), metadata(other.metadata) {
+    auto archName = std::string(metadata->mIdentification.arch_name);
 
     // TODO: E#79344
     auto archSpecificHpi = getArchSpecificHPI(archName);
@@ -224,13 +199,13 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
     parsedInference =
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
     auto parsedInferenceBuffer = parsedInference->getBuffer();
-    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), resRequirements);
+    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements);
 };
 
 HostParsedInference::HostParsedInference(HostParsedInference&& other)
         : bufferManager(other.bufferManager),
           accessManager(other.accessManager),
-          resRequirements(other.resRequirements),
+          metadata(other.metadata),
           loader(std::move(other.loader)),
           parsedInference(other.parsedInference) {
 }
@@ -245,9 +220,9 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
 
     bufferManager = rhs.bufferManager;
     accessManager = rhs.accessManager;
-    resRequirements = rhs.resRequirements;
+    metadata = rhs.metadata;
 
-    auto archName = readArchKind(accessManager);
+    auto archName = std::string(metadata->mIdentification.arch_name);
 
     // TODO: E#79344
     auto archSpecificHpi = getArchSpecificHPI(archName);
@@ -257,7 +232,7 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
     parsedInference =
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
     auto parsedInferenceBuffer = parsedInference->getBuffer();
-    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), resRequirements);
+    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements);
 
     return *this;
 }
@@ -268,7 +243,7 @@ HostParsedInference& HostParsedInference::operator=(HostParsedInference&& rhs) {
     }
     bufferManager = rhs.bufferManager;
     accessManager = rhs.accessManager;
-    resRequirements = rhs.resRequirements;
+    metadata = rhs.metadata;
     loader = std::move(rhs.loader);
     parsedInference = rhs.parsedInference;
 

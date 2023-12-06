@@ -27,6 +27,7 @@
 #include <vpux_elf/types/vpu_extensions.hpp>
 #include <vpux_elf/utils/error.hpp>
 #include <vpux_headers/metadata.hpp>
+#include <vpux_headers/serial_metadata.hpp>
 
 namespace elf {
 
@@ -56,10 +57,8 @@ public:
         }
     }
     DeviceBufferContainer(DeviceBufferContainer&&) = default;
-    DeviceBufferContainer& operator=(const DeviceBufferContainer& other)
-    {
-        if(this == &other)
-        {
+    DeviceBufferContainer& operator=(const DeviceBufferContainer& other) {
+        if (this == &other) {
             return *this;
         }
 
@@ -119,7 +118,8 @@ private:
 
 public:
     VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, const std::vector<SymbolEntry>& runtimeSymTabs,
-               bool symTabOverrideMode = false, const std::vector<elf::Elf_Word>& symbolSectionTypes = std::vector<elf::Elf_Word>());
+               bool symTabOverrideMode = false,
+               const std::vector<elf::Elf_Word>& symbolSectionTypes = std::vector<elf::Elf_Word>());
     VPUXLoader(const VPUXLoader& other);
     VPUXLoader(VPUXLoader&& other) = delete;
     VPUXLoader& operator=(const VPUXLoader&);
@@ -144,7 +144,7 @@ private:
     void registerUserIO(std::vector<DeviceBuffer>& io, const elf::SymbolEntry* symbols, size_t symbolCount) const;
     void load();
 
-    void applyRelocations(const std::vector<std::size_t> &relocationSectionIndexes);
+    void applyRelocations(const std::vector<std::size_t>& relocationSectionIndexes);
 
     BufferManager* m_bufferManager;
     std::shared_ptr<Reader<ELF_Bitness::Elf64>> m_reader;
