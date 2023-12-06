@@ -11,6 +11,7 @@
 #include <vpux_elf/utils/log.hpp>
 #include <vpux_elf/reader.hpp>
 #include <vpux_hpi.hpp>
+#include <sstream>
 
 #if defined(CONFIG_TARGET_SOC_3720) || defined(HOST_BUILD)
 #include <hpi_3720.hpp>
@@ -34,6 +35,57 @@ namespace elf {
 enum ArchKind { UNKNOWN = 0, VPUX37XX, VPUX40XX };
 
 namespace {
+
+const elf::ElfVersion parseAbiVersionStruct(const elf::elf_note::Elf_AbiVersionNote& abiVersionStruct) {
+    return {abiVersionStruct.n_desc[1], abiVersionStruct.n_desc[2], abiVersionStruct.n_desc[3]};
+}
+
+void checkELFLibABICompatibility(const elf::ElfVersion loaderABIVersion, const elf::ElfVersion elfABIVersion) {
+    std::ostringstream loaderABIVersionStream;
+    loaderABIVersionStream << loaderABIVersion.major << "." << loaderABIVersion.minor << "." << loaderABIVersion.patch;
+
+    std::ostringstream elfABIVersionStream;
+    elfABIVersionStream << elfABIVersion.major << "." << elfABIVersion.minor << "." << elfABIVersion.patch;
+
+    if (loaderABIVersion.major != elfABIVersion.major) {
+        VPUX_ELF_LOG(LogLevel::LOG_ERROR, "ELF Library ABI Version is not compatible with the ELF");
+        VPUX_ELF_LOG(LogLevel::LOG_ERROR, "\tExpected ABI Version: %s vs Received ELF ABI Version: %s",
+                     loaderABIVersionStream.str().c_str(), elfABIVersionStream.str().c_str());
+
+        std::ostringstream errorMsgStream;
+        errorMsgStream << "Versioning Error. ELF Library ABI Versions are incompatible. Provided: "
+                       << elfABIVersionStream.str() << " vs Expected: " << loaderABIVersionStream.str();
+        VPUX_ELF_THROW(VersioningError, errorMsgStream.str().c_str(), elfABIVersion, loaderABIVersion);
+    } else if (loaderABIVersion.minor != elfABIVersion.minor || loaderABIVersion.patch != elfABIVersion.patch) {
+        VPUX_ELF_LOG(LogLevel::LOG_WARN, "Warning! ELF Library ABI Versions are compatible but do not match.");
+        VPUX_ELF_LOG(LogLevel::LOG_WARN, "\tExpected ABI Version: %s vs Received ELF ABI Version: %s",
+                     loaderABIVersionStream.str().c_str(), elfABIVersionStream.str().c_str());
+    } else {
+        VPUX_ELF_LOG(LogLevel::LOG_WARN, "ELF Library ABI Versions are perfectly compatible. Version: %s",
+                     loaderABIVersionStream.str().c_str());
+    }
+}
+
+const elf::ElfVersion readElfABIVersion(AccessManager* elfAccess) {
+    Reader<ELF_Bitness::Elf64> reader(elfAccess);
+
+    auto nSections = reader.getSectionsNum();
+
+    for (size_t i = 0; i < nSections; i++) {
+        const auto& section = reader.getSection(i);
+
+        const auto sectionHeader = section.getHeader();
+        auto sectionType = sectionHeader->sh_type;
+
+        if (sectionType == elf::SHT_NOTE) {
+            elf::elf_note::Elf_AbiVersionNote elfABIVersionNote{};
+            memcpy(&elfABIVersionNote, section.getData<elf::elf_note::Elf_AbiVersionNote>(), sizeof(elfABIVersionNote));
+            return parseAbiVersionStruct(elfABIVersionNote);
+        }
+    }
+
+    VPUX_ELF_THROW(RuntimeError, "Could not read ELF ABI Version");
+}
 
 static ResourceRequirements readResourcesFromElf(AccessManager* elfAccess) {
     /* TODO: Temporary solution copied from InferenceManagerDemo */
@@ -149,7 +201,9 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
 
     // TODO: E#79344
     auto archSpecificHpi = getArchSpecificHPI(archName);
+    checkELFLibABICompatibility(archSpecificHpi->getELFLibABIVersion(), readElfABIVersion(accessManager));
     loader = getLoader(bufferManager, accessManager, *archSpecificHpi, resRequirements);
+
     parsedInference =
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
     auto parsedInferenceBuffer = parsedInference->getBuffer();

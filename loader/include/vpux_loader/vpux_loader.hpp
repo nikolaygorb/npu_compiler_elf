@@ -12,8 +12,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <array>
 
-#include <vector>
 #include <vpux_headers/buffer_manager.hpp>
 #include <vpux_headers/buffer_specs.hpp>
 #include <vpux_headers/device_buffer.hpp>
@@ -112,7 +112,7 @@ private:
     using RelocationFunc = std::function<void(void*, const elf::SymbolEntry&, const Elf_Sxword)>;
     using RelocationType = Elf_Word;
 
-    enum class Action { None, AllocateAndLoad, Allocate, Relocate, RegisterUserIO, RegisterNetworkMetadata, Error };
+    enum class Action { None, AllocateAndLoad, Allocate, Relocate, RegisterUserIO, RegisterNetworkMetadata, RegisterElfABIVersion, Error };
 
     static const std::map<Elf_Word, Action> actionMap;
     static const std::map<RelocationType, RelocationFunc> relocationMap;
@@ -137,6 +137,7 @@ public:
     std::vector<DeviceBuffer> getProfBuffers() const;
     const elf::ResourceRequirements getResourceRequirements() const;
     std::shared_ptr<const elf::NetworkMetadata> getNetworkMetadata() const;
+    const elf::elf_note::Elf_AbiVersionNote getElfABIVersion() const;
 
 private:
     bool checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const;
@@ -158,6 +159,7 @@ private:
     std::shared_ptr<std::vector<DeviceBuffer>> m_profOutputsDescriptors;
 
     std::shared_ptr<elf::NetworkMetadata> m_networkMetadata;
+    std::shared_ptr<elf::elf_note::Elf_AbiVersionNote> m_elfABIVersion;
 
     bool m_symTabOverrideMode;
     bool m_explicitAllocations;

@@ -17,9 +17,15 @@ public:
     std::vector<elf::Elf_Word> getSymbolSectionTypes() const override;
     BufferSpecs getParsedInferenceBufferSpecs() override;
     void setHostParsedInference(DeviceBuffer& devBuffer, uint64_t mapped_entry, ResourceRequirements resReq) override;
+    const elf::ElfVersion getELFLibABIVersion() const override;
 
 private:
     std::vector<SymbolEntry> symTab_;
     std::vector<elf::Elf_Word> secTypeContainers_;
+
+    static constexpr uint32_t VERSION_MAJOR = 1;
+    static constexpr uint32_t VERSION_MINOR = 0;
+    static constexpr uint32_t VERSION_PATCH = 0;
 };
+
 }  // namespace elf

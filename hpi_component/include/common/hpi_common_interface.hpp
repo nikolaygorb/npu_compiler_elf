@@ -7,9 +7,11 @@
 
 #include <vpux_elf/types/symbol_entry.hpp>
 #include <vector>
+#include <array>
 #include <vpux_headers/buffer_manager.hpp>
 #include <vpux_headers/device_buffer.hpp>
 #include <vpux_headers/metadata.hpp>
+#include <vpux_elf/types/elf_structs.hpp>
 
 namespace elf {
 
@@ -42,5 +44,10 @@ public:
      */
     virtual void setHostParsedInference(DeviceBuffer& devBuffer, uint64_t mapped_entry,
                                         ResourceRequirements resReq) = 0;
+
+    /**
+     * Get ABI Version of current HPI/Loader
+     */
+    virtual const elf::ElfVersion getELFLibABIVersion() const = 0;
 };
 }  // namespace elf

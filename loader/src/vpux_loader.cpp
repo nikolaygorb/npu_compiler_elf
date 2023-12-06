@@ -337,7 +337,7 @@ const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
         {SHT_RELA, Action::Relocate},
         {SHT_HASH, Action::Error},
         {SHT_DYNAMIC, Action::Error},
-        {SHT_NOTE, Action::Error},
+        {SHT_NOTE, Action::RegisterElfABIVersion},  // SHT_NOTE is currently used solely for ABI Versioning info
         {SHT_NOBITS, Action::Allocate},
         {SHT_REL, Action::Error},
         {SHT_SHLIB, Action::Error},
@@ -386,6 +386,7 @@ VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, co
           m_userOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_profOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_networkMetadata(std::make_shared<NetworkMetadata>()),
+          m_elfABIVersion(std::make_shared<elf::elf_note::Elf_AbiVersionNote>()),
           m_symTabOverrideMode(symTabOverrideMode),
           m_explicitAllocations(symTabOverrideMode),
           m_symbolSectionTypes(symbolSectionTypes) {
@@ -406,6 +407,7 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
           m_userOutputsDescriptors(other.m_userOutputsDescriptors),
           m_profOutputsDescriptors(other.m_profOutputsDescriptors),
           m_networkMetadata(other.m_networkMetadata),
+          m_elfABIVersion(other.m_elfABIVersion),
           m_symTabOverrideMode(other.m_symTabOverrideMode),
           m_explicitAllocations(other.m_explicitAllocations),
           m_symbolSectionTypes(other.m_symbolSectionTypes) {
@@ -447,6 +449,7 @@ VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other)
     m_userOutputsDescriptors = other.m_userOutputsDescriptors;
     m_profOutputsDescriptors = other.m_profOutputsDescriptors;
     m_networkMetadata = other.m_networkMetadata;
+    m_elfABIVersion = other.m_elfABIVersion;
     m_symTabOverrideMode = other.m_symTabOverrideMode;
     m_explicitAllocations = other.m_explicitAllocations;
     m_symbolSectionTypes = other.m_symbolSectionTypes;
@@ -640,6 +643,17 @@ void VPUXLoader::load() {
                          m_networkMetadata->resource_requirements.nn_slice_length_);
             VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tddr_scratch_length_ %u",
                          m_networkMetadata->resource_requirements.ddr_scratch_length_);
+            break;
+        }
+
+        case Action::RegisterElfABIVersion: {
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Parsing the ELF ABI Version");
+
+            auto versionStructPtr = section.getData<elf::elf_note::Elf_AbiVersionNote>();
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Addr of ELF ABI Version = %p", versionStructPtr);
+
+            safeGet<elf::elf_note::Elf_AbiVersionNote>(&(*m_elfABIVersion), versionStructPtr);
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "copy good");
             break;
         }
 
@@ -972,6 +986,10 @@ bool VPUXLoader::checkSectionType(const elf::SectionHeader* section, Elf_Word se
 
 std::shared_ptr<const elf::NetworkMetadata> VPUXLoader::getNetworkMetadata() const {
     return m_networkMetadata;
+}
+
+const elf::elf_note::Elf_AbiVersionNote VPUXLoader::getElfABIVersion() const {
+    return *m_elfABIVersion;
 }
 
 const elf::ResourceRequirements VPUXLoader::getResourceRequirements() const {
