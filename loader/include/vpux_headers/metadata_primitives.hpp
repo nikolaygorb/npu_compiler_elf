@@ -112,10 +112,8 @@ struct VPUX_ALIGNED_STRUCT(8) Identification {
 };
 
 struct VPUX_ALIGNED_STRUCT(8) TensorRef {
-    float strides[MAX_TENSOR_REF_STRIDES];
-    uint64_t bit_strides[MAX_TENSOR_REF_STRIDES];
+    uint64_t strides[MAX_TENSOR_REF_STRIDES];
     uint32_t dimensions[MAX_TENSOR_REF_DIMS];
-    uint8_t pad0_[4] = {0};
     TensorName name;
     uint64_t order;
     DType data_type;
@@ -124,7 +122,7 @@ struct VPUX_ALIGNED_STRUCT(8) TensorRef {
     uint8_t pad1_[4] = {0};
 };
 
-static_assert(sizeof(TensorRef) == 424, "TensorRef size != 424");
+static_assert(sizeof(TensorRef) == 384, "TensorRef size != 384");
 static_assert(offsetof(TensorRef, name) % 8 == 0, "Alignment error");
 
 struct VPUX_ALIGNED_STRUCT(4) PreprocessingInfo {
