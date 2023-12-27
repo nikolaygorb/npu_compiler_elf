@@ -139,6 +139,17 @@ constexpr Elf_Word R_VPU_16_LSB_17_RSHIFT_5_LSHIFT_16 = 19;
 // Dst[14] =    ((((S + A) & 0x0001'FFFF) >> 5) &  1) << 14
 constexpr Elf_Word R_VPU_16_LSB_17_RSHIFT_5_LSHIFT_CUSTOM = 20;
 
+// Used for tile select relocations of 16 bit for M2I HWP address (high part)
+// Formula:
+// Dst |= ((S + A) & ~B21_B26_MASK) >> 16
+constexpr Elf_Word R_VPU_32_BIT_OR_B21_B26_UNSET_HIGH_16 = 21;
+
+// Used for tile select relocations of 16 bit for M2I HWP address (low part)
+// Formula:
+// Dst |= ((S + A) & ~B21_B26_MASK) && 0xFFFF
+constexpr Elf_Word R_VPU_32_BIT_OR_B21_B26_UNSET_LOW_16 = 22;
+
+
 //
 // Symbol types
 //

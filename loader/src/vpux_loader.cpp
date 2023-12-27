@@ -329,6 +329,31 @@ const auto VPU_16_BIT_LSB_17_RSHIFT_5_LSHIFT_CUSTOM_Relocation = [](void* target
     *addr |= converted_value;
 };
 
+const auto VPU_32_BIT_OR_B21_B26_UNSET_HIGH_16_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                                               const Elf_Sxword addend) -> void {
+    auto addr = reinterpret_cast<uint16_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32 bits OR reloc with b21-26 unset and high 16, addr %p, before value: 0x%llx symVal 0x%x addend %llu", addr, *addr,
+                 symVal, addend);
+
+    uint64_t B21_B26_UNSET_MASK = ~B21_B26_MASK;
+    auto patchAddr = static_cast<uint32_t>(symVal + addend) & B21_B26_UNSET_MASK;
+    *addr |= patchAddr >> 16;
+};
+
+const auto VPU_32_BIT_OR_B21_B26_UNSET_LOW_16_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                                              const Elf_Sxword addend) -> void {
+    auto addr = reinterpret_cast<uint16_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32 bits OR reloc with b21-26 unset and low 16, addr %p, before value: 0x%llx symVal 0x%x addend %llu", addr, *addr,
+                 symVal, addend);
+
+    uint64_t B21_B26_UNSET_MASK = ~B21_B26_MASK;
+    auto patchAddr = static_cast<uint16_t>(symVal + addend) & B21_B26_UNSET_MASK;
+    *addr |= patchAddr & 0xFFFF;
+};
+
+
 }  // namespace
 
 const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
@@ -372,6 +397,8 @@ const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoade
         {R_VPU_64_BIT_OR_B21_B26_UNSET, VPU_64_BIT_OR_B21_B26_UNSET_Relocation},
         {R_VPU_16_LSB_17_RSHIFT_5_LSHIFT_16, VPU_16_BIT_LSB_17_RSHIFT_5_LSHIFT_16_Relocation},
         {R_VPU_16_LSB_17_RSHIFT_5_LSHIFT_CUSTOM, VPU_16_BIT_LSB_17_RSHIFT_5_LSHIFT_CUSTOM_Relocation},
+        {R_VPU_32_BIT_OR_B21_B26_UNSET_HIGH_16, VPU_32_BIT_OR_B21_B26_UNSET_HIGH_16_Relocation},
+        {R_VPU_32_BIT_OR_B21_B26_UNSET_LOW_16, VPU_32_BIT_OR_B21_B26_UNSET_LOW_16_Relocation},
 };
 
 AccessorDescriptor::AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t procFlags, uint64_t alignment)
