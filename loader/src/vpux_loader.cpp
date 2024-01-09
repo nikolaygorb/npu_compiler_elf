@@ -373,6 +373,7 @@ const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
         {VPU_SHT_PROF, Action::None},
         {VPU_SHT_CMX_METADATA, Action::None},
         {VPU_SHT_CMX_WORKSPACE, Action::None},
+        {VPU_SHT_PERF_METRICS, Action::None},
 };
 
 const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoader::relocationMap = {

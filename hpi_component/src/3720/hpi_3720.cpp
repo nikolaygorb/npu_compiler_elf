@@ -14,6 +14,7 @@
 #include <api/vpu_nnrt_api_37xx.h>
 #include <api/vpu_cmx_info_37xx.h>
 #include <array>
+#include <cstring>
 // clang-format on
 
 namespace elf {
@@ -51,7 +52,6 @@ static void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics& metri
 }
 
 std::vector<SymbolEntry> HostParsedInference_3720::getSymbolTable(uint8_t index) const {
-
     SymbolEntry symTab_[N_TABS][SPECIAL_SYMTAB_SIZE];
 
     uint32_t inv_addr[] = {nn_public::METADATA0_STORAGE_ADDR + offsetof(nn_public::VpuMetadataMapSingle, inv_storage),
@@ -113,13 +113,17 @@ BufferSpecs HostParsedInference_3720::getParsedInferenceBufferSpecs() {
 }
 
 void HostParsedInference_3720::setHostParsedInference(DeviceBuffer& devBuffer, uint64_t mapped_entry,
-                                                      ResourceRequirements resReq) {
+                                                      ResourceRequirements resReq, uint64_t* perf_metrics) {
     auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference*>(devBuffer.cpu_addr());
 
     hpi->resource_requirements_ = {};
     hpi->resource_requirements_.nn_slice_count_ = resReq.nn_slice_count_;
     hpi->resource_requirements_.nn_barriers_ = resReq.nn_barriers_;
-    setDefaultPerformanceMetrics(hpi->performance_metrics_);
+    if (perf_metrics) {
+        memcpy(static_cast<void*>(&hpi->performance_metrics_), static_cast<void*>(perf_metrics), sizeof(nn_public::VpuPerformanceMetrics));
+    } else {
+        setDefaultPerformanceMetrics(hpi->performance_metrics_);
+    }
 
     hpi->mapped_.address = mapped_entry;
     hpi->mapped_.count = 1;

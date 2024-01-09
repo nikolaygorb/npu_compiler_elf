@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <cstring>
 // clang-format on
 
 namespace elf {
@@ -51,12 +52,12 @@ void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics& metrics) {
     }
 }
 
-HostParsedInference_4000::HostParsedInference_4000()
-{
+HostParsedInference_4000::HostParsedInference_4000() {
     symTab_.reserve(2);
     secTypeContainers_.reserve(2);
     {
-        const auto metadataStart = nn_public::align_storage(alignof(nn_public::VpuDPUInvariant), nn_public::VPU_METADATA_STORAGE_ADDR);
+        const auto metadataStart =
+                nn_public::align_storage(alignof(nn_public::VpuDPUInvariant), nn_public::VPU_METADATA_STORAGE_ADDR);
 
         SymbolEntry metadata;
         metadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
@@ -101,13 +102,17 @@ BufferSpecs HostParsedInference_4000::getParsedInferenceBufferSpecs() {
 }
 
 void HostParsedInference_4000::setHostParsedInference(DeviceBuffer& devBuffer, uint64_t mapped_entry,
-                                                      ResourceRequirements resReq) {
+                                                      ResourceRequirements resReq, uint64_t* perf_metrics) {
     auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference*>(devBuffer.cpu_addr());
 
     hpi->resource_requirements_ = {};
     hpi->resource_requirements_.nn_slice_count_ = resReq.nn_slice_count_;
     hpi->resource_requirements_.nn_barriers_ = resReq.nn_barriers_;
-    setDefaultPerformanceMetrics(hpi->performance_metrics_);
+    if (perf_metrics) {
+        memcpy(static_cast<void*>(&hpi->performance_metrics_), static_cast<void*>(perf_metrics), sizeof(nn_public::VpuPerformanceMetrics));
+    } else {
+        setDefaultPerformanceMetrics(hpi->performance_metrics_);
+    }
 
     hpi->mapped_.address = mapped_entry;
     hpi->mapped_.count = 1;

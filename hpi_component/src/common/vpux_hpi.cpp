@@ -115,10 +115,30 @@ static std::shared_ptr<NetworkMetadata> readMetadata(AccessManager* elfAccess) {
     VPUX_ELF_THROW(HeaderError, "Failed to find a resource");
 }
 
+static uint64_t* readPerfMetrics(AccessManager* elfAccess) {
+    Reader<ELF_Bitness::Elf64> reader(elfAccess);
+
+    auto nSections = reader.getSectionsNum();
+
+    for (size_t i = 0; i < nSections; i++) {
+        const auto& section = reader.getSection(i);
+
+        const auto sectionHeader = section.getHeader();
+        auto sectionType = sectionHeader->sh_type;
+
+        if (sectionType == elf::VPU_SHT_PERF_METRICS) {
+            return (uint64_t*)section.getData<uint64_t>();
+        }
+    }
+
+    VPUX_ELF_LOG(LogLevel::LOG_WARN, "No performance metrics. Default to be used!");
+    return nullptr;
+}
+
 const static std::unordered_map<std::string, ArchKind> knownArch = {{"VPUX37XX", ArchKind::VPUX37XX},
                                                                     {"VPUX40XX", ArchKind::VPUX40XX},
-                                                                    //to be removed with E#88139:
-                                                                    //temporary fix to support NPU 5000 arch
+                                                                    // to be removed with E#88139:
+                                                                    // temporary fix to support NPU 5000 arch
                                                                     {"VPUX50XX", ArchKind::VPUX40XX}};
 
 static ArchKind mapArchStringToArchKind(const std::string& archName) {
@@ -143,9 +163,9 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::
         break;
 #endif
 
-//to be updated with E#88139:
-//temporary fix to support NPU 5000 arch
-#if defined(CONFIG_TARGET_SOC_4000) || (CONFIG_TARGET_SOC_5000)|| defined(HOST_BUILD)
+// to be updated with E#88139:
+// temporary fix to support NPU 5000 arch
+#if defined(CONFIG_TARGET_SOC_4000) || (CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)
     case ArchKind::VPUX40XX:
         archSpecificHPI = std::make_unique<HostParsedInference_4000>();
         break;
@@ -184,7 +204,8 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     parsedInference =
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
     auto parsedInferenceBuffer = parsedInference->getBuffer();
-    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements);
+    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements,
+                                            readPerfMetrics(accessManager));
 }
 
 HostParsedInference::HostParsedInference(const HostParsedInference& other)
@@ -199,7 +220,8 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
     parsedInference =
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
     auto parsedInferenceBuffer = parsedInference->getBuffer();
-    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements);
+    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements,
+                                            readPerfMetrics(accessManager));
 };
 
 HostParsedInference::HostParsedInference(HostParsedInference&& other)
@@ -232,7 +254,8 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
     parsedInference =
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
     auto parsedInferenceBuffer = parsedInference->getBuffer();
-    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements);
+    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements,
+                                            readPerfMetrics(accessManager));
 
     return *this;
 }
