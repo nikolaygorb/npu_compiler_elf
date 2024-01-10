@@ -577,10 +577,17 @@ void VPUXLoader::load() {
 
             auto sectionSize = sectionHeader->sh_size;
             auto sectionAlignment = sectionHeader->sh_addralign;
-            auto sharedInfo = AllocatedDeviceBuffer::SharedInfo::NOT_SHARED;
-            if (!strcmp(section.getName(), ".data.ConstIO")) {
-                sharedInfo = AllocatedDeviceBuffer::SharedInfo::IS_SHARED;
-            }
+            // Shared condition:
+            //  1. has data
+            //  2. is read only
+            //  3. not target of a relocation section
+            //
+            // Condition 1 is fulfilled by entering this case
+            // Condition 2 can be checked here
+            // Condition 3 needs to be checked after all relocation sections have been registered in order to be
+            // independent from the sections order inside the ELF binary
+            auto sharedInfo = sectionFlags & SHF_WRITE ? AllocatedDeviceBuffer::SharedInfo::NOT_SHARED
+                                                       : AllocatedDeviceBuffer::SharedInfo::IS_SHARED;
             auto sharedDevBuf = m_bufferContainer.createSharedDeviceBuffer(
                     sectionCtr, BufferSpecs(sectionAlignment, sectionSize, sectionFlags),
                     AllocatedDeviceBuffer::DataInfo::ELF_HAS_DATA, sharedInfo);
@@ -700,6 +707,9 @@ void VPUXLoader::load() {
         }
     }
 
+    // Now that all relocation sections are known, check shared condition 3
+    updateSharedBuffers(*m_relocationSectionIndexes);
+
     applyRelocations(*m_relocationSectionIndexes);
 
     VPUX_ELF_LOG(LogLevel::LOG_INFO, "Allocated %zu sections", m_bufferContainer.getCount());
@@ -717,6 +727,27 @@ void VPUXLoader::load() {
     }
 
     return;
+}
+
+void VPUXLoader::updateSharedBuffers(const std::vector<std::size_t>& relocationSectionIndexes) {
+    VPUX_ELF_LOG(LogLevel::LOG_TRACE, "update shared buffers");
+    for (const auto& relocationSectionIdx : relocationSectionIndexes) {
+        const auto& relocSection = m_reader->getSection(relocationSectionIdx);
+        const auto relocSecHdr = relocSection.getHeader();
+        const auto relocSecFlags = relocSecHdr->sh_flags;
+        Elf_Word targetSectionIdx;
+        if (relocSecFlags & SHF_INFO_LINK) {
+            targetSectionIdx = relocSecHdr->sh_info;
+        } else {
+            VPUX_ELF_THROW(RelocError, "Rela section with no target section");
+            return;
+        }
+        VPUX_ELF_THROW_WHEN(targetSectionIdx == 0 || targetSectionIdx > m_reader->getSectionsNum(), RelocError,
+                            "invalid target section from rela section");
+
+        auto targetSectionBuffer = m_bufferContainer.getFromIndex(targetSectionIdx);
+        targetSectionBuffer->setShared(AllocatedDeviceBuffer::SharedInfo::NOT_SHARED);
+    }
 }
 
 void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSectionIndexes) {

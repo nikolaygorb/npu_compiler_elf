@@ -96,6 +96,9 @@ public:
     bool isShared() const {
         return (shared == SharedInfo::IS_SHARED);
     }
+    void setShared(SharedInfo val) {
+        shared = val;
+    }
     bool hasData() const {
         return (data == DataInfo::ELF_HAS_DATA);
     }
