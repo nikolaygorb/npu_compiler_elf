@@ -7,19 +7,23 @@
 
 #pragma once
 
+#ifndef VPUX_ELF_LOG_UNIT_NAME
+#define VPUX_ELF_LOG_UNIT_NAME "VpuxLoader"
+#endif
+
+#include <array>
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
-#include <array>
-
-#include <vpux_headers/buffer_manager.hpp>
-#include <vpux_headers/buffer_specs.hpp>
-#include <vpux_headers/device_buffer.hpp>
 
 #include <vpux_elf/accessor.hpp>
 #include <vpux_elf/reader.hpp>
+#include <vpux_elf/utils/log.hpp>
+#include <vpux_headers/buffer_manager.hpp>
+#include <vpux_headers/buffer_specs.hpp>
+#include <vpux_headers/device_buffer.hpp>
 
 #include <vpux_elf/types/elf_structs.hpp>
 #include <vpux_elf/types/relocation_entry.hpp>
@@ -111,7 +115,16 @@ private:
     using RelocationFunc = std::function<void(void*, const elf::SymbolEntry&, const Elf_Sxword)>;
     using RelocationType = Elf_Word;
 
-    enum class Action { None, AllocateAndLoad, Allocate, Relocate, RegisterUserIO, RegisterNetworkMetadata, RegisterElfABIVersion, Error };
+    enum class Action {
+        None,
+        AllocateAndLoad,
+        Allocate,
+        Relocate,
+        RegisterUserIO,
+        RegisterNetworkMetadata,
+        RegisterElfABIVersion,
+        Error
+    };
 
     static const std::map<Elf_Word, Action> actionMap;
     static const std::map<RelocationType, RelocationFunc> relocationMap;
@@ -145,7 +158,7 @@ private:
     void load();
 
     void updateSharedBuffers(const std::vector<std::size_t>& relocationSectionIndexes);
-    void applyRelocations(const std::vector<std::size_t> &relocationSectionIndexes);
+    void applyRelocations(const std::vector<std::size_t>& relocationSectionIndexes);
 
     BufferManager* m_bufferManager;
     std::shared_ptr<Reader<ELF_Bitness::Elf64>> m_reader;

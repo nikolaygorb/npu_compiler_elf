@@ -12,7 +12,6 @@
 #define VPUX_ELF_LOG_UNIT_NAME "VpuxLoader"
 #endif
 #include <vpux_elf/reader.hpp>
-#include <vpux_elf/utils/log.hpp>
 
 namespace elf {
 

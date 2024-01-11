@@ -14,7 +14,6 @@
 #include <vpux_elf/types/elf_structs.hpp>
 #include <vpux_elf/utils/error.hpp>
 #include <vpux_elf/utils/utils.hpp>
-#include <vpux_elf/utils/log.hpp>
 #include <vpux_elf/types/vpu_extensions.hpp>
 
 #include <vpux_elf/accessor.hpp>

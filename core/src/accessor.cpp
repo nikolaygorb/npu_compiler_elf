@@ -3,7 +3,9 @@
 // SPDX-License-Identifier: Apache 2.0
 //
 
-//
+#ifndef VPUX_ELF_LOG_UNIT_NAME
+#define VPUX_ELF_LOG_UNIT_NAME "Accessor"
+#endif
 
 #include <vpux_elf/accessor.hpp>
 #include <vpux_elf/utils/error.hpp>

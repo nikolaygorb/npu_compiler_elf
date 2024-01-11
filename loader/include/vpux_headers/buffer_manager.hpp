@@ -7,7 +7,6 @@
 
 #include <memory>
 #include <vpux_elf/utils/error.hpp>
-#include <vpux_elf/utils/log.hpp>
 #include <vpux_headers/buffer_specs.hpp>
 #include <vpux_headers/device_buffer.hpp>
 
@@ -112,7 +111,6 @@ public:
         return bufferManager->copy(devBuffer, from, count);
     }
     void loadWithLock(const uint8_t* from, size_t count) {
-        VPUX_ELF_LOG(LogLevel::LOG_INFO, "Loading %lu with lock from %p to %p", count, from, getBuffer().cpu_addr());
         lock();
         load(from, count);
         unlock();
