@@ -447,11 +447,11 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
           m_profOutputsDescriptors(other.m_profOutputsDescriptors),
           m_networkMetadata(other.m_networkMetadata),
           m_elfABIVersion(other.m_elfABIVersion),
+          m_sectionMap(other.m_sectionMap),
           m_symTabOverrideMode(other.m_symTabOverrideMode),
           m_explicitAllocations(other.m_explicitAllocations),
-          m_symbolSectionTypes(other.m_symbolSectionTypes),
-          m_sectionMap(other.m_sectionMap),
-          m_loaded(other.m_loaded) {
+          m_loaded(other.m_loaded),
+          m_symbolSectionTypes(other.m_symbolSectionTypes){
     auto numSections = m_reader->getSectionsNum();
     for (size_t sectionIndex = 0; sectionIndex < numSections; ++sectionIndex) {
         if (m_bufferContainer.hasBufferAtIndex(sectionIndex)) {

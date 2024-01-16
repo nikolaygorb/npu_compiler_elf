@@ -123,11 +123,8 @@ const elf::ElfVersion HostParsedInference_4000::getELFLibABIVersion() const {
     return {VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH};
 }
 
-const uint32_t HostParsedInference_4000::getMIVersion(uint64_t mapped_entry) const {
+uint32_t HostParsedInference_4000::getMIVersion(uint64_t mapped_entry) const {
     auto mi = reinterpret_cast<nn_public::VpuMappedInference*>(mapped_entry);
-    auto version = mi->vpu_nnrt_api_ver;
-    auto versionMajor = static_cast<uint16_t>(version >> 16);
-    auto versionMinor = static_cast<uint16_t>(version);
     return mi->vpu_nnrt_api_ver;
 }
 

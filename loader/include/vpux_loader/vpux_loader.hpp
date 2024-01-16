@@ -180,7 +180,6 @@ private:
     std::shared_ptr<elf::NetworkMetadata> m_networkMetadata;
     std::shared_ptr<elf::elf_note::Elf_AbiVersionNote> m_elfABIVersion;
 
-    // change to DeviceBuffer
     std::shared_ptr<std::map<elf::Elf_Word /*section type*/, std::vector<DeviceBuffer>>> /*section data*/
             m_sectionMap;
 
