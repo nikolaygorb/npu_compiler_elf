@@ -451,7 +451,7 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
           m_symTabOverrideMode(other.m_symTabOverrideMode),
           m_explicitAllocations(other.m_explicitAllocations),
           m_loaded(other.m_loaded),
-          m_symbolSectionTypes(other.m_symbolSectionTypes){
+          m_symbolSectionTypes(other.m_symbolSectionTypes) {
     auto numSections = m_reader->getSectionsNum();
     for (size_t sectionIndex = 0; sectionIndex < numSections; ++sectionIndex) {
         if (m_bufferContainer.hasBufferAtIndex(sectionIndex)) {
@@ -591,11 +591,7 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
     for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Solving section %zu", sectionCtr);
 
-        // E#73309
-        // Check type of section
-        // in case of SHT_NOBITS, section does not contain data.
-        // call getSectionNoData
-        const auto& section = m_reader->getSection(sectionCtr);
+        const auto& section = m_reader->getSectionNoData(sectionCtr);
 
         const auto sectionHeader = section.getHeader();
         auto sectionType = sectionHeader->sh_type;
