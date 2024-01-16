@@ -421,6 +421,7 @@ VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager)
     m_bufferManager = bufferManager;
     m_reader = std::make_shared<Reader<ELF_Bitness::Elf64>>(accessor);
     m_sectionMap = std::make_shared<std::map<elf::Elf_Word /*section type*/, std::vector<DeviceBuffer>>>();
+    m_loaded = false;
 
     VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Initializing... Register sections");
     auto numSections = m_reader->getSectionsNum();
@@ -448,7 +449,9 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
           m_elfABIVersion(other.m_elfABIVersion),
           m_symTabOverrideMode(other.m_symTabOverrideMode),
           m_explicitAllocations(other.m_explicitAllocations),
-          m_symbolSectionTypes(other.m_symbolSectionTypes) {
+          m_symbolSectionTypes(other.m_symbolSectionTypes),
+          m_sectionMap(other.m_sectionMap),
+          m_loaded(other.m_loaded) {
     auto numSections = m_reader->getSectionsNum();
     for (size_t sectionIndex = 0; sectionIndex < numSections; ++sectionIndex) {
         if (m_bufferContainer.hasBufferAtIndex(sectionIndex)) {
@@ -489,6 +492,8 @@ VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other) {
     m_symTabOverrideMode = other.m_symTabOverrideMode;
     m_explicitAllocations = other.m_explicitAllocations;
     m_symbolSectionTypes = other.m_symbolSectionTypes;
+    m_sectionMap = other.m_sectionMap;
+    m_loaded = other.m_loaded;
 
     auto numSections = m_reader->getSectionsNum();
     for (size_t sectionIndex = 0; sectionIndex < numSections; ++sectionIndex) {
@@ -541,7 +546,6 @@ uint64_t VPUXLoader::getEntryBeforeLoad() {
     return 0;
 }
 
-
 uint64_t VPUXLoader::getEntry() {
     // this is very very temporary version E#73309
     auto numSections = m_reader->getSectionsNum();
@@ -570,6 +574,8 @@ uint64_t VPUXLoader::getEntry() {
 
 void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTabOverrideMode,
                       const std::vector<elf::Elf_Word>& symbolSectionTypes) {
+    VPUX_ELF_THROW_WHEN(m_loaded, SequenceError, "Sections were previously loaded.");
+
     m_runtimeSymTabs = runtimeSymTabs;
     m_symTabOverrideMode = symTabOverrideMode;
     m_explicitAllocations = symTabOverrideMode;
@@ -764,6 +770,9 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
     for (size_t outputCtr = 0; outputCtr < m_profOutputsDescriptors->size(); ++outputCtr) {
         VPUX_ELF_LOG(LogLevel::LOG_INFO, "\t %zu : %zu", outputCtr, (*m_profOutputsDescriptors)[outputCtr].size());
     }
+
+    // sections were loaded. other calls to this method will throw an error
+    m_loaded = true;
 
     return;
 }

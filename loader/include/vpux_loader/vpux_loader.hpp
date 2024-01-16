@@ -186,6 +186,7 @@ private:
 
     bool m_symTabOverrideMode;
     bool m_explicitAllocations;
+    bool m_loaded;
     std::vector<elf::Elf_Word> m_symbolSectionTypes;
 };
 
