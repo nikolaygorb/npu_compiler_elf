@@ -48,5 +48,10 @@ public:
      * Get ABI Version of current HPI/Loader
      */
     virtual const elf::ElfVersion getELFLibABIVersion() const = 0;
+
+    /**
+     * Get Mapped inference version
+     */
+    virtual const uint32_t getMIVersion(uint64_t mapped_entry) const = 0;
 };
 }  // namespace elf

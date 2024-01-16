@@ -332,8 +332,10 @@ const auto VPU_32_BIT_OR_B21_B26_UNSET_HIGH_16_Relocation = [](void* targetAddr,
                                                                const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint16_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32 bits OR reloc with b21-26 unset and high 16, addr %p, before value: 0x%llx symVal 0x%x addend %llu", addr, *addr,
-                 symVal, addend);
+    VPUX_ELF_LOG(
+            LogLevel::LOG_DEBUG,
+            "\t\t32 bits OR reloc with b21-26 unset and high 16, addr %p, before value: 0x%llx symVal 0x%x addend %llu",
+            addr, *addr, symVal, addend);
 
     uint64_t B21_B26_UNSET_MASK = ~B21_B26_MASK;
     auto patchAddr = static_cast<uint32_t>(symVal + addend) & B21_B26_UNSET_MASK;
@@ -344,14 +346,15 @@ const auto VPU_32_BIT_OR_B21_B26_UNSET_LOW_16_Relocation = [](void* targetAddr, 
                                                               const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint16_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32 bits OR reloc with b21-26 unset and low 16, addr %p, before value: 0x%llx symVal 0x%x addend %llu", addr, *addr,
-                 symVal, addend);
+    VPUX_ELF_LOG(
+            LogLevel::LOG_DEBUG,
+            "\t\t32 bits OR reloc with b21-26 unset and low 16, addr %p, before value: 0x%llx symVal 0x%x addend %llu",
+            addr, *addr, symVal, addend);
 
     uint64_t B21_B26_UNSET_MASK = ~B21_B26_MASK;
     auto patchAddr = static_cast<uint16_t>(symVal + addend) & B21_B26_UNSET_MASK;
     *addr |= patchAddr & 0xFFFF;
 };
-
 
 }  // namespace
 
@@ -405,25 +408,30 @@ AccessorDescriptor::AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t 
         : offset(offset), size(size), procFlags(procFlags), alignment(alignment) {
 }
 
-VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager,
-                       const std::vector<SymbolEntry>& runtimeSymTabs, bool symTabOverrideMode,
-                       const std::vector<elf::Elf_Word>& symbolSectionTypes)
+VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager)
         : m_bufferContainer(bufferManager),
-          m_runtimeSymTabs(runtimeSymTabs),
           m_relocationSectionIndexes(std::make_shared<std::vector<std::size_t>>()),
           m_jitRelocations(std::make_shared<std::vector<std::size_t>>()),
           m_userInputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_userOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_profOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_networkMetadata(std::make_shared<NetworkMetadata>()),
-          m_elfABIVersion(std::make_shared<elf::elf_note::Elf_AbiVersionNote>()),
-          m_symTabOverrideMode(symTabOverrideMode),
-          m_explicitAllocations(symTabOverrideMode),
-          m_symbolSectionTypes(symbolSectionTypes) {
+          m_elfABIVersion(std::make_shared<elf::elf_note::Elf_AbiVersionNote>()) {
     VPUX_ELF_THROW_UNLESS(bufferManager, ArgsError, "Invalid BufferManager pointer");
     m_bufferManager = bufferManager;
     m_reader = std::make_shared<Reader<ELF_Bitness::Elf64>>(accessor);
-    load();
+    m_sectionMap = std::make_shared<std::map<elf::Elf_Word /*section type*/, std::vector<DeviceBuffer>>>();
+
+    VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Initializing... Register sections");
+    auto numSections = m_reader->getSectionsNum();
+    for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
+        auto section = m_reader->getSectionNoData(sectionCtr);
+        auto sectionType = section.getHeader()->sh_type;
+        // set vpu_addr to 0, as the loader is not meant to run on the vpu, but on host side
+        DeviceBuffer sectionData(const_cast<uint8_t*>(section.getData<uint8_t>()), 0, section.getHeader()->sh_size);
+        m_sectionMap.get()->operator[](sectionType).push_back(sectionData);
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "[%lu] Section name: %s", sectionCtr, section.getName());
+    }
 };
 
 VPUXLoader::VPUXLoader(const VPUXLoader& other)
@@ -508,6 +516,32 @@ VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other) {
 VPUXLoader::~VPUXLoader() {
 }
 
+uint64_t VPUXLoader::getEntryBeforeLoad() {
+    auto numSections = m_reader->getSectionsNum();
+
+    for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
+        const auto& section = m_reader->getSectionNoData(sectionCtr);
+
+        auto hdr = section.getHeader();
+        if (hdr->sh_type == elf::SHT_SYMTAB) {
+            auto symTabsSize = section.getEntriesNum();
+            auto symTabs = section.getData<elf::SymbolEntry>();
+
+            for (size_t symTabIdx = 0; symTabIdx < symTabsSize; ++symTabIdx) {
+                auto& symTab = symTabs[symTabIdx];
+                auto symType = elf64STType(symTab.st_info);
+                if (symType == VPU_STT_ENTRY) {
+                    auto secIndx = symTab.st_shndx;
+                    return (uint64_t)m_reader->getSection(secIndx).getData<uint8_t>();
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+
 uint64_t VPUXLoader::getEntry() {
     // this is very very temporary version E#73309
     auto numSections = m_reader->getSectionsNum();
@@ -534,7 +568,13 @@ uint64_t VPUXLoader::getEntry() {
     return 0;
 }
 
-void VPUXLoader::load() {
+void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTabOverrideMode,
+                      const std::vector<elf::Elf_Word>& symbolSectionTypes) {
+    m_runtimeSymTabs = runtimeSymTabs;
+    m_symTabOverrideMode = symTabOverrideMode;
+    m_explicitAllocations = symTabOverrideMode;
+    m_symbolSectionTypes = symbolSectionTypes;
+
     VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Starting LOAD process");
     auto numSections = m_reader->getSectionsNum();
 

@@ -130,16 +130,17 @@ private:
     static const std::map<RelocationType, RelocationFunc> relocationMap;
 
 public:
-    VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, const std::vector<SymbolEntry>& runtimeSymTabs,
-               bool symTabOverrideMode = false,
-               const std::vector<elf::Elf_Word>& symbolSectionTypes = std::vector<elf::Elf_Word>());
+    VPUXLoader(AccessManager* accessor, BufferManager* bufferManager);
     VPUXLoader(const VPUXLoader& other);
     VPUXLoader(VPUXLoader&& other) = delete;
     VPUXLoader& operator=(const VPUXLoader&);
     VPUXLoader& operator=(const VPUXLoader&&) = delete;
     ~VPUXLoader();
 
+    void load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTabOverrideMode = false,
+              const std::vector<elf::Elf_Word>& symbolSectionTypes = std::vector<elf::Elf_Word>());
     uint64_t getEntry();
+    uint64_t getEntryBeforeLoad();
 
     void applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,
                              std::vector<DeviceBuffer>& profiling);
@@ -151,11 +152,15 @@ public:
     const elf::ResourceRequirements getResourceRequirements() const;
     std::shared_ptr<const elf::NetworkMetadata> getNetworkMetadata() const;
     const elf::elf_note::Elf_AbiVersionNote getElfABIVersion() const;
+    std::vector<DeviceBuffer>& getSectionsOfType(elf::Elf_Word type) {
+        // VPUX_ELF_THROW_UNLESS(m_sectionMap.get()->find(type) != m_sectionMap.get()->end(), RangeError,
+        //                       "Section type not registered!");
+        return m_sectionMap.get()->operator[](type);
+    };
 
 private:
     bool checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const;
     void registerUserIO(std::vector<DeviceBuffer>& io, const elf::SymbolEntry* symbols, size_t symbolCount) const;
-    void load();
 
     void updateSharedBuffers(const std::vector<std::size_t>& relocationSectionIndexes);
     void applyRelocations(const std::vector<std::size_t>& relocationSectionIndexes);
@@ -174,6 +179,10 @@ private:
 
     std::shared_ptr<elf::NetworkMetadata> m_networkMetadata;
     std::shared_ptr<elf::elf_note::Elf_AbiVersionNote> m_elfABIVersion;
+
+    // change to DeviceBuffer
+    std::shared_ptr<std::map<elf::Elf_Word /*section type*/, std::vector<DeviceBuffer>>> /*section data*/
+            m_sectionMap;
 
     bool m_symTabOverrideMode;
     bool m_explicitAllocations;

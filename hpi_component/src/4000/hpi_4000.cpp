@@ -109,7 +109,8 @@ void HostParsedInference_4000::setHostParsedInference(DeviceBuffer& devBuffer, u
     hpi->resource_requirements_.nn_slice_count_ = resReq.nn_slice_count_;
     hpi->resource_requirements_.nn_barriers_ = resReq.nn_barriers_;
     if (perf_metrics) {
-        memcpy(static_cast<void*>(&hpi->performance_metrics_), static_cast<void*>(perf_metrics), sizeof(nn_public::VpuPerformanceMetrics));
+        memcpy(static_cast<void*>(&hpi->performance_metrics_), static_cast<void*>(perf_metrics),
+               sizeof(nn_public::VpuPerformanceMetrics));
     } else {
         setDefaultPerformanceMetrics(hpi->performance_metrics_);
     }
@@ -120,6 +121,14 @@ void HostParsedInference_4000::setHostParsedInference(DeviceBuffer& devBuffer, u
 
 const elf::ElfVersion HostParsedInference_4000::getELFLibABIVersion() const {
     return {VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH};
+}
+
+const uint32_t HostParsedInference_4000::getMIVersion(uint64_t mapped_entry) const {
+    auto mi = reinterpret_cast<nn_public::VpuMappedInference*>(mapped_entry);
+    auto version = mi->vpu_nnrt_api_ver;
+    auto versionMajor = static_cast<uint16_t>(version >> 16);
+    auto versionMinor = static_cast<uint16_t>(version);
+    return mi->vpu_nnrt_api_ver;
 }
 
 }  // namespace elf

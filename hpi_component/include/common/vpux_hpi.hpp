@@ -32,8 +32,11 @@ public:
     std::vector<DeviceBuffer> getOutputBuffers() const;
     std::vector<DeviceBuffer> getProfBuffers() const;
     std::shared_ptr<const NetworkMetadata> getMetadata();
+    elf::ElfVersion getABIVersion() const;
+    uint32_t getMIVersion() const;
     void applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,
                           std::vector<DeviceBuffer>& profiling);
+    void load();
 
 private:
     BufferManager* bufferManager;
@@ -41,6 +44,11 @@ private:
     std::shared_ptr<NetworkMetadata> metadata;
     std::unique_ptr<VPUXLoader> loader;
     std::shared_ptr<AllocatedDeviceBuffer> parsedInference;
+
+    // helpers
+    void readMetadata();
+    uint64_t* readPerfMetrics();
+    elf::ElfVersion readElfABIVersion() const;
 };
 
 }  // namespace elf

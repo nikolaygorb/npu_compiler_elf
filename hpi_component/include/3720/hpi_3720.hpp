@@ -17,6 +17,7 @@ public:
     void setHostParsedInference(DeviceBuffer& devBuffer, uint64_t mapped_entry, ResourceRequirements resReq,
                                 uint64_t* perf_metrics) override;
     const elf::ElfVersion getELFLibABIVersion() const override;
+    const uint32_t getMIVersion(uint64_t mapped_entry) const override;
 
 private:
     static constexpr uint32_t VERSION_MAJOR = 1;
