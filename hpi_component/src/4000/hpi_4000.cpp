@@ -102,14 +102,14 @@ BufferSpecs HostParsedInference_4000::getParsedInferenceBufferSpecs() {
 }
 
 void HostParsedInference_4000::setHostParsedInference(DeviceBuffer& devBuffer, uint64_t mapped_entry,
-                                                      ResourceRequirements resReq, uint64_t* perf_metrics) {
+                                                      ResourceRequirements resReq, const uint64_t* perf_metrics) {
     auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference*>(devBuffer.cpu_addr());
 
     hpi->resource_requirements_ = {};
     hpi->resource_requirements_.nn_slice_count_ = resReq.nn_slice_count_;
     hpi->resource_requirements_.nn_barriers_ = resReq.nn_barriers_;
     if (perf_metrics) {
-        memcpy(static_cast<void*>(&hpi->performance_metrics_), static_cast<void*>(perf_metrics),
+        memcpy(static_cast<void*>(&hpi->performance_metrics_), static_cast<const void*>(perf_metrics),
                sizeof(nn_public::VpuPerformanceMetrics));
     } else {
         setDefaultPerformanceMetrics(hpi->performance_metrics_);
@@ -124,6 +124,7 @@ const elf::ElfVersion HostParsedInference_4000::getELFLibABIVersion() const {
 }
 
 uint32_t HostParsedInference_4000::getMIVersion(uint64_t mapped_entry) const {
+    VPUX_ELF_THROW_WHEN(!mapped_entry, ArgsError, "Received nullptr.");
     auto mi = reinterpret_cast<nn_public::VpuMappedInference*>(mapped_entry);
     return mi->vpu_nnrt_api_ver;
 }

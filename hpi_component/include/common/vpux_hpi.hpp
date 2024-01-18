@@ -47,7 +47,7 @@ private:
 
     // helpers
     void readMetadata();
-    uint64_t* readPerfMetrics();
+    const uint64_t* readPerfMetrics();
     elf::ElfVersion readElfABIVersion() const;
 };
 

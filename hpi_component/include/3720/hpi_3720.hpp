@@ -15,7 +15,7 @@ public:
     std::vector<SymbolEntry> getSymbolTable(uint8_t index) const override;
     BufferSpecs getParsedInferenceBufferSpecs() override;
     void setHostParsedInference(DeviceBuffer& devBuffer, uint64_t mapped_entry, ResourceRequirements resReq,
-                                uint64_t* perf_metrics) override;
+                                const uint64_t* perf_metrics) override;
     const elf::ElfVersion getELFLibABIVersion() const override;
     uint32_t getMIVersion(uint64_t mapped_entry) const override;
 

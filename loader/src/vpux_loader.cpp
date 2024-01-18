@@ -416,12 +416,12 @@ VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager)
           m_userOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_profOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_networkMetadata(std::make_shared<NetworkMetadata>()),
-          m_elfABIVersion(std::make_shared<elf::elf_note::Elf_AbiVersionNote>()) {
+          m_elfABIVersion(std::make_shared<elf::elf_note::Elf_AbiVersionNote>()),
+          m_loaded(false) {
     VPUX_ELF_THROW_UNLESS(bufferManager, ArgsError, "Invalid BufferManager pointer");
     m_bufferManager = bufferManager;
     m_reader = std::make_shared<Reader<ELF_Bitness::Elf64>>(accessor);
     m_sectionMap = std::make_shared<std::map<elf::Elf_Word /*section type*/, std::vector<DeviceBuffer>>>();
-    m_loaded = false;
 
     VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Initializing... Register sections");
     auto numSections = m_reader->getSectionsNum();
@@ -430,8 +430,14 @@ VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager)
         auto sectionType = section.getHeader()->sh_type;
         // set vpu_addr to 0, as the loader is not meant to run on the vpu, but on host side
         DeviceBuffer sectionData(const_cast<uint8_t*>(section.getData<uint8_t>()), 0, section.getHeader()->sh_size);
-        m_sectionMap.get()->operator[](sectionType).push_back(sectionData);
+        m_sectionMap.get()->operator[](sectionType).emplace_back(sectionData);
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "[%lu] Section name: %s", sectionCtr, section.getName());
+    }
+
+    // accomodate missing section due to compatibility with older ELFs
+    if(m_sectionMap->find(elf::VPU_SHT_PERF_METRICS) == m_sectionMap->end())
+    {
+        m_sectionMap->operator[](elf::VPU_SHT_PERF_METRICS) = {};
     }
 };
 
@@ -1103,5 +1109,11 @@ const elf::elf_note::Elf_AbiVersionNote VPUXLoader::getElfABIVersion() const {
 const elf::ResourceRequirements VPUXLoader::getResourceRequirements() const {
     return m_networkMetadata->mResourceRequirements;
 }
+
+std::vector<DeviceBuffer>& VPUXLoader::getSectionsOfType(elf::Elf_Word type) {
+    VPUX_ELF_THROW_UNLESS(m_sectionMap.get()->find(type) != m_sectionMap.get()->end(), RangeError,
+                          "Section type not registered!");
+    return m_sectionMap.get()->operator[](type);
+};
 
 }  // namespace elf

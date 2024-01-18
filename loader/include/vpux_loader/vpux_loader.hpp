@@ -138,7 +138,7 @@ public:
     ~VPUXLoader();
 
     void load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTabOverrideMode = false,
-              const std::vector<elf::Elf_Word>& symbolSectionTypes = std::vector<elf::Elf_Word>());
+              const std::vector<elf::Elf_Word>& symbolSectionTypes = {});
     uint64_t getEntry();
     uint64_t getEntryBeforeLoad();
 
@@ -152,11 +152,7 @@ public:
     const elf::ResourceRequirements getResourceRequirements() const;
     std::shared_ptr<const elf::NetworkMetadata> getNetworkMetadata() const;
     const elf::elf_note::Elf_AbiVersionNote getElfABIVersion() const;
-    std::vector<DeviceBuffer>& getSectionsOfType(elf::Elf_Word type) {
-        // VPUX_ELF_THROW_UNLESS(m_sectionMap.get()->find(type) != m_sectionMap.get()->end(), RangeError,
-        //                       "Section type not registered!");
-        return m_sectionMap.get()->operator[](type);
-    };
+    std::vector<DeviceBuffer>& getSectionsOfType(elf::Elf_Word type);
 
 private:
     bool checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const;

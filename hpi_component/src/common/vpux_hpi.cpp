@@ -110,10 +110,10 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::
 
 }  // namespace
 
-uint64_t* HostParsedInference::readPerfMetrics() {
+const uint64_t* HostParsedInference::readPerfMetrics() {
     const auto& sections = loader->getSectionsOfType(elf::VPU_SHT_PERF_METRICS);
     if (sections.size() == 1) {
-        return (uint64_t*)sections[0].cpu_addr();
+        return reinterpret_cast<const uint64_t*>(sections[0].cpu_addr());
     }
 
     VPUX_ELF_LOG(LogLevel::LOG_WARN, "No performance metrics. Default to be used!");
@@ -122,7 +122,7 @@ uint64_t* HostParsedInference::readPerfMetrics() {
 
 void HostParsedInference::readMetadata() {
     const auto& sections = loader->getSectionsOfType(elf::VPU_SHT_NETDESC);
-    VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Range error for metadata section.");
+    VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one metadata section.");
 
     auto metadataBufferPtr = sections[0].cpu_addr();
     auto metadataBufferSize = sections[0].size();
@@ -131,7 +131,7 @@ void HostParsedInference::readMetadata() {
 
 elf::ElfVersion HostParsedInference::readElfABIVersion() const {
     const auto& sections = loader->getSectionsOfType(elf::SHT_NOTE);
-    VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Range error for ABI secion.");
+    VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one ABI section.");
 
     elf::elf_note::Elf_AbiVersionNote elfABIVersionNote{};
 

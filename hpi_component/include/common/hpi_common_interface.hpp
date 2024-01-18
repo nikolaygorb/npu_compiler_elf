@@ -43,7 +43,7 @@ public:
      * @param resReq resource requirements to be added to the host parsed inference
      */
     virtual void setHostParsedInference(DeviceBuffer& devBuffer, uint64_t mapped_entry, ResourceRequirements resReq,
-                                        uint64_t* perf_metrics) = 0;
+                                        const uint64_t* perf_metrics) = 0;
     /**
      * Get ABI Version of current HPI/Loader
      */
