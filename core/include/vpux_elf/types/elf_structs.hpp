@@ -46,9 +46,9 @@ struct ElfTypes<ELF_Bitness::Elf64> {
     using SymbolEntry = Elf64_Sym;
 };
 
-// 
+//
 // ELF Library version control struct
-// 
+//
 struct ElfVersion {
     ElfVersion(uint32_t v_major, uint32_t v_minor, uint32_t v_patch) : major{v_major}, minor{v_minor}, patch{v_patch} {};
     ElfVersion() = delete;

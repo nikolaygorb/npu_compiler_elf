@@ -112,6 +112,8 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::
 
 const uint64_t* HostParsedInference::readPerfMetrics() {
     const auto& sections = loader->getSectionsOfType(elf::VPU_SHT_PERF_METRICS);
+    VPUX_ELF_THROW_WHEN(sections.size() > 1, RangeError, "Expected only a single section of performance metrics.");
+
     if (sections.size() == 1) {
         return reinterpret_cast<const uint64_t*>(sections[0].cpu_addr());
     }
@@ -131,13 +133,17 @@ void HostParsedInference::readMetadata() {
 
 elf::ElfVersion HostParsedInference::readElfABIVersion() const {
     const auto& sections = loader->getSectionsOfType(elf::SHT_NOTE);
-    VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one ABI section.");
-
-    elf::elf_note::Elf_AbiVersionNote elfABIVersionNote{};
-
-    VPUX_ELF_THROW_UNLESS(sections[0].size() == sizeof(elfABIVersionNote), SectionError, "Wrong ABI size.");
-    memcpy(&elfABIVersionNote, sections[0].cpu_addr(), sizeof(elfABIVersionNote));
-    return parseAbiVersionStruct(elfABIVersionNote);
+    for(auto i:sections)
+    {
+        elf::elf_note::Elf_AbiVersionNote elfABIVersionNote{};
+        VPUX_ELF_THROW_UNLESS(i.size() == sizeof(elfABIVersionNote), SectionError, "Wrong ABI size.");
+        memcpy(&elfABIVersionNote, i.cpu_addr(), sizeof(elfABIVersionNote));
+        if(elfABIVersionNote.n_type == elf::elf_note::NT_GNU_ABI_TAG)
+        {
+            return parseAbiVersionStruct(elfABIVersionNote);
+        }
+    }
+    VPUX_ELF_THROW(RangeError, "Expected ABI version not found.");
 }
 
 HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr)
@@ -152,6 +158,9 @@ void HostParsedInference::load() {
     // TODO: E#79344
     auto archSpecificHpi = getArchSpecificHPI(archName);
     checkELFLibABICompatibility(archSpecificHpi->getELFLibABIVersion(), readElfABIVersion());
+    // TODO define readMIVersion based on readElfABIVersion
+    // checkELFLibABICompatibility(archSpecificHpi->getExpectedMIVersion(), readMIVersion());
+
 
     const auto symbolTable = archSpecificHpi->getSymbolTable(metadata->mResourceRequirements.nn_slice_count_);
     const auto symbolSectionTypes = archSpecificHpi->getSymbolSectionTypes();
@@ -229,16 +238,6 @@ HostParsedInference& HostParsedInference::operator=(HostParsedInference&& rhs) {
     parsedInference = rhs.parsedInference;
 
     return *this;
-}
-
-elf::ElfVersion HostParsedInference::getABIVersion() const {
-    return readElfABIVersion();
-}
-
-uint32_t HostParsedInference::getMIVersion() const {
-    auto archName = std::string(metadata->mIdentification.arch_name);
-    auto archSpecificHpi = getArchSpecificHPI(archName);
-    return archSpecificHpi->getMIVersion(loader->getEntryBeforeLoad());
 }
 
 DeviceBuffer HostParsedInference::getParsedInference() const {

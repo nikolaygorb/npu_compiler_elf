@@ -52,6 +52,6 @@ public:
     /**
      * Get Mapped inference version
      */
-    virtual uint32_t getMIVersion(uint64_t mapped_entry) const = 0;
+    virtual elf::ElfVersion getExpectedMIVersion() const = 0;
 };
 }  // namespace elf

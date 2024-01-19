@@ -134,10 +134,9 @@ const elf::ElfVersion HostParsedInference_3720::getELFLibABIVersion() const {
     return {VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH};
 }
 
-uint32_t HostParsedInference_3720::getMIVersion(uint64_t mapped_entry) const {
-    VPUX_ELF_THROW_WHEN(!mapped_entry, ArgsError, "Received nullptr.");
-    auto mi = reinterpret_cast<nn_public::VpuMappedInference*>(mapped_entry);
-    return mi->vpu_nnrt_api_ver;
+elf::ElfVersion HostParsedInference_3720::getExpectedMIVersion() const {
+    elf::ElfVersion version(VPU_NNRT_37XX_API_VER_MAJOR, VPU_NNRT_37XX_API_VER_MINOR, VPU_NNRT_37XX_API_VER_PATCH);
+    return version;
 }
 
 }  // namespace elf

@@ -527,31 +527,6 @@ VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other) {
 VPUXLoader::~VPUXLoader() {
 }
 
-uint64_t VPUXLoader::getEntryBeforeLoad() {
-    auto numSections = m_reader->getSectionsNum();
-
-    for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
-        const auto& section = m_reader->getSectionNoData(sectionCtr);
-
-        auto hdr = section.getHeader();
-        if (hdr->sh_type == elf::SHT_SYMTAB) {
-            auto symTabsSize = section.getEntriesNum();
-            auto symTabs = section.getData<elf::SymbolEntry>();
-
-            for (size_t symTabIdx = 0; symTabIdx < symTabsSize; ++symTabIdx) {
-                auto& symTab = symTabs[symTabIdx];
-                auto symType = elf64STType(symTab.st_info);
-                if (symType == VPU_STT_ENTRY) {
-                    auto secIndx = symTab.st_shndx;
-                    return (uint64_t)m_reader->getSection(secIndx).getData<uint8_t>();
-                }
-            }
-        }
-    }
-
-    return 0;
-}
-
 uint64_t VPUXLoader::getEntry() {
     // this is very very temporary version E#73309
     auto numSections = m_reader->getSectionsNum();
