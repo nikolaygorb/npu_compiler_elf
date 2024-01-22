@@ -46,21 +46,21 @@ void checkELFLibABICompatibility(const elf::ElfVersion loaderABIVersion, const e
     std::ostringstream elfABIVersionStream;
     elfABIVersionStream << elfABIVersion.major << "." << elfABIVersion.minor << "." << elfABIVersion.patch;
 
-    if (loaderABIVersion.major != elfABIVersion.major) {
+    if (loaderABIVersion.major != elfABIVersion.major || loaderABIVersion.minor < elfABIVersion.minor) {
         VPUX_ELF_LOG(LogLevel::LOG_ERROR, "ELF Library ABI Version is not compatible with the ELF");
-        VPUX_ELF_LOG(LogLevel::LOG_ERROR, "\tExpected ABI Version: %s vs Received ELF ABI Version: %s",
+        VPUX_ELF_LOG(LogLevel::LOG_ERROR, "\tExpected ABI Version: %s and received ELF ABI Version: %s",
                      loaderABIVersionStream.str().c_str(), elfABIVersionStream.str().c_str());
 
         std::ostringstream errorMsgStream;
         errorMsgStream << "Versioning Error. ELF Library ABI Versions are incompatible. Provided: "
                        << elfABIVersionStream.str() << " vs Expected: " << loaderABIVersionStream.str();
         VPUX_ELF_THROW(VersioningError, errorMsgStream.str().c_str(), elfABIVersion, loaderABIVersion);
-    } else if (loaderABIVersion.minor != elfABIVersion.minor || loaderABIVersion.patch != elfABIVersion.patch) {
+    } else if (loaderABIVersion.minor > elfABIVersion.minor) {
         VPUX_ELF_LOG(LogLevel::LOG_WARN, "Warning! ELF Library ABI Versions are compatible but do not match.");
-        VPUX_ELF_LOG(LogLevel::LOG_WARN, "\tExpected ABI Version: %s vs Received ELF ABI Version: %s",
+        VPUX_ELF_LOG(LogLevel::LOG_WARN, "\tExpected ABI Version: %s and eceived ELF ABI Version: %s",
                      loaderABIVersionStream.str().c_str(), elfABIVersionStream.str().c_str());
     } else {
-        VPUX_ELF_LOG(LogLevel::LOG_WARN, "ELF Library ABI Versions are perfectly compatible. Version: %s",
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "ELF Library ABI Versions are perfectly compatible. Version: %s",
                      loaderABIVersionStream.str().c_str());
     }
 }
