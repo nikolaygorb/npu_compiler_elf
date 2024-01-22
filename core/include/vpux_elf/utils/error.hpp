@@ -20,25 +20,6 @@ public:
     }
 };
 
-class VersioningError : public RuntimeError {
-public:
-    explicit VersioningError(const char* what, ElfVersion providedVersion, ElfVersion requiredVersion)
-            : RuntimeError(what), m_providedVersion(providedVersion), m_requiredVersion(requiredVersion)  {
-    }
-
-    ElfVersion getProvidedVersion() {
-        return m_providedVersion;
-    }
-
-    ElfVersion getRequiredVersion() {
-        return m_requiredVersion;
-    }
-
-private:
-    ElfVersion m_providedVersion;
-    ElfVersion m_requiredVersion;
-};
-
 class LogicError : public std::logic_error {
 public:
     explicit LogicError(const char* what): std::logic_error(what) {

@@ -366,7 +366,7 @@ const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
         {SHT_RELA, Action::Relocate},
         {SHT_HASH, Action::Error},
         {SHT_DYNAMIC, Action::Error},
-        {SHT_NOTE, Action::RegisterElfABIVersion},  // SHT_NOTE is currently used solely for ABI Versioning info
+        {SHT_NOTE, Action::RegisterVersionInfo},
         {SHT_NOBITS, Action::Allocate},
         {SHT_REL, Action::Error},
         {SHT_SHLIB, Action::Error},
@@ -416,7 +416,7 @@ VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager)
           m_userOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_profOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_networkMetadata(std::make_shared<NetworkMetadata>()),
-          m_elfABIVersion(std::make_shared<elf::elf_note::Elf_AbiVersionNote>()),
+          m_elfABIVersion(std::make_shared<elf::elf_note::VersionNote>()),
           m_loaded(false) {
     VPUX_ELF_THROW_UNLESS(bufferManager, ArgsError, "Invalid BufferManager pointer");
     m_bufferManager = bufferManager;
@@ -702,14 +702,29 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
             break;
         }
 
-        case Action::RegisterElfABIVersion: {
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Parsing the ELF ABI Version");
+        case Action::RegisterVersionInfo: {
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Parsing Versioning information");
 
-            auto versionStructPtr = section.getData<elf::elf_note::Elf_AbiVersionNote>();
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Addr of ELF ABI Version = %p", versionStructPtr);
+            auto versionStructPtr = section.getData<elf::elf_note::VersionNote>();
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Addr of Versioning information = %p", versionStructPtr);
 
-            safeGet<elf::elf_note::Elf_AbiVersionNote>(&(*m_elfABIVersion), versionStructPtr);
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "ELF ABI Version read and copied successfully");
+            auto versionType = versionStructPtr->n_type;
+            switch (versionType) {
+                case elf::elf_note::NT_GNU_ABI_TAG:
+                    safeGet<elf::elf_note::VersionNote>(&(*m_elfABIVersion), versionStructPtr);
+                    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Identified & succesfully read and copied ELF ABI Version");
+                    break;
+
+                case elf::elf_note::NT_NPU_MPI_VERSION:
+                    safeGet<elf::elf_note::VersionNote>(&(*m_MIVersion), versionStructPtr);
+                    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Identified & succesfully read and copied Mapped Inference Version");
+                    break;
+
+                default:
+                    VPUX_ELF_LOG(LogLevel::LOG_WARN, "Unrecognized Version Section Type %x", versionType);
+                    break;
+
+            };
             break;
         }
 
@@ -723,8 +738,14 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
         }
 
         default: {
-            VPUX_ELF_THROW(ImplausibleState, "Unhandled section type");
-            return;
+            if (sectionType >= elf::SHT_LOUSER && sectionType <= elf::SHT_HIUSER) {
+                VPUX_ELF_LOG(LogLevel::LOG_WARN, "Unrecognized Section Type in User range %x", sectionType);
+                break;
+            } else {
+                VPUX_ELF_THROW(ImplausibleState, "Unrecognized Section Type outside of User range");
+                return;
+            }
+            break;
         }
         }
     }
@@ -1077,8 +1098,12 @@ std::shared_ptr<const elf::NetworkMetadata> VPUXLoader::getNetworkMetadata() con
     return m_networkMetadata;
 }
 
-const elf::elf_note::Elf_AbiVersionNote VPUXLoader::getElfABIVersion() const {
+const elf::elf_note::VersionNote VPUXLoader::getElfABIVersion() const {
     return *m_elfABIVersion;
+}
+
+const elf::elf_note::VersionNote VPUXLoader::getMIVersion() const {
+    return *m_MIVersion;
 }
 
 const elf::ResourceRequirements VPUXLoader::getResourceRequirements() const {

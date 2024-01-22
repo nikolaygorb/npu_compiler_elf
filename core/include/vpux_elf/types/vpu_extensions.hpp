@@ -204,4 +204,8 @@ constexpr Elf_Word VPU_NNRD_SYM_HW_REGISTER = 7;
 const Elf_Word VPU_SH_INFO_FOR_VPU = 0;
 const Elf_Word VPU_SH_ADDR_ALIGN_FOR_VPU = 64;
 
+namespace elf_note {
+// Custom values for n_type field of SHT_NOTE section
+constexpr uint32_t NT_NPU_MPI_VERSION = 0xA000;
+}
 }

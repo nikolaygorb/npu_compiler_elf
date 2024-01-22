@@ -122,7 +122,7 @@ private:
         Relocate,
         RegisterUserIO,
         RegisterNetworkMetadata,
-        RegisterElfABIVersion,
+        RegisterVersionInfo,
         Error
     };
 
@@ -151,7 +151,8 @@ public:
     std::vector<DeviceBuffer> getProfBuffers() const;
     const elf::ResourceRequirements getResourceRequirements() const;
     std::shared_ptr<const elf::NetworkMetadata> getNetworkMetadata() const;
-    const elf::elf_note::Elf_AbiVersionNote getElfABIVersion() const;
+    const elf::elf_note::VersionNote getElfABIVersion() const;
+    const elf::elf_note::VersionNote getMIVersion() const;
     std::vector<DeviceBuffer>& getSectionsOfType(elf::Elf_Word type);
 
 private:
@@ -174,7 +175,8 @@ private:
     std::shared_ptr<std::vector<DeviceBuffer>> m_profOutputsDescriptors;
 
     std::shared_ptr<elf::NetworkMetadata> m_networkMetadata;
-    std::shared_ptr<elf::elf_note::Elf_AbiVersionNote> m_elfABIVersion;
+    std::shared_ptr<elf::elf_note::VersionNote> m_elfABIVersion;
+    std::shared_ptr<elf::elf_note::VersionNote> m_MIVersion;
 
     std::shared_ptr<std::map<elf::Elf_Word /*section type*/, std::vector<DeviceBuffer>>> /*section data*/
             m_sectionMap;

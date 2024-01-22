@@ -35,36 +35,6 @@ enum ArchKind { UNKNOWN = 0, VPUX37XX, VPUX40XX };
 
 namespace {
 
-const elf::ElfVersion parseAbiVersionStruct(const elf::elf_note::Elf_AbiVersionNote& abiVersionStruct) {
-    return {abiVersionStruct.n_desc[1], abiVersionStruct.n_desc[2], abiVersionStruct.n_desc[3]};
-}
-
-void checkELFLibABICompatibility(const elf::ElfVersion loaderABIVersion, const elf::ElfVersion elfABIVersion) {
-    std::ostringstream loaderABIVersionStream;
-    loaderABIVersionStream << loaderABIVersion.major << "." << loaderABIVersion.minor << "." << loaderABIVersion.patch;
-
-    std::ostringstream elfABIVersionStream;
-    elfABIVersionStream << elfABIVersion.major << "." << elfABIVersion.minor << "." << elfABIVersion.patch;
-
-    if (loaderABIVersion.major != elfABIVersion.major || loaderABIVersion.minor < elfABIVersion.minor) {
-        VPUX_ELF_LOG(LogLevel::LOG_ERROR, "ELF Library ABI Version is not compatible with the ELF");
-        VPUX_ELF_LOG(LogLevel::LOG_ERROR, "\tExpected ABI Version: %s and received ELF ABI Version: %s",
-                     loaderABIVersionStream.str().c_str(), elfABIVersionStream.str().c_str());
-
-        std::ostringstream errorMsgStream;
-        errorMsgStream << "Versioning Error. ELF Library ABI Versions are incompatible. Provided: "
-                       << elfABIVersionStream.str() << " vs Expected: " << loaderABIVersionStream.str();
-        VPUX_ELF_THROW(VersioningError, errorMsgStream.str().c_str(), elfABIVersion, loaderABIVersion);
-    } else if (loaderABIVersion.minor > elfABIVersion.minor) {
-        VPUX_ELF_LOG(LogLevel::LOG_WARN, "Warning! ELF Library ABI Versions are compatible but do not match.");
-        VPUX_ELF_LOG(LogLevel::LOG_WARN, "\tExpected ABI Version: %s and eceived ELF ABI Version: %s",
-                     loaderABIVersionStream.str().c_str(), elfABIVersionStream.str().c_str());
-    } else {
-        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "ELF Library ABI Versions are perfectly compatible. Version: %s",
-                     loaderABIVersionStream.str().c_str());
-    }
-}
-
 const static std::unordered_map<std::string, ArchKind> knownArch = {{"VPUX37XX", ArchKind::VPUX37XX},
                                                                     {"VPUX40XX", ArchKind::VPUX40XX},
                                                                     // to be removed with E#88139:
@@ -131,19 +101,26 @@ void HostParsedInference::readMetadata() {
     metadata = MetadataSerialization::deserialize(metadataBufferPtr, metadataBufferSize);
 }
 
-elf::ElfVersion HostParsedInference::readElfABIVersion() const {
-    const auto& sections = loader->getSectionsOfType(elf::SHT_NOTE);
-    for(auto i:sections)
-    {
-        elf::elf_note::Elf_AbiVersionNote elfABIVersionNote{};
-        VPUX_ELF_THROW_UNLESS(i.size() == sizeof(elfABIVersionNote), SectionError, "Wrong ABI size.");
-        memcpy(&elfABIVersionNote, i.cpu_addr(), sizeof(elfABIVersionNote));
-        if(elfABIVersionNote.n_type == elf::elf_note::NT_GNU_ABI_TAG)
-        {
-            return parseAbiVersionStruct(elfABIVersionNote);
+const elf::ElfVersion HostParsedInference::readVersioningInfo(uint32_t versionType) const {
+    const auto& noteSections = loader->getSectionsOfType(elf::SHT_NOTE);
+    for (auto section : noteSections) {
+        VPUX_ELF_THROW_UNLESS(section.size() == sizeof(elf::elf_note::VersionNote), SectionError, "Wrong Versioning Note size");
+        elf::elf_note::VersionNote elfABIVersionNote{};
+        memcpy(&elfABIVersionNote, section.cpu_addr(), sizeof(elf::elf_note::VersionNote));
+        if (elfABIVersionNote.n_type == versionType) {
+            return elf::ElfVersion(elfABIVersionNote);
         }
     }
-    VPUX_ELF_THROW(RangeError, "Expected ABI version not found.");
+    VPUX_ELF_LOG(LogLevel::LOG_ERROR, "Could not retrieve versioning info of type %x", versionType);
+    VPUX_ELF_THROW(RangeError, "Requested Versioning information was not found");
+}
+
+const elf::ElfVersion HostParsedInference::getElfABIVersion() const {
+    return readVersioningInfo(elf::elf_note::NT_GNU_ABI_TAG);
+}
+
+const elf::ElfVersion HostParsedInference::getMIVersion() const {
+    return readVersioningInfo(elf::elf_note::NT_NPU_MPI_VERSION);
 }
 
 HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr)
@@ -157,10 +134,12 @@ void HostParsedInference::load() {
 
     // TODO: E#79344
     auto archSpecificHpi = getArchSpecificHPI(archName);
-    checkELFLibABICompatibility(archSpecificHpi->getELFLibABIVersion(), readElfABIVersion());
-    // TODO define readMIVersion based on readElfABIVersion
-    // checkELFLibABICompatibility(archSpecificHpi->getExpectedMIVersion(), readMIVersion());
 
+    // Check ELF Library ABI Compatibility
+    elf::ElfVersion::checkVersionCompatibility(archSpecificHpi->getELFLibABIVersion(), getElfABIVersion(), elf::VersionType::ELF_ABI_VERSION);
+
+    // Check Mapped Inference Compatibility
+    elf::ElfVersion::checkVersionCompatibility(archSpecificHpi->getExpectedMIVersion(), getMIVersion(), elf::VersionType::MAPPED_INFERENCE_VERSION);
 
     const auto symbolTable = archSpecificHpi->getSymbolTable(metadata->mResourceRequirements.nn_slice_count_);
     const auto symbolSectionTypes = archSpecificHpi->getSymbolSectionTypes();

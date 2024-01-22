@@ -12,6 +12,7 @@
 #include <vpux_headers/buffer_manager.hpp>
 #include <vpux_headers/device_buffer.hpp>
 #include <vpux_headers/metadata.hpp>
+#include <vpux_elf/utils/version.hpp>
 
 namespace elf {
 
@@ -52,6 +53,6 @@ public:
     /**
      * Get Mapped inference version
      */
-    virtual elf::ElfVersion getExpectedMIVersion() const = 0;
+    virtual const elf::ElfVersion getExpectedMIVersion() const = 0;
 };
 }  // namespace elf

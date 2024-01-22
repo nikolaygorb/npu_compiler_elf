@@ -123,9 +123,8 @@ const elf::ElfVersion HostParsedInference_4000::getELFLibABIVersion() const {
     return {VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH};
 }
 
-elf::ElfVersion HostParsedInference_4000::getExpectedMIVersion() const {
-    elf::ElfVersion version(VPU_NNRT_40XX_API_VER_MAJOR, VPU_NNRT_40XX_API_VER_MINOR, VPU_NNRT_40XX_API_VER_PATCH);
-    return version;
+const elf::ElfVersion HostParsedInference_4000::getExpectedMIVersion() const {
+    return {VPU_NNRT_40XX_API_VER_MAJOR, VPU_NNRT_40XX_API_VER_MINOR, VPU_NNRT_40XX_API_VER_PATCH};
 }
 
 }  // namespace elf

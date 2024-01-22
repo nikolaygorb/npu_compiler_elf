@@ -11,6 +11,7 @@
 #include <vpux_headers/buffer_manager.hpp>
 #include <vpux_headers/device_buffer.hpp>
 #include <vpux_headers/metadata.hpp>
+#include <vpux_elf/utils/version.hpp>
 
 namespace elf {
 
@@ -32,6 +33,10 @@ public:
     std::vector<DeviceBuffer> getOutputBuffers() const;
     std::vector<DeviceBuffer> getProfBuffers() const;
     std::shared_ptr<const NetworkMetadata> getMetadata();
+
+    const elf::ElfVersion getElfABIVersion() const;
+    const elf::ElfVersion getMIVersion() const;
+
     void applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,
                           std::vector<DeviceBuffer>& profiling);
     void load();
@@ -46,7 +51,7 @@ private:
     // helpers
     void readMetadata();
     const uint64_t* readPerfMetrics();
-    elf::ElfVersion readElfABIVersion() const;
+    const elf::ElfVersion readVersioningInfo(uint32_t versionType) const;
 };
 
 }  // namespace elf
