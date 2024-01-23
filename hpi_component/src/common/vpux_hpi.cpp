@@ -142,7 +142,7 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     readMetadata();
     auto archName = std::string(metadata->mIdentification.arch_name);
     auto expArchName = archKindToString(expArchKind);
-    VPUX_ELF_THROW_WHEN(mapArchStringToArchKind(archName) != expArchKind, ArgsError, "Expected arch %s but receieved %s.", archName, expArchName);
+    VPUX_ELF_THROW_WHEN(mapArchStringToArchKind(archName) != expArchKind, ArgsError, "Expected arch %s ", expArchName.c_str() ," but receieved %s.", archName.c_str());
 
     auto archSpecificHpi = getArchSpecificHPI(archName);
 
