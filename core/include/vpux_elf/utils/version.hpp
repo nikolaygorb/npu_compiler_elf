@@ -24,22 +24,20 @@ enum class VersionType {
     MAPPED_INFERENCE_VERSION = 2
 };
 
-std::string stringifyVersionTypeEnum(VersionType val);
-
-class ElfVersion final {
+class Version final {
 public:
-    ElfVersion(uint32_t v_major, uint32_t v_minor, uint32_t v_patch) : major{v_major}, minor{v_minor}, patch{v_patch} {};
-    ElfVersion(const elf::elf_note::VersionNote& versionNote) : major{versionNote.n_desc[1]}, minor{versionNote.n_desc[2]}, patch{versionNote.n_desc[3]} {};
-    ElfVersion() = delete;
+    Version(uint32_t v_major, uint32_t v_minor, uint32_t v_patch) : major{v_major}, minor{v_minor}, patch{v_patch} {};
+    explicit Version(const elf::elf_note::VersionNote& versionNote) : major{versionNote.n_desc[1]}, minor{versionNote.n_desc[2]}, patch{versionNote.n_desc[3]} {};
+    ~Version() = default;
 
-    friend std::ostream& operator<< (std::ostream& stream, const ElfVersion& version) {
+    friend std::ostream& operator<< (std::ostream& stream, const Version& version) {
         stream << version.major << "." << version.minor << "." << version.patch;
         return stream;
     }
 
     /**
-     * Helper static function to check the compatibility between different versions 
-     * 
+     * Helper static function to check the compatibility between different versions
+     *
      * @note
      * Although it has no return, the function THROWS for incompatibilies and warns for unwanted differences.
      * Behaviour:
@@ -48,43 +46,43 @@ public:
      *  - if expected minor version > received minor version => compatible but not fully matching => logs warning
      *  - otherwise, versions match well
      *
-     * @param expectedVersion the expected version in ElfVersion format: {v_major.v_minor.v_patch}
+     * @param expectedVersion the expected version in Version format: {v_major.v_minor.v_patch}
      *
-     * @param receivedVersion the received version in ElfVersion format: {v_major.v_minor.v_patch}
+     * @param receivedVersion the received version in Version format: {v_major.v_minor.v_patch}
      *
      * @return void
      */
-    static void checkVersionCompatibility(const ElfVersion& expectedVersion, const ElfVersion& recievedVersion, const VersionType versionType = VersionType::UNKNOWN_VERSION);
+    static void checkVersionCompatibility(const Version& expectedVersion, const Version& recievedVersion, const VersionType versionType = VersionType::UNKNOWN_VERSION);
 
-public:
-    const uint32_t major;
-    const uint32_t minor;
-    const uint32_t patch;
+private:
+    uint32_t major;
+    uint32_t minor;
+    uint32_t patch;
 };
 
 
 
-// 
-// VersioningError extension 
-// 
+//
+// VersioningError extension
+//
 
 class VersioningError : public elf::RuntimeError {
 public:
-    explicit VersioningError(const char* what, elf::ElfVersion providedVersion, elf::ElfVersion requiredVersion)
+    explicit VersioningError(const char* what, elf::Version providedVersion, elf::Version requiredVersion)
             : RuntimeError(what), m_providedVersion(providedVersion), m_requiredVersion(requiredVersion)  {
     }
 
-    ElfVersion getProvidedVersion() {
+    Version getProvidedVersion() {
         return m_providedVersion;
     }
 
-    ElfVersion getRequiredVersion() {
+    Version getRequiredVersion() {
         return m_requiredVersion;
     }
 
 private:
-    ElfVersion m_providedVersion;
-    ElfVersion m_requiredVersion;
+    Version m_providedVersion;
+    Version m_requiredVersion;
 };
 
 } // namespace elf

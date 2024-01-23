@@ -11,7 +11,8 @@
 
 namespace elf {
 
-std::string stringifyVersionTypeEnum(VersionType val) {
+namespace {
+    std::string stringifyVersionTypeEnum(VersionType val) {
     switch (val) {
         case VersionType::UNKNOWN_VERSION: return "UNKNOWN_VERSION";
         case VersionType::ELF_ABI_VERSION: return "ELF_ABI_VERSION";
@@ -19,8 +20,9 @@ std::string stringifyVersionTypeEnum(VersionType val) {
         default: return "";
     }
 }
+};
 
-void ElfVersion::checkVersionCompatibility(const ElfVersion& expectedVersion, const ElfVersion& recievedVersion, const VersionType versionType) {
+void Version::checkVersionCompatibility(const Version& expectedVersion, const Version& recievedVersion, const VersionType versionType) {
     auto versionTypeString = elf::stringifyVersionTypeEnum(versionType);
 
     std::ostringstream logBuffer;

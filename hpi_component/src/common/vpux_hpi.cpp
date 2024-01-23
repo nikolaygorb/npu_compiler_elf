@@ -30,24 +30,33 @@
 // clang-format on
 
 namespace elf {
-
-enum ArchKind { UNKNOWN = 0, VPUX37XX, VPUX40XX };
-
 namespace {
 
-const static std::unordered_map<std::string, ArchKind> knownArch = {{"VPUX37XX", ArchKind::VPUX37XX},
-                                                                    {"VPUX40XX", ArchKind::VPUX40XX},
-                                                                    // to be removed with E#88139:
-                                                                    // temporary fix to support NPU 5000 arch
-                                                                    {"VPUX50XX", ArchKind::VPUX40XX}};
+const static std::unordered_map<std::string,
+                        HostParsedInference::ArchKind> knownArch = {{"UNKNOWN", HostParsedInference::ArchKind::UNKNOWN},
+                                                                    {"VPUX37XX", HostParsedInference::ArchKind::VPUX37XX},
+                                                                    {"VPUX40XX", HostParsedInference::ArchKind::VPUX40XX},
+                                                                    {"VPUX50XX", HostParsedInference::ArchKind::VPUX50XX}};
 
-static ArchKind mapArchStringToArchKind(const std::string& archName) {
+static HostParsedInference::ArchKind mapArchStringToArchKind(const std::string& archName) {
     auto retArch = knownArch.find(archName);
     if (retArch != knownArch.end()) {
         return retArch->second;
     } else {
-        return ArchKind::UNKNOWN;
+        return HostParsedInference::ArchKind::UNKNOWN;
     }
+}
+
+static std::string archKindToString(HostParsedInference::ArchKind arch)
+{
+    for(auto archIt : knownArch)
+    {
+        if(archIt.second == arch)
+        {
+            return archIt.first;
+        }
+    }
+    return std::string("UNKNOWN");
 }
 
 static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::string& archName) {
@@ -58,7 +67,7 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::
     std::unique_ptr<HostParsedInferenceCommon> archSpecificHPI;
     switch (arch) {
 #if defined(CONFIG_TARGET_SOC_3720) || defined(HOST_BUILD)
-    case ArchKind::VPUX37XX:
+    case HostParsedInference::ArchKind::VPUX37XX:
         archSpecificHPI = std::make_unique<HostParsedInference_3720>();
         break;
 #endif
@@ -66,7 +75,8 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::
 // to be updated with E#88139:
 // temporary fix to support NPU 5000 arch
 #if defined(CONFIG_TARGET_SOC_4000) || (CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)
-    case ArchKind::VPUX40XX:
+    case HostParsedInference::ArchKind::VPUX40XX:
+    case HostParsedInference::ArchKind::VPUX50XX:
         archSpecificHPI = std::make_unique<HostParsedInference_4000>();
         break;
 #endif
@@ -101,32 +111,37 @@ void HostParsedInference::readMetadata() {
     metadata = MetadataSerialization::deserialize(metadataBufferPtr, metadataBufferSize);
 }
 
-const elf::ElfVersion HostParsedInference::readVersioningInfo(uint32_t versionType) const {
+const elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType) const {
     const auto& noteSections = loader->getSectionsOfType(elf::SHT_NOTE);
     for (auto section : noteSections) {
         VPUX_ELF_THROW_UNLESS(section.size() == sizeof(elf::elf_note::VersionNote), SectionError, "Wrong Versioning Note size");
         elf::elf_note::VersionNote elfABIVersionNote{};
         memcpy(&elfABIVersionNote, section.cpu_addr(), sizeof(elf::elf_note::VersionNote));
         if (elfABIVersionNote.n_type == versionType) {
-            return elf::ElfVersion(elfABIVersionNote);
+            return elf::Version(elfABIVersionNote);
         }
     }
     VPUX_ELF_LOG(LogLevel::LOG_ERROR, "Could not retrieve versioning info of type %x", versionType);
     VPUX_ELF_THROW(RangeError, "Requested Versioning information was not found");
 }
 
-const elf::ElfVersion HostParsedInference::getElfABIVersion() const {
+const elf::Version HostParsedInference::getElfABIVersion() const {
     return readVersioningInfo(elf::elf_note::NT_GNU_ABI_TAG);
 }
 
-const elf::ElfVersion HostParsedInference::getMIVersion() const {
+const elf::Version HostParsedInference::getMIVersion() const {
     return readVersioningInfo(elf::elf_note::NT_NPU_MPI_VERSION);
 }
 
-HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr)
+HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, ArchKind expArchKind)
         : bufferManager(bufferMgr), accessManager(accessMgr) {
+    // create the loader object to cache sections
     loader = std::make_unique<VPUXLoader>(accessMgr, bufferMgr);
+    // read metadata in order to have access arch name
     readMetadata();
+    auto archName = std::string(metadata->mIdentification.arch_name);
+    auto expArchName = archKindToString(expArchKind);
+    VPUX_ELF_THROW_WHEN(mapArchStringToArchKind(archName) != expArchKind, ArgsError, "Expected arch %s but receieved %s.", archName, expArchName);
 }
 
 void HostParsedInference::load() {
@@ -136,10 +151,10 @@ void HostParsedInference::load() {
     auto archSpecificHpi = getArchSpecificHPI(archName);
 
     // Check ELF Library ABI Compatibility
-    elf::ElfVersion::checkVersionCompatibility(archSpecificHpi->getELFLibABIVersion(), getElfABIVersion(), elf::VersionType::ELF_ABI_VERSION);
+    elf::Version::checkVersionCompatibility(archSpecificHpi->getELFLibABIVersion(), getElfABIVersion(), elf::VersionType::ELF_ABI_VERSION);
 
     // Check Mapped Inference Compatibility
-    elf::ElfVersion::checkVersionCompatibility(archSpecificHpi->getExpectedMIVersion(), getMIVersion(), elf::VersionType::MAPPED_INFERENCE_VERSION);
+    elf::Version::checkVersionCompatibility(archSpecificHpi->getExpectedMIVersion(), getMIVersion(), elf::VersionType::MAPPED_INFERENCE_VERSION);
 
     const auto symbolTable = archSpecificHpi->getSymbolTable(metadata->mResourceRequirements.nn_slice_count_);
     const auto symbolSectionTypes = archSpecificHpi->getSymbolSectionTypes();
@@ -240,7 +255,7 @@ std::vector<DeviceBuffer> HostParsedInference::getProfBuffers() const {
 }
 
 std::shared_ptr<const elf::NetworkMetadata> HostParsedInference::getMetadata() {
-    return loader->getNetworkMetadata();
+    return metadata;
 }
 
 void HostParsedInference::applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,

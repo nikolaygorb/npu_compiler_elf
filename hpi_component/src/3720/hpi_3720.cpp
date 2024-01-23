@@ -130,11 +130,11 @@ void HostParsedInference_3720::setHostParsedInference(DeviceBuffer& devBuffer, u
     hpi->mapped_.count = 1;
 }
 
-const elf::ElfVersion HostParsedInference_3720::getELFLibABIVersion() const {
+const elf::Version HostParsedInference_3720::getELFLibABIVersion() const {
     return {VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH};
 }
 
-const elf::ElfVersion HostParsedInference_3720::getExpectedMIVersion() const {
+const elf::Version HostParsedInference_3720::getExpectedMIVersion() const {
     return {VPU_NNRT_37XX_API_VER_MAJOR, VPU_NNRT_37XX_API_VER_MINOR, VPU_NNRT_37XX_API_VER_PATCH};
 }
 
