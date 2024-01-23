@@ -21,7 +21,7 @@ class HostParsedInference final {
 public:
     enum class ArchKind { UNKNOWN = 0, VPUX37XX, VPUX40XX, VPUX50XX};
 
-    HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, ArchKind expArchKind);
+    HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, ArchKind expArchKind, elf::Version nnExpectedVersion);
     HostParsedInference(const HostParsedInference& other);
     HostParsedInference(HostParsedInference&& other);
     ~HostParsedInference();

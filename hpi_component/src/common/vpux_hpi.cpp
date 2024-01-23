@@ -133,23 +133,21 @@ const elf::Version HostParsedInference::getMIVersion() const {
     return readVersioningInfo(elf::elf_note::NT_NPU_MPI_VERSION);
 }
 
-HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, ArchKind expArchKind)
+HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, ArchKind expArchKind, elf::Version nnExpectedVersion)
         : bufferManager(bufferMgr), accessManager(accessMgr) {
     // create the loader object to cache sections
     loader = std::make_unique<VPUXLoader>(accessMgr, bufferMgr);
-    // read metadata in order to have access arch name.
-    // also driver can querry it before loading
-    readMetadata();
-    auto archName = std::string(metadata->mIdentification.arch_name);
     auto expArchName = archKindToString(expArchKind);
-    VPUX_ELF_THROW_WHEN(mapArchStringToArchKind(archName) != expArchKind, ArgsError, "Expected arch %s ", expArchName.c_str() ," but receieved %s.", archName.c_str());
-
-    auto archSpecificHpi = getArchSpecificHPI(archName);
-
+    auto archSpecificHpi = getArchSpecificHPI(expArchName);
     // Check ELF Library ABI Compatibility
     elf::Version::checkVersionCompatibility(archSpecificHpi->getELFLibABIVersion(), getElfABIVersion(), elf::VersionType::ELF_ABI_VERSION);
+
+    readMetadata();
+    auto archName = std::string(metadata->mIdentification.arch_name);
+    VPUX_ELF_THROW_WHEN(mapArchStringToArchKind(archName) != expArchKind, ArgsError, "Expected arch %s ", expArchName.c_str() ," but receieved %s.", archName.c_str());
+
     // Check Mapped Inference Compatibility
-    elf::Version::checkVersionCompatibility(archSpecificHpi->getExpectedMIVersion(), getMIVersion(), elf::VersionType::MAPPED_INFERENCE_VERSION);
+    elf::Version::checkVersionCompatibility(nnExpectedVersion, getMIVersion(), elf::VersionType::MAPPED_INFERENCE_VERSION);
 }
 
 void HostParsedInference::load() {
