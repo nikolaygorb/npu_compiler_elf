@@ -137,24 +137,25 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
         : bufferManager(bufferMgr), accessManager(accessMgr) {
     // create the loader object to cache sections
     loader = std::make_unique<VPUXLoader>(accessMgr, bufferMgr);
-    // read metadata in order to have access arch name
+    // read metadata in order to have access arch name.
+    // also driver can querry it before loading
     readMetadata();
     auto archName = std::string(metadata->mIdentification.arch_name);
     auto expArchName = archKindToString(expArchKind);
     VPUX_ELF_THROW_WHEN(mapArchStringToArchKind(archName) != expArchKind, ArgsError, "Expected arch %s but receieved %s.", archName, expArchName);
+
+    auto archSpecificHpi = getArchSpecificHPI(archName);
+
+    // Check ELF Library ABI Compatibility
+    elf::Version::checkVersionCompatibility(archSpecificHpi->getELFLibABIVersion(), getElfABIVersion(), elf::VersionType::ELF_ABI_VERSION);
+    // Check Mapped Inference Compatibility
+    elf::Version::checkVersionCompatibility(archSpecificHpi->getExpectedMIVersion(), getMIVersion(), elf::VersionType::MAPPED_INFERENCE_VERSION);
 }
 
 void HostParsedInference::load() {
     auto archName = std::string(metadata->mIdentification.arch_name);
 
-    // TODO: E#79344
     auto archSpecificHpi = getArchSpecificHPI(archName);
-
-    // Check ELF Library ABI Compatibility
-    elf::Version::checkVersionCompatibility(archSpecificHpi->getELFLibABIVersion(), getElfABIVersion(), elf::VersionType::ELF_ABI_VERSION);
-
-    // Check Mapped Inference Compatibility
-    elf::Version::checkVersionCompatibility(archSpecificHpi->getExpectedMIVersion(), getMIVersion(), elf::VersionType::MAPPED_INFERENCE_VERSION);
 
     const auto symbolTable = archSpecificHpi->getSymbolTable(metadata->mResourceRequirements.nn_slice_count_);
     const auto symbolSectionTypes = archSpecificHpi->getSymbolSectionTypes();
