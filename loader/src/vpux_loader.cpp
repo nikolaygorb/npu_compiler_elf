@@ -366,12 +366,12 @@ const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
         {SHT_RELA, Action::Relocate},
         {SHT_HASH, Action::Error},
         {SHT_DYNAMIC, Action::Error},
-        {SHT_NOTE, Action::RegisterVersionInfo},
+        {SHT_NOTE, Action::None},
         {SHT_NOBITS, Action::Allocate},
         {SHT_REL, Action::Error},
         {SHT_SHLIB, Action::Error},
         {SHT_DYNSYM, Action::Error},
-        {VPU_SHT_NETDESC, Action::RegisterNetworkMetadata},
+        {VPU_SHT_NETDESC, Action::None},
         {VPU_SHT_PROF, Action::None},
         {VPU_SHT_CMX_METADATA, Action::None},
         {VPU_SHT_CMX_WORKSPACE, Action::None},
@@ -415,8 +415,6 @@ VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager)
           m_userInputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_userOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_profOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
-          m_networkMetadata(std::make_shared<NetworkMetadata>()),
-          m_elfABIVersion(std::make_shared<elf::elf_note::VersionNote>()),
           m_loaded(false) {
     VPUX_ELF_THROW_UNLESS(bufferManager, ArgsError, "Invalid BufferManager pointer");
     m_bufferManager = bufferManager;
@@ -451,8 +449,6 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
           m_userInputsDescriptors(other.m_userInputsDescriptors),
           m_userOutputsDescriptors(other.m_userOutputsDescriptors),
           m_profOutputsDescriptors(other.m_profOutputsDescriptors),
-          m_networkMetadata(other.m_networkMetadata),
-          m_elfABIVersion(other.m_elfABIVersion),
           m_sectionMap(other.m_sectionMap),
           m_symTabOverrideMode(other.m_symTabOverrideMode),
           m_explicitAllocations(other.m_explicitAllocations),
@@ -493,8 +489,6 @@ VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other) {
     m_userInputsDescriptors = other.m_userInputsDescriptors;
     m_userOutputsDescriptors = other.m_userOutputsDescriptors;
     m_profOutputsDescriptors = other.m_profOutputsDescriptors;
-    m_networkMetadata = other.m_networkMetadata;
-    m_elfABIVersion = other.m_elfABIVersion;
     m_symTabOverrideMode = other.m_symTabOverrideMode;
     m_explicitAllocations = other.m_explicitAllocations;
     m_symbolSectionTypes = other.m_symbolSectionTypes;
@@ -577,11 +571,21 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
         const auto sectionHeader = section.getHeader();
         auto sectionType = sectionHeader->sh_type;
         auto searchAction = actionMap.find(sectionType);
+        auto action = Action::None;
 
-        VPUX_ELF_THROW_WHEN(searchAction == actionMap.end(), SectionError, "Unknown section type");
+        if(searchAction == actionMap.end()) {
+            if (sectionType >= elf::SHT_LOUSER && sectionType <= elf::SHT_HIUSER) {
+                VPUX_ELF_LOG(LogLevel::LOG_WARN, "Unrecognized Section Type in User range %x", sectionType);
+            }
+            else {
+                VPUX_ELF_THROW(ImplausibleState, "Unrecognized Section Type outside of User range");
+            }
+        }
+        else {
+            action = searchAction->second;
+        }
 
         auto sectionFlags = sectionHeader->sh_flags;
-        auto action = searchAction->second;
 
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "    name  : %s", section.getName());
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "    type  : %u", sectionType);
@@ -676,58 +680,6 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
             break;
         }
 
-        case Action::RegisterNetworkMetadata: {
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Parsing the network metadata");
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Resource Requirements:");
-
-            m_networkMetadata =
-                    MetadataSerialization::deserialize(section.getData<uint8_t>(), section.getHeader()->sh_size);
-
-            // the number of available barriers is computed as follows:
-            // numClusters - (to be used) platform specific
-            // maxNumClustersForArch - platform specific
-            // maxBarriersPerInference - platrofm specific
-            // barriersPerCluster = maxBarriersPerInference / maxNumClustersForArch
-            // nn_barriers = min(maxBarriersPerInference, barriersPerCluster * numClusters)
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tnn_barriers %hhu",
-                         m_networkMetadata->mResourceRequirements.nn_barriers_);
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tnn_slice_count_ %hhu",
-                         m_networkMetadata->mResourceRequirements.nn_slice_count_);
-
-            // not uesd:
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tnn_slice_length_ %u",
-                         m_networkMetadata->mResourceRequirements.nn_slice_length_);
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tddr_scratch_length_ %u",
-                         m_networkMetadata->mResourceRequirements.ddr_scratch_length_);
-            break;
-        }
-
-        case Action::RegisterVersionInfo: {
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Parsing Versioning information");
-
-            auto versionStructPtr = section.getData<elf::elf_note::VersionNote>();
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Addr of Versioning information = %p", versionStructPtr);
-
-            auto versionType = versionStructPtr->n_type;
-            switch (versionType) {
-                case elf::elf_note::NT_GNU_ABI_TAG:
-                    safeGet<elf::elf_note::VersionNote>(&(*m_elfABIVersion), versionStructPtr);
-                    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Identified & succesfully read and copied ELF ABI Version");
-                    break;
-
-                case elf::elf_note::NT_NPU_MPI_VERSION:
-                    safeGet<elf::elf_note::VersionNote>(&(*m_MIVersion), versionStructPtr);
-                    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Identified & succesfully read and copied Mapped Inference Version");
-                    break;
-
-                default:
-                    VPUX_ELF_LOG(LogLevel::LOG_WARN, "Unrecognized Version Section Type %x", versionType);
-                    break;
-
-            };
-            break;
-        }
-
         case Action::Error: {
             VPUX_ELF_THROW(SectionError, "Unexpected section type");
             return;
@@ -738,14 +690,8 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
         }
 
         default: {
-            if (sectionType >= elf::SHT_LOUSER && sectionType <= elf::SHT_HIUSER) {
-                VPUX_ELF_LOG(LogLevel::LOG_WARN, "Unrecognized Section Type in User range %x", sectionType);
-                break;
-            } else {
-                VPUX_ELF_THROW(ImplausibleState, "Unrecognized Section Type outside of User range");
-                return;
-            }
-            break;
+            VPUX_ELF_THROW(ImplausibleState, "Unrecognized Section Type outside of User range");
+            return;
         }
         }
     }
@@ -1092,22 +1038,6 @@ std::vector<DeviceBuffer> VPUXLoader::getProfBuffers() const {
 
 bool VPUXLoader::checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const {
     return section->sh_type == secType;
-}
-
-std::shared_ptr<const elf::NetworkMetadata> VPUXLoader::getNetworkMetadata() const {
-    return m_networkMetadata;
-}
-
-const elf::elf_note::VersionNote VPUXLoader::getElfABIVersion() const {
-    return *m_elfABIVersion;
-}
-
-const elf::elf_note::VersionNote VPUXLoader::getMIVersion() const {
-    return *m_MIVersion;
-}
-
-const elf::ResourceRequirements VPUXLoader::getResourceRequirements() const {
-    return m_networkMetadata->mResourceRequirements;
 }
 
 std::vector<DeviceBuffer>& VPUXLoader::getSectionsOfType(elf::Elf_Word type) {

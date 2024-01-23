@@ -140,7 +140,6 @@ public:
     void load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTabOverrideMode = false,
               const std::vector<elf::Elf_Word>& symbolSectionTypes = {});
     uint64_t getEntry();
-    uint64_t getEntryBeforeLoad();
 
     void applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,
                              std::vector<DeviceBuffer>& profiling);
@@ -149,10 +148,6 @@ public:
     std::vector<DeviceBuffer> getInputBuffers() const;
     std::vector<DeviceBuffer> getOutputBuffers() const;
     std::vector<DeviceBuffer> getProfBuffers() const;
-    const elf::ResourceRequirements getResourceRequirements() const;
-    std::shared_ptr<const elf::NetworkMetadata> getNetworkMetadata() const;
-    const elf::elf_note::VersionNote getElfABIVersion() const;
-    const elf::elf_note::VersionNote getMIVersion() const;
     std::vector<DeviceBuffer>& getSectionsOfType(elf::Elf_Word type);
 
 private:
@@ -173,10 +168,6 @@ private:
     std::shared_ptr<std::vector<DeviceBuffer>> m_userInputsDescriptors;
     std::shared_ptr<std::vector<DeviceBuffer>> m_userOutputsDescriptors;
     std::shared_ptr<std::vector<DeviceBuffer>> m_profOutputsDescriptors;
-
-    std::shared_ptr<elf::NetworkMetadata> m_networkMetadata;
-    std::shared_ptr<elf::elf_note::VersionNote> m_elfABIVersion;
-    std::shared_ptr<elf::elf_note::VersionNote> m_MIVersion;
 
     std::shared_ptr<std::map<elf::Elf_Word /*section type*/, std::vector<DeviceBuffer>>> /*section data*/
             m_sectionMap;
