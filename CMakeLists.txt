@@ -44,9 +44,14 @@ target_include_directories(vpux_elf PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/4000>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/common>)
 
+# E#100154 TODO remove:
+# `/src/vpux_compiler/include/vpux/compiler/dialect/VPU37XX` after its renaming finishes
+# `/src/vpux_compiler/include/vpux/compiler/dialect/NPUReg37XX` after VPU37XX folders renaming finishes
 if (DEFINED IE_MAIN_VPUX_PLUGIN_SOURCE_DIR)
     target_include_directories(vpux_elf PUBLIC
+        "${IE_MAIN_VPUX_PLUGIN_SOURCE_DIR}/src/vpux_compiler/include/vpux/compiler/NPU37XX/dialect/NPUReg37XX"
         "${IE_MAIN_VPUX_PLUGIN_SOURCE_DIR}/src/vpux_compiler/include/vpux/compiler/dialect/NPUReg37XX"
+        "${IE_MAIN_VPUX_PLUGIN_SOURCE_DIR}/src/vpux_compiler/include/vpux/compiler/dialect/VPU37XX"
         "${IE_MAIN_VPUX_PLUGIN_SOURCE_DIR}/src/vpux_compiler/include/vpux/compiler/dialect/VPU40XX")
 endif()
 
