@@ -32,42 +32,15 @@
 namespace elf {
 namespace {
 
-const static std::unordered_map<std::string,
-                        HostParsedInference::ArchKind> knownArch = {{"UNKNOWN", HostParsedInference::ArchKind::UNKNOWN},
-                                                                    {"VPUX37XX", HostParsedInference::ArchKind::VPUX37XX},
-                                                                    {"VPUX40XX", HostParsedInference::ArchKind::VPUX40XX},
-                                                                    {"VPUX50XX", HostParsedInference::ArchKind::VPUX50XX}};
-
-static HostParsedInference::ArchKind mapArchStringToArchKind(const std::string& archName) {
-    auto retArch = knownArch.find(archName);
-    if (retArch != knownArch.end()) {
-        return retArch->second;
-    } else {
-        return HostParsedInference::ArchKind::UNKNOWN;
-    }
-}
-
-static std::string archKindToString(HostParsedInference::ArchKind arch)
-{
-    for(auto archIt : knownArch)
-    {
-        if(archIt.second == arch)
-        {
-            return archIt.first;
-        }
-    }
-    return std::string("UNKNOWN");
-}
-
 static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::string& archName) {
-    auto arch = mapArchStringToArchKind(archName);
+    auto arch = elf::platform::mapArchStringToArchKind(archName);
 
     VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Creating specialized HPI for arch %u", arch);
 
     std::unique_ptr<HostParsedInferenceCommon> archSpecificHPI;
     switch (arch) {
 #if defined(CONFIG_TARGET_SOC_3720) || defined(HOST_BUILD)
-    case HostParsedInference::ArchKind::VPUX37XX:
+    case elf::platform::ArchKind::VPUX37XX:
         archSpecificHPI = std::make_unique<HostParsedInference_3720>();
         break;
 #endif
@@ -75,8 +48,8 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::
 // to be updated with E#88139:
 // temporary fix to support NPU 5000 arch
 #if defined(CONFIG_TARGET_SOC_4000) || (CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)
-    case HostParsedInference::ArchKind::VPUX40XX:
-    case HostParsedInference::ArchKind::VPUX50XX:
+    case elf::platform::ArchKind::VPUX40XX:
+    case elf::platform::ArchKind::VPUX50XX:
         archSpecificHPI = std::make_unique<HostParsedInference_4000>();
         break;
 #endif
@@ -133,20 +106,32 @@ const elf::Version HostParsedInference::getMIVersion() const {
     return readVersioningInfo(elf::elf_note::NT_NPU_MPI_VERSION);
 }
 
-HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, ArchKind expArchKind, elf::Version nnExpectedVersion)
+HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs)
         : bufferManager(bufferMgr), accessManager(accessMgr) {
     // create the loader object to cache sections
     loader = std::make_unique<VPUXLoader>(accessMgr, bufferMgr);
-    auto expArchName = archKindToString(expArchKind);
+
+    auto& expectedArch = hpiConfigs.archKind;
+    auto expArchName = elf::platform::stringifyArchKind(expectedArch);
     auto archSpecificHpi = getArchSpecificHPI(expArchName);
     // Check ELF Library ABI Compatibility
     elf::Version::checkVersionCompatibility(archSpecificHpi->getELFLibABIVersion(), getElfABIVersion(), elf::VersionType::ELF_ABI_VERSION);
 
     readMetadata();
-    auto archName = std::string(metadata->mIdentification.arch_name);
-    VPUX_ELF_THROW_WHEN(mapArchStringToArchKind(archName) != expArchKind, ArgsError, "Expected arch %s ", expArchName.c_str() ," but receieved %s.", archName.c_str());
+
+    std::string archName, revisionName;
+    std::tie(archName, revisionName) = elf::platform::parseMetadataArchInfo(metadata->mIdentification.arch_name);
+
+    VPUX_ELF_THROW_WHEN(elf::platform::mapArchStringToArchKind(archName) != expectedArch, ArgsError, "Expected arch %s ", expArchName.c_str() ," but receieved %s.", archName.c_str());
 
     // Check Mapped Inference Compatibility
+    auto& nnExpectedVersion = hpiConfigs.nnVersion;
+
+    // If Expected Mapped Inference version is not provided via HPI config, fall back to local version
+    if (!nnExpectedVersion.isValid()) {
+        nnExpectedVersion = archSpecificHpi->getExpectedMIVersion();
+    }
+
     elf::Version::checkVersionCompatibility(nnExpectedVersion, getMIVersion(), elf::VersionType::MAPPED_INFERENCE_VERSION);
 }
 

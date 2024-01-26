@@ -22,8 +22,14 @@ namespace {
 }
 };
 
+bool Version::isValid() const {
+        return major > 0;
+    }
+
 void Version::checkVersionCompatibility(const Version& expectedVersion, const Version& recievedVersion, const VersionType versionType) {
     auto versionTypeString = elf::stringifyVersionTypeEnum(versionType);
+
+    VPUX_ELF_THROW_UNLESS(expectedVersion.isValid() && recievedVersion.isValid(), VersioningError, "Version major 0 does not constitute a valid version!");
 
     std::ostringstream logBuffer;
     if (expectedVersion.major != recievedVersion.major || expectedVersion.minor < recievedVersion.minor) {

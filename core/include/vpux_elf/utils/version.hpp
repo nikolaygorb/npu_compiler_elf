@@ -54,6 +54,8 @@ public:
      */
     static void checkVersionCompatibility(const Version& expectedVersion, const Version& recievedVersion, const VersionType versionType = VersionType::UNKNOWN_VERSION);
 
+    bool isValid() const;
+
 private:
     uint32_t major;
     uint32_t minor;
