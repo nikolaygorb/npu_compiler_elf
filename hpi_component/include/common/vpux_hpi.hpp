@@ -12,33 +12,10 @@
 #include <vpux_headers/buffer_manager.hpp>
 #include <vpux_headers/device_buffer.hpp>
 #include <vpux_headers/metadata.hpp>
+#include <vpux_headers/platform.hpp>
 #include <vpux_elf/utils/version.hpp>
 
 namespace elf {
-
-namespace platform {
-
-// Clone of Compiler VPU-dialect enum-attribute
-enum class ArchKind : uint64_t {
-  UNKNOWN = 0,
-  VPUX30XX = 1,
-  VPUX37XX = 3,
-  VPUX40XX = 4,
-  VPUX50XX = 5,
-};
-
-const std::unordered_map<std::string, elf::platform::ArchKind> knownArch = {{"UNKNOWN", elf::platform::ArchKind::UNKNOWN},
-                                                    {"VPUX30XX", elf::platform::ArchKind::VPUX30XX},
-                                                    {"VPUX37XX", elf::platform::ArchKind::VPUX37XX},
-                                                    {"VPUX40XX", elf::platform::ArchKind::VPUX40XX},
-                                                    {"VPUX50XX", elf::platform::ArchKind::VPUX50XX}};
-
-elf::platform::ArchKind mapArchStringToArchKind(const std::string& archName);
-std::string stringifyArchKind(elf::platform::ArchKind arch);
-
-std::pair<std::string, std::string> parseMetadataArchInfo(std::string metaArchName);
-
-} // namespace platform
 
 class VPUXLoader;
 
@@ -66,6 +43,7 @@ public:
     std::vector<DeviceBuffer> getOutputBuffers() const;
     std::vector<DeviceBuffer> getProfBuffers() const;
     std::shared_ptr<const NetworkMetadata> getMetadata();
+    std::shared_ptr<const elf::platform::PlatformInfo> getPlatformInfo();
     const elf::Version getElfABIVersion() const;
     const elf::Version getMIVersion() const;
 
@@ -77,11 +55,13 @@ private:
     BufferManager* bufferManager;
     AccessManager* accessManager;
     std::shared_ptr<NetworkMetadata> metadata;
+    std::shared_ptr<elf::platform::PlatformInfo> platformInfo;
     std::unique_ptr<VPUXLoader> loader;
     std::shared_ptr<AllocatedDeviceBuffer> parsedInference;
 
     // helpers
     void readMetadata();
+    void readPlatformInfo();
     const uint64_t* readPerfMetrics();
     const elf::Version readVersioningInfo(uint32_t versionType) const;
 };

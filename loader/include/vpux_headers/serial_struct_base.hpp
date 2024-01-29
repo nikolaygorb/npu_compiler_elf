@@ -170,9 +170,9 @@ public:
     }
 };
 
-class SerialMetadataBase {
+class SerialStructBase {
 public:
-    SerialMetadataBase() = default;
+    SerialStructBase() = default;
 
     template <typename DataType>
     void addElement(DataType& value) {

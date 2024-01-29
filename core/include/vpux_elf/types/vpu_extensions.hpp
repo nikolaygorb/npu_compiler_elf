@@ -165,6 +165,7 @@ constexpr Elf_Word VPU_SHT_PROF           = 0x8aaaaaab;
 constexpr Elf_Word VPU_SHT_CMX_METADATA   = 0x8aaaaaac;
 constexpr Elf_Word VPU_SHT_CMX_WORKSPACE  = 0x8aaaaaad;
 constexpr Elf_Word VPU_SHT_PERF_METRICS   = 0x8aaaaaae;
+constexpr Elf_Word VPU_SHT_PLATFORM_INFO  = 0x8aaaaaaf;
 
 //
 // Section flags

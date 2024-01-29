@@ -4,13 +4,13 @@
 //
 
 #include <vpux_headers/metadata.hpp>
-#include <vpux_headers/serial_metadata_base.hpp>
+#include <vpux_headers/serial_struct_base.hpp>
 
 #pragma once
 
 namespace elf {
 
-class SerialMetadata : public SerialMetadataBase {
+class SerialMetadata : public SerialStructBase {
 public:
     SerialMetadata(NetworkMetadata& metaObj) {
         addElement(metaObj.mIdentification);

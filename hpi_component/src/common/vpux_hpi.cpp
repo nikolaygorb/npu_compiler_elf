@@ -32,13 +32,11 @@
 namespace elf {
 namespace {
 
-static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::string& archName) {
-    auto arch = elf::platform::mapArchStringToArchKind(archName);
-
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Creating specialized HPI for arch %u", arch);
+static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const elf::platform::ArchKind& archKind) {
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Creating specialized HPI for arch %u", archKind);
 
     std::unique_ptr<HostParsedInferenceCommon> archSpecificHPI;
-    switch (arch) {
+    switch (archKind) {
 #if defined(CONFIG_TARGET_SOC_3720) || defined(HOST_BUILD)
     case elf::platform::ArchKind::VPUX37XX:
         archSpecificHPI = std::make_unique<HostParsedInference_3720>();
@@ -54,7 +52,7 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::
         break;
 #endif
     default:
-        VPUX_ELF_THROW(RangeError, (archName + " arch is not supported").c_str());
+        VPUX_ELF_THROW(RangeError, (elf::platform::stringifyArchKind(archKind) + " arch is not supported").c_str());
         break;
     }
 
@@ -62,42 +60,6 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::
 }
 
 }  // namespace
-
-namespace platform {
-
-elf::platform::ArchKind mapArchStringToArchKind(const std::string& archName) {
-    auto retArch = knownArch.find(archName);
-    if (retArch != knownArch.end()) {
-        return retArch->second;
-    } else {
-        return elf::platform::ArchKind::UNKNOWN;
-    }
-}
-
-std::string stringifyArchKind(elf::platform::ArchKind arch) {
-    for (auto archIt : knownArch) {
-        if (archIt.second == arch) {
-            return archIt.first;
-        }
-    }
-    return std::string("UNKNOWN");
-}
-
-std::pair<std::string, std::string> parseMetadataArchInfo(std::string metaArchName) {
-    auto delimiterLoc = metaArchName.find_first_of("_");
-    if (delimiterLoc != std::string::npos) {
-        VPUX_ELF_THROW_UNLESS(delimiterLoc == metaArchName.find_last_of("_"), RuntimeError, "ELF Metadata Arch Information not correctly formatted.");
-        auto archName = metaArchName.substr(0, delimiterLoc);
-        auto revisionName = metaArchName.substr(delimiterLoc + 1);
-        return {archName, revisionName};
-    } else {
-        return {metaArchName, ""};
-    }
-}
-
-
-} // namespace platform
-
 
 const uint64_t* HostParsedInference::readPerfMetrics() {
     const auto& sections = loader->getSectionsOfType(elf::VPU_SHT_PERF_METRICS);
@@ -118,6 +80,15 @@ void HostParsedInference::readMetadata() {
     auto metadataBufferPtr = sections[0].cpu_addr();
     auto metadataBufferSize = sections[0].size();
     metadata = MetadataSerialization::deserialize(metadataBufferPtr, metadataBufferSize);
+}
+
+void HostParsedInference::readPlatformInfo() {
+    const auto& sections = loader->getSectionsOfType(elf::VPU_SHT_PLATFORM_INFO);
+    VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one metadata section.");
+
+    auto platformInfoBufferPtr = sections[0].cpu_addr();
+    auto platformInfoBufferSize = sections[0].size();
+    platformInfo = elf::platform::PlatformInfoSerialization::deserialize(platformInfoBufferPtr, platformInfoBufferSize);
 }
 
 const elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType) const {
@@ -148,29 +119,31 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     loader = std::make_unique<VPUXLoader>(accessMgr, bufferMgr);
 
     auto& expectedArch = hpiConfigs.archKind;
-    auto expArchName = elf::platform::stringifyArchKind(expectedArch);
-    auto archSpecificHpi = getArchSpecificHPI(expArchName);
+    auto archSpecificHpi = getArchSpecificHPI(expectedArch);
     // Check ELF Library ABI Compatibility
     elf::Version::checkVersionCompatibility(archSpecificHpi->getELFLibABIVersion(), getElfABIVersion(), elf::VersionType::ELF_ABI_VERSION);
 
     readMetadata();
+    readPlatformInfo();
 
-    std::string archName, revisionName;
-    std::tie(archName, revisionName) = elf::platform::parseMetadataArchInfo(metadata->mIdentification.arch_name);
+    auto archKind = platformInfo->mArchKind;
+    auto archRevision = std::string(platformInfo->mArchRevision.revision);
 
     // Check if compiled ELF arch and HPI arch match
-    if (elf::platform::mapArchStringToArchKind(archName) != expectedArch) {
+    if (archKind != expectedArch) {
         std::stringstream logBuffer; 
-        logBuffer << "Incorrect arch. Expected: " << expArchName << " vs Received: " << archName;
+        logBuffer << "Incorrect arch. Expected: " << elf::platform::stringifyArchKind(expectedArch) << " vs Received: " << elf::platform::stringifyArchKind(archKind);
         VPUX_ELF_THROW(ArgsError, logBuffer.str().c_str());
     }
 
     // Check if arch revision matches between ELF and what HPI expects.
     // Issue a warning, for the moment.
-    if (revisionName != hpiConfigs.archRevision) {
+    if (archRevision != hpiConfigs.archRevision) {
         std::stringstream logBuffer; 
-        logBuffer << "Incorrect revision. Expected: " << expArchName << " vs Received: " << archName;
-        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, logBuffer.str().c_str());
+        logBuffer << "Incorrect revision. Expected: " << hpiConfigs.archRevision << " vs Received: " << archRevision;
+        while (1) {
+            VPUX_ELF_LOG(LogLevel::LOG_FATAL, logBuffer.str().c_str());
+        }
     }
 
     // Check Mapped Inference Compatibility
@@ -185,9 +158,7 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
 }
 
 void HostParsedInference::load() {
-    auto archName = std::string(metadata->mIdentification.arch_name);
-
-    auto archSpecificHpi = getArchSpecificHPI(archName);
+    auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
 
     const auto symbolTable = archSpecificHpi->getSymbolTable(metadata->mResourceRequirements.nn_slice_count_);
     const auto symbolSectionTypes = archSpecificHpi->getSymbolSectionTypes();
@@ -204,10 +175,8 @@ void HostParsedInference::load() {
 
 HostParsedInference::HostParsedInference(const HostParsedInference& other)
         : bufferManager(other.bufferManager), accessManager(other.accessManager), metadata(other.metadata) {
-    auto archName = std::string(metadata->mIdentification.arch_name);
-
     // TODO: E#79344
-    auto archSpecificHpi = getArchSpecificHPI(archName);
+    auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
     // Use clone semantics here by copy-constructing the loader object
     loader = std::make_unique<VPUXLoader>(*other.loader);
     // Every new loader object means a new parsedInference struct as well
@@ -237,11 +206,10 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
     bufferManager = rhs.bufferManager;
     accessManager = rhs.accessManager;
     metadata = rhs.metadata;
-
-    auto archName = std::string(metadata->mIdentification.arch_name);
+    platformInfo = rhs.platformInfo;
 
     // TODO: E#79344
-    auto archSpecificHpi = getArchSpecificHPI(archName);
+    auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
     // Use clone semantics here by copy-constructing the loader object
     loader = std::make_unique<VPUXLoader>(*rhs.loader);
     // Every new loader object means a new parsedInference struct as well
@@ -261,6 +229,7 @@ HostParsedInference& HostParsedInference::operator=(HostParsedInference&& rhs) {
     bufferManager = rhs.bufferManager;
     accessManager = rhs.accessManager;
     metadata = rhs.metadata;
+    platformInfo = rhs.platformInfo;
     loader = std::move(rhs.loader);
     parsedInference = rhs.parsedInference;
 
@@ -289,6 +258,10 @@ std::vector<DeviceBuffer> HostParsedInference::getProfBuffers() const {
 
 std::shared_ptr<const elf::NetworkMetadata> HostParsedInference::getMetadata() {
     return metadata;
+}
+
+std::shared_ptr<const elf::platform::PlatformInfo> HostParsedInference::getPlatformInfo() {
+    return platformInfo;
 }
 
 void HostParsedInference::applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,
