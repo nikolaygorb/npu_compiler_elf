@@ -63,6 +63,42 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::
 
 }  // namespace
 
+namespace platform {
+
+elf::platform::ArchKind mapArchStringToArchKind(const std::string& archName) {
+    auto retArch = knownArch.find(archName);
+    if (retArch != knownArch.end()) {
+        return retArch->second;
+    } else {
+        return elf::platform::ArchKind::UNKNOWN;
+    }
+}
+
+std::string stringifyArchKind(elf::platform::ArchKind arch) {
+    for (auto archIt : knownArch) {
+        if (archIt.second == arch) {
+            return archIt.first;
+        }
+    }
+    return std::string("UNKNOWN");
+}
+
+std::pair<std::string, std::string> parseMetadataArchInfo(std::string metaArchName) {
+    auto delimiterLoc = metaArchName.find_first_of("_");
+    if (delimiterLoc != std::string::npos) {
+        VPUX_ELF_THROW_UNLESS(delimiterLoc == metaArchName.find_last_of("_"), RuntimeError, "ELF Metadata Arch Information not correctly formatted.");
+        auto archName = metaArchName.substr(0, delimiterLoc);
+        auto revisionName = metaArchName.substr(delimiterLoc + 1);
+        return {archName, revisionName};
+    } else {
+        return {metaArchName, ""};
+    }
+}
+
+
+} // namespace platform
+
+
 const uint64_t* HostParsedInference::readPerfMetrics() {
     const auto& sections = loader->getSectionsOfType(elf::VPU_SHT_PERF_METRICS);
     VPUX_ELF_THROW_WHEN(sections.size() > 1, RangeError, "Expected only a single section of performance metrics.");
@@ -122,7 +158,20 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     std::string archName, revisionName;
     std::tie(archName, revisionName) = elf::platform::parseMetadataArchInfo(metadata->mIdentification.arch_name);
 
-    VPUX_ELF_THROW_WHEN(elf::platform::mapArchStringToArchKind(archName) != expectedArch, ArgsError, "Expected arch %s ", expArchName.c_str() ," but receieved %s.", archName.c_str());
+    // Check if compiled ELF arch and HPI arch match
+    if (elf::platform::mapArchStringToArchKind(archName) != expectedArch) {
+        std::stringstream logBuffer; 
+        logBuffer << "Incorrect arch. Expected: " << expArchName << " vs Received: " << archName;
+        VPUX_ELF_THROW(ArgsError, logBuffer.str().c_str());
+    }
+
+    // Check if arch revision matches between ELF and what HPI expects.
+    // Issue a warning, for the moment.
+    if (revisionName != hpiConfigs.archRevision) {
+        std::stringstream logBuffer; 
+        logBuffer << "Incorrect revision. Expected: " << expArchName << " vs Received: " << archName;
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, logBuffer.str().c_str());
+    }
 
     // Check Mapped Inference Compatibility
     auto& nnExpectedVersion = hpiConfigs.nnVersion;
