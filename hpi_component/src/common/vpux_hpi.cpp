@@ -127,23 +127,12 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     readPlatformInfo();
 
     auto archKind = platformInfo->mArchKind;
-    auto archRevision = std::string(platformInfo->mArchRevision.revision);
 
     // Check if compiled ELF arch and HPI arch match
     if (archKind != expectedArch) {
         std::stringstream logBuffer; 
         logBuffer << "Incorrect arch. Expected: " << elf::platform::stringifyArchKind(expectedArch) << " vs Received: " << elf::platform::stringifyArchKind(archKind);
         VPUX_ELF_THROW(ArgsError, logBuffer.str().c_str());
-    }
-
-    // Check if arch revision matches between ELF and what HPI expects.
-    // Issue a warning, for the moment.
-    if (archRevision != hpiConfigs.archRevision) {
-        std::stringstream logBuffer; 
-        logBuffer << "Incorrect revision. Expected: " << hpiConfigs.archRevision << " vs Received: " << archRevision;
-        while (1) {
-            VPUX_ELF_LOG(LogLevel::LOG_FATAL, logBuffer.str().c_str());
-        }
     }
 
     // Check Mapped Inference Compatibility
