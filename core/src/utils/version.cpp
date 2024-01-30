@@ -33,19 +33,13 @@ void Version::checkVersionCompatibility(const Version& expectedVersion, const Ve
 
     std::ostringstream logBuffer;
     if (expectedVersion.major != recievedVersion.major || expectedVersion.minor < recievedVersion.minor) {
-        logBuffer << versionTypeString << " is NOT compatible with the ELF";
-        VPUX_ELF_LOG(LogLevel::LOG_ERROR, logBuffer.str().c_str());
-
-        logBuffer.str("");
-        logBuffer << versionTypeString << " ERROR. Expected: " << expectedVersion << " vs received: " << recievedVersion;
+        logBuffer << "ERROR! " << versionTypeString << " is NOT compatible with the ELF";
+        logBuffer << " Expected: " << expectedVersion << " vs received: " << recievedVersion;
         VPUX_ELF_LOG(LogLevel::LOG_ERROR, logBuffer.str().c_str());
         VPUX_ELF_THROW(VersioningError, logBuffer.str().c_str(), recievedVersion, expectedVersion);
     } else if (expectedVersion.minor > recievedVersion.minor) {
         logBuffer << "Warning! " << versionTypeString << " are compatible but do not fully match.";
-        VPUX_ELF_LOG(LogLevel::LOG_WARN, logBuffer.str().c_str());
-
-        logBuffer.str("");
-        logBuffer << versionTypeString << " Warning. Expected: " << expectedVersion << " vs received: " << recievedVersion;
+        logBuffer << " Expected: " << expectedVersion << " vs received: " << recievedVersion;
         VPUX_ELF_LOG(LogLevel::LOG_WARN, logBuffer.str().c_str());
     } else {
         logBuffer << versionTypeString << " are perfectly compatible. Version: " << expectedVersion;
