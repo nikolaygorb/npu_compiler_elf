@@ -91,7 +91,7 @@ void HostParsedInference::readPlatformInfo() {
     platformInfo = elf::platform::PlatformInfoSerialization::deserialize(platformInfoBufferPtr, platformInfoBufferSize);
 }
 
-const elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType) const {
+elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType) const {
     const auto& noteSections = loader->getSectionsOfType(elf::SHT_NOTE);
     for (auto section : noteSections) {
         VPUX_ELF_THROW_UNLESS(section.size() == sizeof(elf::elf_note::VersionNote), SectionError, "Wrong Versioning Note size");
@@ -105,16 +105,16 @@ const elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType)
     VPUX_ELF_THROW(RangeError, "Requested Versioning information was not found");
 }
 
-const elf::Version HostParsedInference::getElfABIVersion() const {
+elf::Version HostParsedInference::getElfABIVersion() const {
     return readVersioningInfo(elf::elf_note::NT_GNU_ABI_TAG);
 }
 
-const elf::Version HostParsedInference::getMIVersion() const {
+elf::Version HostParsedInference::getMIVersion() const {
     return readVersioningInfo(elf::elf_note::NT_NPU_MPI_VERSION);
 }
 
 HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs)
-        : bufferManager(bufferMgr), accessManager(accessMgr) {
+        : bufferManager(bufferMgr), accessManager(accessMgr), hpiCfg(hpiConfigs) {
     // create the loader object to cache sections
     loader = std::make_unique<VPUXLoader>(accessMgr, bufferMgr);
 
@@ -139,8 +139,8 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     auto& nnExpectedVersion = hpiConfigs.nnVersion;
 
     // If Expected Mapped Inference version is not provided via HPI config, fall back to local version
-    if (!nnExpectedVersion.isValid()) {
-        nnExpectedVersion = archSpecificHpi->getExpectedMIVersion();
+    if (!nnExpectedVersion.checkValidity()) {
+        nnExpectedVersion = archSpecificHpi->getStaticMIVersion();
     }
 
     elf::Version::checkVersionCompatibility(nnExpectedVersion, getMIVersion(), elf::VersionType::MAPPED_INFERENCE_VERSION);

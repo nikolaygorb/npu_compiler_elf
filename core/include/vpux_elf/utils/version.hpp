@@ -26,9 +26,9 @@ enum class VersionType {
 
 class Version final {
 public:
-    Version(uint32_t v_major, uint32_t v_minor, uint32_t v_patch) : major{v_major}, minor{v_minor}, patch{v_patch} {};
-    explicit Version(const elf::elf_note::VersionNote& versionNote) : major{versionNote.n_desc[1]}, minor{versionNote.n_desc[2]}, patch{versionNote.n_desc[3]} {};
-    ~Version() = default;
+    Version(uint32_t v_major, uint32_t v_minor, uint32_t v_patch) : major{v_major}, minor{v_minor}, patch{v_patch}, isValid{true} {};
+    explicit Version(const elf::elf_note::VersionNote& versionNote) : major{versionNote.n_desc[1]}, minor{versionNote.n_desc[2]}, patch{versionNote.n_desc[3]}, isValid{true} {};
+    Version() = default;
 
     friend std::ostream& operator<< (std::ostream& stream, const Version& version) {
         stream << version.major << "." << version.minor << "." << version.patch;
@@ -54,12 +54,14 @@ public:
      */
     static void checkVersionCompatibility(const Version& expectedVersion, const Version& recievedVersion, const VersionType versionType = VersionType::UNKNOWN_VERSION);
 
-    bool isValid() const;
+    bool checkValidity() const;
 
 private:
     uint32_t major;
     uint32_t minor;
     uint32_t patch;
+
+    bool isValid = false;
 };
 
 

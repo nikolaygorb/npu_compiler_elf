@@ -12,15 +12,19 @@ namespace elf {
 
 namespace platform {
 
-namespace {
-const std::unordered_map<std::string, elf::platform::ArchKind> knownArch = {{"UNKNOWN", elf::platform::ArchKind::UNKNOWN},
+
+const std::unordered_map<std::string, elf::platform::ArchKind>& getKnownArchitectures() {
+    static const std::unordered_map<std::string, elf::platform::ArchKind> knownArch = {{"UNKNOWN", elf::platform::ArchKind::UNKNOWN},
                                                     {"VPUX30XX", elf::platform::ArchKind::VPUX30XX},
                                                     {"VPUX37XX", elf::platform::ArchKind::VPUX37XX},
                                                     {"VPUX40XX", elf::platform::ArchKind::VPUX40XX},
                                                     {"VPUX50XX", elf::platform::ArchKind::VPUX50XX}};
-} // namespace 
+
+    return knownArch;
+}
 
 elf::platform::ArchKind mapArchStringToArchKind(const std::string& archName) {
+    auto& knownArch = getKnownArchitectures();
     auto retArch = knownArch.find(archName);
     if (retArch != knownArch.end()) {
         return retArch->second;
@@ -30,6 +34,7 @@ elf::platform::ArchKind mapArchStringToArchKind(const std::string& archName) {
 }
 
 std::string stringifyArchKind(const elf::platform::ArchKind& arch) {
+    auto& knownArch = getKnownArchitectures();
     for (auto archIt : knownArch) {
         if (archIt.second == arch) {
             return archIt.first;

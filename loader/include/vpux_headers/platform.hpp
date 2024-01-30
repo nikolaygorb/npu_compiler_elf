@@ -24,6 +24,7 @@ enum class ArchKind : uint64_t {
     VPUX50XX = 5,
 };
 
+const std::unordered_map<std::string, elf::platform::ArchKind>& getKnownArchitectures();
 elf::platform::ArchKind mapArchStringToArchKind(const std::string& archName);
 std::string stringifyArchKind(const elf::platform::ArchKind& arch);
 

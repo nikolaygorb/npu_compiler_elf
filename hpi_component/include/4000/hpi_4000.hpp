@@ -18,8 +18,8 @@ public:
     BufferSpecs getParsedInferenceBufferSpecs() override;
     void setHostParsedInference(DeviceBuffer& devBuffer, uint64_t mapped_entry, ResourceRequirements resReq,
                                 const uint64_t* perf_metrics) override;
-    const elf::Version getELFLibABIVersion() const override;
-    const elf::Version getExpectedMIVersion() const override;
+    elf::Version getELFLibABIVersion() const override;
+    elf::Version getStaticMIVersion() const override;
 
 private:
     std::vector<SymbolEntry> symTab_;
