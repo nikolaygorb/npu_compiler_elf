@@ -84,7 +84,7 @@ void HostParsedInference::readMetadata() {
 
 void HostParsedInference::readPlatformInfo() {
     const auto& sections = loader->getSectionsOfType(elf::VPU_SHT_PLATFORM_INFO);
-    VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one metadata section.");
+    VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one Platform Info section.");
 
     auto platformInfoBufferPtr = sections[0].cpu_addr();
     auto platformInfoBufferSize = sections[0].size();

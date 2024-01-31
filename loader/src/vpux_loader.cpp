@@ -17,6 +17,17 @@ namespace elf {
 
 namespace {
 
+bool hasMemoryFootprint(elf::Elf_Word sectionType) {
+    switch (sectionType) {
+        case elf::SHT_NOBITS:
+        case elf::VPU_SHT_CMX_METADATA:
+        case elf::VPU_SHT_CMX_WORKSPACE:
+            return false;
+        default:
+            return true;
+    }
+}
+
 const uint32_t LO_21_BIT_MASK = 0x001F'FFFF;
 const uint32_t B21_B26_MASK = 0x07E0'0000;
 
@@ -421,23 +432,6 @@ VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager)
     m_bufferManager = bufferManager;
     m_reader = std::make_shared<Reader<ELF_Bitness::Elf64>>(accessor);
     m_sectionMap = std::make_shared<std::map<elf::Elf_Word /*section type*/, std::vector<DeviceBuffer>>>();
-
-    VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Initializing... Register sections");
-    auto numSections = m_reader->getSectionsNum();
-    for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
-        auto section = m_reader->getSectionNoData(sectionCtr);
-        auto sectionType = section.getHeader()->sh_type;
-        // set vpu_addr to 0, as the loader is not meant to run on the vpu, but on host side
-        DeviceBuffer sectionData(const_cast<uint8_t*>(section.getData<uint8_t>()), 0, section.getHeader()->sh_size);
-        m_sectionMap.get()->operator[](sectionType).emplace_back(sectionData);
-        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "[%lu] Section name: %s", sectionCtr, section.getName());
-    }
-
-    // accomodate missing section due to compatibility with older ELFs
-    if(m_sectionMap->find(elf::VPU_SHT_PERF_METRICS) == m_sectionMap->end())
-    {
-        m_sectionMap->operator[](elf::VPU_SHT_PERF_METRICS) = {};
-    }
 };
 
 VPUXLoader::VPUXLoader(const VPUXLoader& other)
@@ -1042,9 +1036,24 @@ bool VPUXLoader::checkSectionType(const elf::SectionHeader* section, Elf_Word se
 }
 
 std::vector<DeviceBuffer>& VPUXLoader::getSectionsOfType(elf::Elf_Word type) {
-    VPUX_ELF_THROW_UNLESS(m_sectionMap.get()->find(type) != m_sectionMap.get()->end(), RangeError,
-                          "Section type not registered!");
-    return m_sectionMap.get()->operator[](type);
+    VPUX_ELF_THROW_WHEN(!hasMemoryFootprint(type), elf::RuntimeError, "Can't access data of NOBITS-like section");
+    if (m_sectionMap->find(type) != m_sectionMap->end()) {
+        return (*m_sectionMap)[type];
+    }
+
+    std::vector<DeviceBuffer> sectionVector;
+    auto numSections = m_reader->getSectionsNum();
+    for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
+        auto section = m_reader->getSectionNoData(sectionCtr);
+        auto sectionType = section.getHeader()->sh_type;
+        if (sectionType == type) {
+            // set vpu_addr to 0, as the loader is not meant to run on the vpu, but on host side
+            DeviceBuffer sectionData(const_cast<uint8_t*>(section.getData<uint8_t>()), 0, section.getHeader()->sh_size);
+            sectionVector.push_back(sectionData);
+        }
+    }
+    m_sectionMap->insert({type, sectionVector});
+    return (*m_sectionMap)[type];
 };
 
 }  // namespace elf
