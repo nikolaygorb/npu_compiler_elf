@@ -163,7 +163,7 @@ void HostParsedInference::load() {
 }
 
 HostParsedInference::HostParsedInference(const HostParsedInference& other)
-        : bufferManager(other.bufferManager), accessManager(other.accessManager), metadata(other.metadata) {
+        : bufferManager(other.bufferManager), accessManager(other.accessManager), metadata(other.metadata), platformInfo(other.platformInfo) {
     // TODO: E#79344
     auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
     // Use clone semantics here by copy-constructing the loader object
@@ -180,6 +180,7 @@ HostParsedInference::HostParsedInference(HostParsedInference&& other)
         : bufferManager(other.bufferManager),
           accessManager(other.accessManager),
           metadata(other.metadata),
+          platformInfo(other.platformInfo),
           loader(std::move(other.loader)),
           parsedInference(other.parsedInference) {
 }
