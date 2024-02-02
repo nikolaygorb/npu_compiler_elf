@@ -86,7 +86,7 @@ using SectionHeader = Elf64_Shdr;
 
 namespace elf_note {
 // Standard GNU Format for SHT_NOTE - ABI Version sections
-struct Elf_AbiVersionNote {
+struct VersionNote {
     uint32_t n_namesz;      // size of n_name field
     uint32_t n_descz;       // size of n_desc field
     uint32_t n_type;

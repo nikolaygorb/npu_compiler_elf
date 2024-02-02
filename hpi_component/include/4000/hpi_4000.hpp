@@ -17,8 +17,9 @@ public:
     std::vector<elf::Elf_Word> getSymbolSectionTypes() const override;
     BufferSpecs getParsedInferenceBufferSpecs() override;
     void setHostParsedInference(DeviceBuffer& devBuffer, uint64_t mapped_entry, ResourceRequirements resReq,
-                                uint64_t* perf_metrics) override;
-    const elf::ElfVersion getELFLibABIVersion() const override;
+                                const uint64_t* perf_metrics) override;
+    elf::Version getELFLibABIVersion() const override;
+    elf::Version getStaticMIVersion() const override;
 
 private:
     std::vector<SymbolEntry> symTab_;

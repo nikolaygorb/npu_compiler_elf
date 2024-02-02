@@ -12,11 +12,21 @@
 #define VPUX_ELF_LOG_UNIT_NAME "VpuxLoader"
 #endif
 #include <vpux_elf/reader.hpp>
-#include <vpux_elf/utils/log.hpp>
 
 namespace elf {
 
 namespace {
+
+bool hasMemoryFootprint(elf::Elf_Word sectionType) {
+    switch (sectionType) {
+        case elf::SHT_NOBITS:
+        case elf::VPU_SHT_CMX_METADATA:
+        case elf::VPU_SHT_CMX_WORKSPACE:
+            return false;
+        default:
+            return true;
+    }
+}
 
 const uint32_t LO_21_BIT_MASK = 0x001F'FFFF;
 const uint32_t B21_B26_MASK = 0x07E0'0000;
@@ -333,8 +343,10 @@ const auto VPU_32_BIT_OR_B21_B26_UNSET_HIGH_16_Relocation = [](void* targetAddr,
                                                                const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint16_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32 bits OR reloc with b21-26 unset and high 16, addr %p, before value: 0x%llx symVal 0x%x addend %llu", addr, *addr,
-                 symVal, addend);
+    VPUX_ELF_LOG(
+            LogLevel::LOG_DEBUG,
+            "\t\t32 bits OR reloc with b21-26 unset and high 16, addr %p, before value: 0x%llx symVal 0x%x addend %llu",
+            addr, *addr, symVal, addend);
 
     uint64_t B21_B26_UNSET_MASK = ~B21_B26_MASK;
     auto patchAddr = static_cast<uint32_t>(symVal + addend) & B21_B26_UNSET_MASK;
@@ -345,14 +357,15 @@ const auto VPU_32_BIT_OR_B21_B26_UNSET_LOW_16_Relocation = [](void* targetAddr, 
                                                               const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint16_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t32 bits OR reloc with b21-26 unset and low 16, addr %p, before value: 0x%llx symVal 0x%x addend %llu", addr, *addr,
-                 symVal, addend);
+    VPUX_ELF_LOG(
+            LogLevel::LOG_DEBUG,
+            "\t\t32 bits OR reloc with b21-26 unset and low 16, addr %p, before value: 0x%llx symVal 0x%x addend %llu",
+            addr, *addr, symVal, addend);
 
     uint64_t B21_B26_UNSET_MASK = ~B21_B26_MASK;
     auto patchAddr = static_cast<uint16_t>(symVal + addend) & B21_B26_UNSET_MASK;
     *addr |= patchAddr & 0xFFFF;
 };
-
 
 }  // namespace
 
@@ -364,15 +377,16 @@ const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
         {SHT_RELA, Action::Relocate},
         {SHT_HASH, Action::Error},
         {SHT_DYNAMIC, Action::Error},
-        {SHT_NOTE, Action::RegisterElfABIVersion},  // SHT_NOTE is currently used solely for ABI Versioning info
+        {SHT_NOTE, Action::None},
         {SHT_NOBITS, Action::Allocate},
         {SHT_REL, Action::Error},
         {SHT_SHLIB, Action::Error},
         {SHT_DYNSYM, Action::Error},
-        {VPU_SHT_NETDESC, Action::RegisterNetworkMetadata},
+        {VPU_SHT_NETDESC, Action::None},
         {VPU_SHT_PROF, Action::None},
         {VPU_SHT_CMX_METADATA, Action::None},
         {VPU_SHT_CMX_WORKSPACE, Action::None},
+        {VPU_SHT_PLATFORM_INFO, Action::None},
         {VPU_SHT_PERF_METRICS, Action::None},
 };
 
@@ -406,25 +420,18 @@ AccessorDescriptor::AccessorDescriptor(uint64_t offset, uint64_t size, uint64_t 
         : offset(offset), size(size), procFlags(procFlags), alignment(alignment) {
 }
 
-VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager,
-                       const std::vector<SymbolEntry>& runtimeSymTabs, bool symTabOverrideMode,
-                       const std::vector<elf::Elf_Word>& symbolSectionTypes)
+VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager)
         : m_bufferContainer(bufferManager),
-          m_runtimeSymTabs(runtimeSymTabs),
           m_relocationSectionIndexes(std::make_shared<std::vector<std::size_t>>()),
           m_jitRelocations(std::make_shared<std::vector<std::size_t>>()),
           m_userInputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_userOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_profOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
-          m_networkMetadata(std::make_shared<NetworkMetadata>()),
-          m_elfABIVersion(std::make_shared<elf::elf_note::Elf_AbiVersionNote>()),
-          m_symTabOverrideMode(symTabOverrideMode),
-          m_explicitAllocations(symTabOverrideMode),
-          m_symbolSectionTypes(symbolSectionTypes) {
+          m_loaded(false) {
     VPUX_ELF_THROW_UNLESS(bufferManager, ArgsError, "Invalid BufferManager pointer");
     m_bufferManager = bufferManager;
     m_reader = std::make_shared<Reader<ELF_Bitness::Elf64>>(accessor);
-    load();
+    m_sectionMap = std::make_shared<std::map<elf::Elf_Word /*section type*/, std::vector<DeviceBuffer>>>();
 };
 
 VPUXLoader::VPUXLoader(const VPUXLoader& other)
@@ -437,10 +444,10 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
           m_userInputsDescriptors(other.m_userInputsDescriptors),
           m_userOutputsDescriptors(other.m_userOutputsDescriptors),
           m_profOutputsDescriptors(other.m_profOutputsDescriptors),
-          m_networkMetadata(other.m_networkMetadata),
-          m_elfABIVersion(other.m_elfABIVersion),
+          m_sectionMap(other.m_sectionMap),
           m_symTabOverrideMode(other.m_symTabOverrideMode),
           m_explicitAllocations(other.m_explicitAllocations),
+          m_loaded(other.m_loaded),
           m_symbolSectionTypes(other.m_symbolSectionTypes) {
     auto numSections = m_reader->getSectionsNum();
     for (size_t sectionIndex = 0; sectionIndex < numSections; ++sectionIndex) {
@@ -477,11 +484,11 @@ VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other) {
     m_userInputsDescriptors = other.m_userInputsDescriptors;
     m_userOutputsDescriptors = other.m_userOutputsDescriptors;
     m_profOutputsDescriptors = other.m_profOutputsDescriptors;
-    m_networkMetadata = other.m_networkMetadata;
-    m_elfABIVersion = other.m_elfABIVersion;
     m_symTabOverrideMode = other.m_symTabOverrideMode;
     m_explicitAllocations = other.m_explicitAllocations;
     m_symbolSectionTypes = other.m_symbolSectionTypes;
+    m_sectionMap = other.m_sectionMap;
+    m_loaded = other.m_loaded;
 
     auto numSections = m_reader->getSectionsNum();
     for (size_t sectionIndex = 0; sectionIndex < numSections; ++sectionIndex) {
@@ -535,7 +542,15 @@ uint64_t VPUXLoader::getEntry() {
     return 0;
 }
 
-void VPUXLoader::load() {
+void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTabOverrideMode,
+                      const std::vector<elf::Elf_Word>& symbolSectionTypes) {
+    VPUX_ELF_THROW_WHEN(m_loaded, SequenceError, "Sections were previously loaded.");
+
+    m_runtimeSymTabs = runtimeSymTabs;
+    m_symTabOverrideMode = symTabOverrideMode;
+    m_explicitAllocations = symTabOverrideMode;
+    m_symbolSectionTypes = symbolSectionTypes;
+
     VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Starting LOAD process");
     auto numSections = m_reader->getSectionsNum();
 
@@ -546,20 +561,26 @@ void VPUXLoader::load() {
     for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Solving section %zu", sectionCtr);
 
-        // E#73309
-        // Check type of section
-        // in case of SHT_NOBITS, section does not contain data.
-        // call getSectionNoData
-        const auto& section = m_reader->getSection(sectionCtr);
+        const auto& section = m_reader->getSectionNoData(sectionCtr);
 
         const auto sectionHeader = section.getHeader();
         auto sectionType = sectionHeader->sh_type;
         auto searchAction = actionMap.find(sectionType);
+        auto action = Action::None;
 
-        VPUX_ELF_THROW_WHEN(searchAction == actionMap.end(), SectionError, "Unknown section type");
+        if(searchAction == actionMap.end()) {
+            if (sectionType >= elf::SHT_LOUSER && sectionType <= elf::SHT_HIUSER) {
+                VPUX_ELF_LOG(LogLevel::LOG_WARN, "Unrecognized Section Type in User range %x", sectionType);
+            }
+            else {
+                VPUX_ELF_THROW(ImplausibleState, "Unrecognized Section Type outside of User range");
+            }
+        }
+        else {
+            action = searchAction->second;
+        }
 
         auto sectionFlags = sectionHeader->sh_flags;
-        auto action = searchAction->second;
 
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "    name  : %s", section.getName());
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "    type  : %u", sectionType);
@@ -654,43 +675,6 @@ void VPUXLoader::load() {
             break;
         }
 
-        case Action::RegisterNetworkMetadata: {
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Parsing the network metadata");
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Resource Requirements:");
-
-            m_networkMetadata =
-                    MetadataSerialization::deserialize(section.getData<uint8_t>(), section.getHeader()->sh_size);
-
-            // the number of available barriers is computed as follows:
-            // numClusters - (to be used) platform specific
-            // maxNumClustersForArch - platform specific
-            // maxBarriersPerInference - platrofm specific
-            // barriersPerCluster = maxBarriersPerInference / maxNumClustersForArch
-            // nn_barriers = min(maxBarriersPerInference, barriersPerCluster * numClusters)
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tnn_barriers %hhu",
-                         m_networkMetadata->mResourceRequirements.nn_barriers_);
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tnn_slice_count_ %hhu",
-                         m_networkMetadata->mResourceRequirements.nn_slice_count_);
-
-            // not uesd:
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tnn_slice_length_ %u",
-                         m_networkMetadata->mResourceRequirements.nn_slice_length_);
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tddr_scratch_length_ %u",
-                         m_networkMetadata->mResourceRequirements.ddr_scratch_length_);
-            break;
-        }
-
-        case Action::RegisterElfABIVersion: {
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Parsing the ELF ABI Version");
-
-            auto versionStructPtr = section.getData<elf::elf_note::Elf_AbiVersionNote>();
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Addr of ELF ABI Version = %p", versionStructPtr);
-
-            safeGet<elf::elf_note::Elf_AbiVersionNote>(&(*m_elfABIVersion), versionStructPtr);
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "ELF ABI Version read and copied successfully");
-            break;
-        }
-
         case Action::Error: {
             VPUX_ELF_THROW(SectionError, "Unexpected section type");
             return;
@@ -701,7 +685,7 @@ void VPUXLoader::load() {
         }
 
         default: {
-            VPUX_ELF_THROW(ImplausibleState, "Unhandled section type");
+            VPUX_ELF_THROW(ImplausibleState, "Unrecognized Section Type outside of User range");
             return;
         }
         }
@@ -725,6 +709,9 @@ void VPUXLoader::load() {
     for (size_t outputCtr = 0; outputCtr < m_profOutputsDescriptors->size(); ++outputCtr) {
         VPUX_ELF_LOG(LogLevel::LOG_INFO, "\t %zu : %zu", outputCtr, (*m_profOutputsDescriptors)[outputCtr].size());
     }
+
+    // sections were loaded. other calls to this method will throw an error
+    m_loaded = true;
 
     return;
 }
@@ -1048,16 +1035,25 @@ bool VPUXLoader::checkSectionType(const elf::SectionHeader* section, Elf_Word se
     return section->sh_type == secType;
 }
 
-std::shared_ptr<const elf::NetworkMetadata> VPUXLoader::getNetworkMetadata() const {
-    return m_networkMetadata;
-}
+std::vector<DeviceBuffer>& VPUXLoader::getSectionsOfType(elf::Elf_Word type) {
+    VPUX_ELF_THROW_WHEN(!hasMemoryFootprint(type), elf::RuntimeError, "Can't access data of NOBITS-like section");
+    if (m_sectionMap->find(type) != m_sectionMap->end()) {
+        return (*m_sectionMap)[type];
+    }
 
-const elf::elf_note::Elf_AbiVersionNote VPUXLoader::getElfABIVersion() const {
-    return *m_elfABIVersion;
-}
-
-const elf::ResourceRequirements VPUXLoader::getResourceRequirements() const {
-    return m_networkMetadata->mResourceRequirements;
-}
+    std::vector<DeviceBuffer> sectionVector;
+    auto numSections = m_reader->getSectionsNum();
+    for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
+        auto section = m_reader->getSectionNoData(sectionCtr);
+        auto sectionType = section.getHeader()->sh_type;
+        if (sectionType == type) {
+            // set vpu_addr to 0, as the loader is not meant to run on the vpu, but on host side
+            DeviceBuffer sectionData(const_cast<uint8_t*>(section.getData<uint8_t>()), 0, section.getHeader()->sh_size);
+            sectionVector.push_back(sectionData);
+        }
+    }
+    m_sectionMap->insert({type, sectionVector});
+    return (*m_sectionMap)[type];
+};
 
 }  // namespace elf

@@ -20,25 +20,6 @@ public:
     }
 };
 
-class VersioningError : public RuntimeError {
-public:
-    explicit VersioningError(const char* what, ElfVersion providedVersion, ElfVersion requiredVersion)
-            : RuntimeError(what), m_providedVersion(providedVersion), m_requiredVersion(requiredVersion)  {
-    }
-
-    ElfVersion getProvidedVersion() {
-        return m_providedVersion;
-    }
-
-    ElfVersion getRequiredVersion() {
-        return m_requiredVersion;
-    }
-
-private:
-    ElfVersion m_providedVersion;
-    ElfVersion m_requiredVersion;
-};
-
 class LogicError : public std::logic_error {
 public:
     explicit LogicError(const char* what): std::logic_error(what) {
@@ -72,14 +53,14 @@ VPUX_ELF_DEFINE_EXCEPTION(LogicError, ImplausibleState);
 #define VPUX_ELF_THROW_UNLESS(condition, exception, msg, ...)  \
     do {                                                       \
         if (!(condition)) {                                    \
-            VPUX_ELF_THROW((exception), (msg), ##__VA_ARGS__); \
+            VPUX_ELF_THROW(exception, (msg), ##__VA_ARGS__); \
         }                                                      \
     } while (0);
 
 #define VPUX_ELF_THROW_WHEN(condition, exception, msg, ...)    \
     do {                                                       \
         if ((condition)) {                                     \
-            VPUX_ELF_THROW((exception), (msg), ##__VA_ARGS__); \
+            VPUX_ELF_THROW(exception, (msg), ##__VA_ARGS__); \
         }                                                      \
     } while (0);
 

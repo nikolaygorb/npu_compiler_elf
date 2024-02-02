@@ -9,7 +9,6 @@
 // clang-format off
 #include <vpux_loader/vpux_loader.hpp>
 #include <vpux_elf/utils/log.hpp>
-#include <vpux_elf/reader.hpp>
 #include <vpux_hpi.hpp>
 #include <sstream>
 
@@ -31,134 +30,15 @@
 // clang-format on
 
 namespace elf {
-
-enum ArchKind { UNKNOWN = 0, VPUX37XX, VPUX40XX };
-
 namespace {
 
-const elf::ElfVersion parseAbiVersionStruct(const elf::elf_note::Elf_AbiVersionNote& abiVersionStruct) {
-    return {abiVersionStruct.n_desc[1], abiVersionStruct.n_desc[2], abiVersionStruct.n_desc[3]};
-}
-
-void checkELFLibABICompatibility(const elf::ElfVersion loaderABIVersion, const elf::ElfVersion elfABIVersion) {
-    std::ostringstream loaderABIVersionStream;
-    loaderABIVersionStream << loaderABIVersion.major << "." << loaderABIVersion.minor << "." << loaderABIVersion.patch;
-
-    std::ostringstream elfABIVersionStream;
-    elfABIVersionStream << elfABIVersion.major << "." << elfABIVersion.minor << "." << elfABIVersion.patch;
-
-    if (loaderABIVersion.major != elfABIVersion.major) {
-        VPUX_ELF_LOG(LogLevel::LOG_ERROR, "ELF Library ABI Version is not compatible with the ELF");
-        VPUX_ELF_LOG(LogLevel::LOG_ERROR, "\tExpected ABI Version: %s vs Received ELF ABI Version: %s",
-                     loaderABIVersionStream.str().c_str(), elfABIVersionStream.str().c_str());
-
-        std::ostringstream errorMsgStream;
-        errorMsgStream << "Versioning Error. ELF Library ABI Versions are incompatible. Provided: "
-                       << elfABIVersionStream.str() << " vs Expected: " << loaderABIVersionStream.str();
-        VPUX_ELF_THROW(VersioningError, errorMsgStream.str().c_str(), elfABIVersion, loaderABIVersion);
-    } else if (loaderABIVersion.minor != elfABIVersion.minor || loaderABIVersion.patch != elfABIVersion.patch) {
-        VPUX_ELF_LOG(LogLevel::LOG_WARN, "Warning! ELF Library ABI Versions are compatible but do not match.");
-        VPUX_ELF_LOG(LogLevel::LOG_WARN, "\tExpected ABI Version: %s vs Received ELF ABI Version: %s",
-                     loaderABIVersionStream.str().c_str(), elfABIVersionStream.str().c_str());
-    } else {
-        VPUX_ELF_LOG(LogLevel::LOG_WARN, "ELF Library ABI Versions are perfectly compatible. Version: %s",
-                     loaderABIVersionStream.str().c_str());
-    }
-}
-
-const elf::ElfVersion readElfABIVersion(AccessManager* elfAccess) {
-    Reader<ELF_Bitness::Elf64> reader(elfAccess);
-
-    auto nSections = reader.getSectionsNum();
-
-    for (size_t i = 0; i < nSections; i++) {
-        const auto& section = reader.getSection(i);
-
-        const auto sectionHeader = section.getHeader();
-        auto sectionType = sectionHeader->sh_type;
-
-        if (sectionType == elf::SHT_NOTE) {
-            elf::elf_note::Elf_AbiVersionNote elfABIVersionNote{};
-            memcpy(&elfABIVersionNote, section.getData<elf::elf_note::Elf_AbiVersionNote>(), sizeof(elfABIVersionNote));
-            return parseAbiVersionStruct(elfABIVersionNote);
-        }
-    }
-
-    VPUX_ELF_THROW(RuntimeError, "Could not read ELF ABI Version");
-}
-
-static std::shared_ptr<NetworkMetadata> readMetadata(AccessManager* elfAccess) {
-    /* TODO: Temporary solution copied from InferenceManagerDemo */
-    // Temporary solution:
-    // The loader must be initialized with a pre-generated symtab.
-    // To generate a symtab for a configuration (one cluster/two clusters), the resource
-    // requirements shoud be read before the loader starts to apply relocations.
-    // Issue should be addressed with E#73309
-
-    Reader<ELF_Bitness::Elf64> reader(elfAccess);
-
-    auto nSections = reader.getSectionsNum();
-
-    for (size_t i = 0; i < nSections; i++) {
-        const auto& section = reader.getSection(i);
-
-        const auto sectionHeader = section.getHeader();
-        auto sectionType = sectionHeader->sh_type;
-
-        if (sectionType == elf::VPU_SHT_NETDESC) {
-            uint8_t* metadataBufferPtr = const_cast<uint8_t*>(section.getData<uint8_t>());
-            uint64_t metadataBufferSize = section.getHeader()->sh_size;
-            return MetadataSerialization::deserialize(metadataBufferPtr, metadataBufferSize);
-        }
-    }
-
-    VPUX_ELF_THROW(HeaderError, "Failed to find a resource");
-}
-
-static uint64_t* readPerfMetrics(AccessManager* elfAccess) {
-    Reader<ELF_Bitness::Elf64> reader(elfAccess);
-
-    auto nSections = reader.getSectionsNum();
-
-    for (size_t i = 0; i < nSections; i++) {
-        const auto& section = reader.getSection(i);
-
-        const auto sectionHeader = section.getHeader();
-        auto sectionType = sectionHeader->sh_type;
-
-        if (sectionType == elf::VPU_SHT_PERF_METRICS) {
-            return (uint64_t*)section.getData<uint64_t>();
-        }
-    }
-
-    VPUX_ELF_LOG(LogLevel::LOG_WARN, "No performance metrics. Default to be used!");
-    return nullptr;
-}
-
-const static std::unordered_map<std::string, ArchKind> knownArch = {{"VPUX37XX", ArchKind::VPUX37XX},
-                                                                    {"VPUX40XX", ArchKind::VPUX40XX},
-                                                                    // to be removed with E#88139:
-                                                                    // temporary fix to support NPU 5000 arch
-                                                                    {"VPUX50XX", ArchKind::VPUX40XX}};
-
-static ArchKind mapArchStringToArchKind(const std::string& archName) {
-    auto retArch = knownArch.find(archName);
-    if (retArch != knownArch.end()) {
-        return retArch->second;
-    } else {
-        return ArchKind::UNKNOWN;
-    }
-}
-
-static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::string& archName) {
-    auto arch = mapArchStringToArchKind(archName);
-
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Creating specialized HPI for arch %u", arch);
+static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const elf::platform::ArchKind& archKind) {
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Creating specialized HPI for arch %u", archKind);
 
     std::unique_ptr<HostParsedInferenceCommon> archSpecificHPI;
-    switch (arch) {
+    switch (archKind) {
 #if defined(CONFIG_TARGET_SOC_3720) || defined(HOST_BUILD)
-    case ArchKind::VPUX37XX:
+    case elf::platform::ArchKind::VPUX37XX:
         archSpecificHPI = std::make_unique<HostParsedInference_3720>();
         break;
 #endif
@@ -166,54 +46,126 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const std::
 // to be updated with E#88139:
 // temporary fix to support NPU 5000 arch
 #if defined(CONFIG_TARGET_SOC_4000) || (CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)
-    case ArchKind::VPUX40XX:
+    case elf::platform::ArchKind::VPUX40XX:
+    case elf::platform::ArchKind::VPUX50XX:
         archSpecificHPI = std::make_unique<HostParsedInference_4000>();
         break;
 #endif
     default:
-        VPUX_ELF_THROW(RangeError, (archName + " arch is not supported").c_str());
+        VPUX_ELF_THROW(RangeError, (elf::platform::stringifyArchKind(archKind) + " arch is not supported").c_str());
         break;
     }
 
     return archSpecificHPI;
 }
 
-static std::unique_ptr<VPUXLoader> getLoader(BufferManager* bufferMgr, AccessManager* accessMgr,
-                                             HostParsedInferenceCommon& hpiCommon,
-                                             const ResourceRequirements& resRequirements) {
-    // E#73555
-    const auto symbolTable = hpiCommon.getSymbolTable(resRequirements.nn_slice_count_);
-    const auto symbolSectionTypes = hpiCommon.getSymbolSectionTypes();
-    auto symTabOverrideMode = hpiCommon.getSymbolSectionTypes().size() == 0 ? false : true;
-    auto loader =
-            std::make_unique<VPUXLoader>(accessMgr, bufferMgr, symbolTable, symTabOverrideMode, symbolSectionTypes);
-    return loader;
-}
-
 }  // namespace
 
-HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr)
-        : bufferManager(bufferMgr), accessManager(accessMgr) {
-    metadata = readMetadata(accessManager);
-    auto archName = std::string(metadata->mIdentification.arch_name);
+const uint64_t* HostParsedInference::readPerfMetrics() {
+    const auto& sections = loader->getSectionsOfType(elf::VPU_SHT_PERF_METRICS);
+    VPUX_ELF_THROW_WHEN(sections.size() > 1, RangeError, "Expected only a single section of performance metrics.");
 
-    // TODO: E#79344
-    auto archSpecificHpi = getArchSpecificHPI(archName);
-    checkELFLibABICompatibility(archSpecificHpi->getELFLibABIVersion(), readElfABIVersion(accessManager));
-    loader = getLoader(bufferManager, accessManager, *archSpecificHpi, metadata->mResourceRequirements);
+    if (sections.size() == 1) {
+        return reinterpret_cast<const uint64_t*>(sections[0].cpu_addr());
+    }
+
+    VPUX_ELF_LOG(LogLevel::LOG_WARN, "No performance metrics. Default to be used!");
+    return nullptr;
+}
+
+void HostParsedInference::readMetadata() {
+    const auto& sections = loader->getSectionsOfType(elf::VPU_SHT_NETDESC);
+    VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one metadata section.");
+
+    auto metadataBufferPtr = sections[0].cpu_addr();
+    auto metadataBufferSize = sections[0].size();
+    metadata = MetadataSerialization::deserialize(metadataBufferPtr, metadataBufferSize);
+}
+
+void HostParsedInference::readPlatformInfo() {
+    const auto& sections = loader->getSectionsOfType(elf::VPU_SHT_PLATFORM_INFO);
+    VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one Platform Info section.");
+
+    auto platformInfoBufferPtr = sections[0].cpu_addr();
+    auto platformInfoBufferSize = sections[0].size();
+    platformInfo = elf::platform::PlatformInfoSerialization::deserialize(platformInfoBufferPtr, platformInfoBufferSize);
+}
+
+elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType) const {
+    const auto& noteSections = loader->getSectionsOfType(elf::SHT_NOTE);
+    for (auto section : noteSections) {
+        VPUX_ELF_THROW_UNLESS(section.size() == sizeof(elf::elf_note::VersionNote), SectionError, "Wrong Versioning Note size");
+        elf::elf_note::VersionNote elfABIVersionNote{};
+        memcpy(&elfABIVersionNote, section.cpu_addr(), sizeof(elf::elf_note::VersionNote));
+        if (elfABIVersionNote.n_type == versionType) {
+            return elf::Version(elfABIVersionNote);
+        }
+    }
+    VPUX_ELF_LOG(LogLevel::LOG_ERROR, "Could not retrieve versioning info of type %x", versionType);
+    VPUX_ELF_THROW(RangeError, "Requested Versioning information was not found");
+}
+
+elf::Version HostParsedInference::getElfABIVersion() const {
+    return readVersioningInfo(elf::elf_note::NT_GNU_ABI_TAG);
+}
+
+elf::Version HostParsedInference::getMIVersion() const {
+    return readVersioningInfo(elf::elf_note::NT_NPU_MPI_VERSION);
+}
+
+HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs)
+        : bufferManager(bufferMgr), accessManager(accessMgr), hpiCfg(hpiConfigs) {
+    // create the loader object to cache sections
+    loader = std::make_unique<VPUXLoader>(accessMgr, bufferMgr);
+
+    auto& expectedArch = hpiConfigs.archKind;
+    auto archSpecificHpi = getArchSpecificHPI(expectedArch);
+    // Check ELF Library ABI Compatibility
+    elf::Version::checkVersionCompatibility(archSpecificHpi->getELFLibABIVersion(), getElfABIVersion(), elf::VersionType::ELF_ABI_VERSION);
+
+    readMetadata();
+    readPlatformInfo();
+
+    auto archKind = platformInfo->mArchKind;
+
+    // Check if compiled ELF arch and HPI arch match
+    if (archKind != expectedArch) {
+        std::stringstream logBuffer; 
+        logBuffer << "Incorrect arch. Expected: " << elf::platform::stringifyArchKind(expectedArch) << " vs Received: " << elf::platform::stringifyArchKind(archKind);
+        VPUX_ELF_THROW(ArgsError, logBuffer.str().c_str());
+    }
+
+    // Check Mapped Inference Compatibility
+    auto& nnExpectedVersion = hpiConfigs.nnVersion;
+
+    // If Expected Mapped Inference version is not provided via HPI config, fall back to local version
+    if (!nnExpectedVersion.checkValidity()) {
+        nnExpectedVersion = archSpecificHpi->getStaticMIVersion();
+    }
+
+    elf::Version::checkVersionCompatibility(nnExpectedVersion, getMIVersion(), elf::VersionType::MAPPED_INFERENCE_VERSION);
+}
+
+void HostParsedInference::load() {
+    auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
+
+    const auto symbolTable = archSpecificHpi->getSymbolTable(metadata->mResourceRequirements.nn_slice_count_);
+    const auto symbolSectionTypes = archSpecificHpi->getSymbolSectionTypes();
+    auto symTabOverrideMode = archSpecificHpi->getSymbolSectionTypes().size() == 0 ? false : true;
+
+    loader->load(symbolTable, symTabOverrideMode, symbolSectionTypes);
+
     parsedInference =
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
     auto parsedInferenceBuffer = parsedInference->getBuffer();
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements,
-                                            readPerfMetrics(accessManager));
+                                            readPerfMetrics());
 }
 
 HostParsedInference::HostParsedInference(const HostParsedInference& other)
-        : bufferManager(other.bufferManager), accessManager(other.accessManager), metadata(other.metadata) {
-    auto archName = std::string(metadata->mIdentification.arch_name);
-
+        : bufferManager(other.bufferManager), accessManager(other.accessManager), metadata(other.metadata), platformInfo(other.platformInfo) {
     // TODO: E#79344
-    auto archSpecificHpi = getArchSpecificHPI(archName);
+    auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
     // Use clone semantics here by copy-constructing the loader object
     loader = std::make_unique<VPUXLoader>(*other.loader);
     // Every new loader object means a new parsedInference struct as well
@@ -221,13 +173,14 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
     auto parsedInferenceBuffer = parsedInference->getBuffer();
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements,
-                                            readPerfMetrics(accessManager));
+                                            readPerfMetrics());
 };
 
 HostParsedInference::HostParsedInference(HostParsedInference&& other)
         : bufferManager(other.bufferManager),
           accessManager(other.accessManager),
           metadata(other.metadata),
+          platformInfo(other.platformInfo),
           loader(std::move(other.loader)),
           parsedInference(other.parsedInference) {
 }
@@ -243,11 +196,10 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
     bufferManager = rhs.bufferManager;
     accessManager = rhs.accessManager;
     metadata = rhs.metadata;
-
-    auto archName = std::string(metadata->mIdentification.arch_name);
+    platformInfo = rhs.platformInfo;
 
     // TODO: E#79344
-    auto archSpecificHpi = getArchSpecificHPI(archName);
+    auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
     // Use clone semantics here by copy-constructing the loader object
     loader = std::make_unique<VPUXLoader>(*rhs.loader);
     // Every new loader object means a new parsedInference struct as well
@@ -255,7 +207,7 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
     auto parsedInferenceBuffer = parsedInference->getBuffer();
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements,
-                                            readPerfMetrics(accessManager));
+                                            readPerfMetrics());
 
     return *this;
 }
@@ -267,6 +219,7 @@ HostParsedInference& HostParsedInference::operator=(HostParsedInference&& rhs) {
     bufferManager = rhs.bufferManager;
     accessManager = rhs.accessManager;
     metadata = rhs.metadata;
+    platformInfo = rhs.platformInfo;
     loader = std::move(rhs.loader);
     parsedInference = rhs.parsedInference;
 
@@ -294,7 +247,11 @@ std::vector<DeviceBuffer> HostParsedInference::getProfBuffers() const {
 }
 
 std::shared_ptr<const elf::NetworkMetadata> HostParsedInference::getMetadata() {
-    return loader->getNetworkMetadata();
+    return metadata;
+}
+
+std::shared_ptr<const elf::platform::PlatformInfo> HostParsedInference::getPlatformInfo() {
+    return platformInfo;
 }
 
 void HostParsedInference::applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,

@@ -7,19 +7,23 @@
 
 #pragma once
 
+#ifndef VPUX_ELF_LOG_UNIT_NAME
+#define VPUX_ELF_LOG_UNIT_NAME "VpuxLoader"
+#endif
+
+#include <array>
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
-#include <array>
-
-#include <vpux_headers/buffer_manager.hpp>
-#include <vpux_headers/buffer_specs.hpp>
-#include <vpux_headers/device_buffer.hpp>
 
 #include <vpux_elf/accessor.hpp>
 #include <vpux_elf/reader.hpp>
+#include <vpux_elf/utils/log.hpp>
+#include <vpux_headers/buffer_manager.hpp>
+#include <vpux_headers/buffer_specs.hpp>
+#include <vpux_headers/device_buffer.hpp>
 
 #include <vpux_elf/types/elf_structs.hpp>
 #include <vpux_elf/types/relocation_entry.hpp>
@@ -111,21 +115,30 @@ private:
     using RelocationFunc = std::function<void(void*, const elf::SymbolEntry&, const Elf_Sxword)>;
     using RelocationType = Elf_Word;
 
-    enum class Action { None, AllocateAndLoad, Allocate, Relocate, RegisterUserIO, RegisterNetworkMetadata, RegisterElfABIVersion, Error };
+    enum class Action {
+        None,
+        AllocateAndLoad,
+        Allocate,
+        Relocate,
+        RegisterUserIO,
+        RegisterNetworkMetadata,
+        RegisterVersionInfo,
+        Error
+    };
 
     static const std::map<Elf_Word, Action> actionMap;
     static const std::map<RelocationType, RelocationFunc> relocationMap;
 
 public:
-    VPUXLoader(AccessManager* accessor, BufferManager* bufferManager, const std::vector<SymbolEntry>& runtimeSymTabs,
-               bool symTabOverrideMode = false,
-               const std::vector<elf::Elf_Word>& symbolSectionTypes = std::vector<elf::Elf_Word>());
+    VPUXLoader(AccessManager* accessor, BufferManager* bufferManager);
     VPUXLoader(const VPUXLoader& other);
     VPUXLoader(VPUXLoader&& other) = delete;
     VPUXLoader& operator=(const VPUXLoader&);
     VPUXLoader& operator=(const VPUXLoader&&) = delete;
     ~VPUXLoader();
 
+    void load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTabOverrideMode = false,
+              const std::vector<elf::Elf_Word>& symbolSectionTypes = {});
     uint64_t getEntry();
 
     void applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,
@@ -135,17 +148,14 @@ public:
     std::vector<DeviceBuffer> getInputBuffers() const;
     std::vector<DeviceBuffer> getOutputBuffers() const;
     std::vector<DeviceBuffer> getProfBuffers() const;
-    const elf::ResourceRequirements getResourceRequirements() const;
-    std::shared_ptr<const elf::NetworkMetadata> getNetworkMetadata() const;
-    const elf::elf_note::Elf_AbiVersionNote getElfABIVersion() const;
+    std::vector<DeviceBuffer>& getSectionsOfType(elf::Elf_Word type);
 
 private:
     bool checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const;
     void registerUserIO(std::vector<DeviceBuffer>& io, const elf::SymbolEntry* symbols, size_t symbolCount) const;
-    void load();
 
     void updateSharedBuffers(const std::vector<std::size_t>& relocationSectionIndexes);
-    void applyRelocations(const std::vector<std::size_t> &relocationSectionIndexes);
+    void applyRelocations(const std::vector<std::size_t>& relocationSectionIndexes);
 
     BufferManager* m_bufferManager;
     std::shared_ptr<Reader<ELF_Bitness::Elf64>> m_reader;
@@ -159,11 +169,12 @@ private:
     std::shared_ptr<std::vector<DeviceBuffer>> m_userOutputsDescriptors;
     std::shared_ptr<std::vector<DeviceBuffer>> m_profOutputsDescriptors;
 
-    std::shared_ptr<elf::NetworkMetadata> m_networkMetadata;
-    std::shared_ptr<elf::elf_note::Elf_AbiVersionNote> m_elfABIVersion;
+    std::shared_ptr<std::map<elf::Elf_Word /*section type*/, std::vector<DeviceBuffer>>> /*section data*/
+            m_sectionMap;
 
     bool m_symTabOverrideMode;
     bool m_explicitAllocations;
+    bool m_loaded;
     std::vector<elf::Elf_Word> m_symbolSectionTypes;
 };
 
