@@ -67,7 +67,7 @@ Version VersionsProvider::getLibraryELFVersion() const { return impl->getELFLibA
 Version VersionsProvider::getLibraryMIVersion() const { return impl->getStaticMIVersion(); }
 
 const uint64_t* HostParsedInference::readPerfMetrics() {
-    const auto& sections = loader->getSectionsOfType(elf::VPU_SHT_PERF_METRICS);
+    const auto& sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_PERF_METRICS);
     VPUX_ELF_THROW_WHEN(sections.size() > 1, RangeError, "Expected only a single section of performance metrics.");
 
     if (sections.size() == 1) {
@@ -79,7 +79,7 @@ const uint64_t* HostParsedInference::readPerfMetrics() {
 }
 
 void HostParsedInference::readMetadata() {
-    const auto& sections = loader->getSectionsOfType(elf::VPU_SHT_NETDESC);
+    const auto& sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_NETDESC);
     VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one metadata section.");
 
     auto metadataBufferPtr = sections[0].cpu_addr();
@@ -88,7 +88,7 @@ void HostParsedInference::readMetadata() {
 }
 
 void HostParsedInference::readPlatformInfo() {
-    const auto& sections = loader->getSectionsOfType(elf::VPU_SHT_PLATFORM_INFO);
+    const auto& sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_PLATFORM_INFO);
     VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one Platform Info section.");
 
     auto platformInfoBufferPtr = sections[0].cpu_addr();
@@ -97,11 +97,12 @@ void HostParsedInference::readPlatformInfo() {
 }
 
 elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType) const {
-    const auto& noteSections = loader->getSectionsOfType(elf::SHT_NOTE);
+    const auto& noteSections = loaders.front()->getSectionsOfType(elf::SHT_NOTE);
     for (auto section : noteSections) {
-        VPUX_ELF_THROW_UNLESS(section.size() == sizeof(elf::elf_note::VersionNote), SectionError, "Wrong Versioning Note size");
+        VPUX_ELF_THROW_UNLESS(section.size() == sizeof(elf::elf_note::VersionNote), SectionError,
+                              "Wrong Versioning Note size");
         elf::elf_note::VersionNote elfABIVersionNote{};
-        memcpy(&elfABIVersionNote, section.cpu_addr(), sizeof(elf::elf_note::VersionNote));
+        std::memcpy(&elfABIVersionNote, section.cpu_addr(), sizeof(elf::elf_note::VersionNote));
         if (elfABIVersionNote.n_type == versionType) {
             return elf::Version(elfABIVersionNote);
         }
@@ -129,12 +130,13 @@ elf::Version HostParsedInference::getLibraryMIVersion() const {
 HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs)
         : bufferManager(bufferMgr), accessManager(accessMgr), hpiCfg(hpiConfigs) {
     // create the loader object to cache sections
-    loader = std::make_unique<VPUXLoader>(accessMgr, bufferMgr);
+    loaders.emplace_back(std::make_unique<VPUXLoader>(accessMgr, bufferMgr));
 
     auto& expectedArch = hpiConfigs.archKind;
     auto archSpecificHpi = getArchSpecificHPI(expectedArch);
     // Check ELF Library ABI Compatibility
-    elf::Version::checkVersionCompatibility(getLibraryELFVersion(), getElfABIVersion(), elf::VersionType::ELF_ABI_VERSION);
+    elf::Version::checkVersionCompatibility(getLibraryELFVersion(), getElfABIVersion(),
+                                            elf::VersionType::ELF_ABI_VERSION);
 
     readMetadata();
     readPlatformInfo();
@@ -144,7 +146,8 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     // Check if compiled ELF arch and HPI arch match
     if (archKind != expectedArch) {
         std::stringstream logBuffer;
-        logBuffer << "Incorrect arch. Expected: " << elf::platform::stringifyArchKind(expectedArch) << " vs Received: " << elf::platform::stringifyArchKind(archKind);
+        logBuffer << "Incorrect arch. Expected: " << elf::platform::stringifyArchKind(expectedArch)
+                  << " vs Received: " << elf::platform::stringifyArchKind(archKind);
         VPUX_ELF_THROW(ArgsError, logBuffer.str().c_str());
     }
 
@@ -156,36 +159,86 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
         nnExpectedVersion = getLibraryMIVersion();
     }
 
-    elf::Version::checkVersionCompatibility(nnExpectedVersion, getMIVersion(), elf::VersionType::MAPPED_INFERENCE_VERSION);
+    elf::Version::checkVersionCompatibility(nnExpectedVersion, getMIVersion(),
+                                            elf::VersionType::MAPPED_INFERENCE_VERSION);
 }
 
 void HostParsedInference::load() {
     auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
 
-    const auto symbolTable = archSpecificHpi->getSymbolTable(metadata->mResourceRequirements.nn_slice_count_);
     const auto symbolSectionTypes = archSpecificHpi->getSymbolSectionTypes();
     auto symTabOverrideMode = archSpecificHpi->getSymbolSectionTypes().size() == 0 ? false : true;
 
-    loader->load(symbolTable, symTabOverrideMode, symbolSectionTypes);
+    std::vector<uint64_t> entriesVct;
+    if (platformInfo->mArchKind == elf::platform::ArchKind::VPUX37XX &&
+        metadata->mResourceRequirements.nn_slice_count_ < archSpecificHpi->getArchTilesCount()) {
+        entries = std::make_shared<AllocatedDeviceBuffer>(
+                bufferManager, archSpecificHpi->getEntryBufferSpecs(archSpecificHpi->getArchTilesCount()));
+        entriesVct.reserve(loaders.size());
+        auto entrySize = entries->getBufferSpecs().size / archSpecificHpi->getArchTilesCount();
+        for (uint8_t idx = 0; idx < archSpecificHpi->getArchTilesCount(); ++idx) {
+            const auto symbolTable = archSpecificHpi->getSymbolTable(idx);
+            if (idx == 0) {
+                // first loader is created.
+                loaders[idx]->load(symbolTable, symTabOverrideMode, symbolSectionTypes);
+            } else {
+                // create other loaders using the first one that has
+                // been initialized.
+                // Pass the symbol table to override the symbols from the previous loader
+                loaders.push_back(std::make_unique<VPUXLoader>(*loaders.front(), symbolTable));
+            }
+            auto entryDeviceBuffer = loaders[idx]->getEntry();
+            std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize, (void*)entryDeviceBuffer.cpu_addr(),
+                        entrySize);
+            entriesVct.push_back((entries->getBuffer().vpu_addr() + idx * entrySize));
+        }
+    } else {
+        auto symbolTable = archSpecificHpi->getSymbolTable(metadata->mResourceRequirements.nn_slice_count_);
+        loaders.front()->load(symbolTable, symTabOverrideMode, symbolSectionTypes);
+        entriesVct.push_back(loaders.front()->getEntry().vpu_addr());
+    }
 
     parsedInference =
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
     auto parsedInferenceBuffer = parsedInference->getBuffer();
-    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements,
+    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
                                             readPerfMetrics());
 }
 
 HostParsedInference::HostParsedInference(const HostParsedInference& other)
-        : bufferManager(other.bufferManager), accessManager(other.accessManager), metadata(other.metadata), platformInfo(other.platformInfo) {
+        : bufferManager(other.bufferManager),
+          accessManager(other.accessManager),
+          metadata(other.metadata),
+          platformInfo(other.platformInfo) {
     // TODO: E#79344
     auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
     // Use clone semantics here by copy-constructing the loader object
-    loader = std::make_unique<VPUXLoader>(*other.loader);
+    loaders.reserve(other.loaders.size());
+    std::vector<uint64_t> entriesVct;
+    entriesVct.reserve(other.loaders.size());
+    if (platformInfo->mArchKind == elf::platform::ArchKind::VPUX37XX &&
+        metadata->mResourceRequirements.nn_slice_count_ < archSpecificHpi->getArchTilesCount()) {
+        entries = std::make_shared<AllocatedDeviceBuffer>(bufferManager,
+                                                          archSpecificHpi->getEntryBufferSpecs(other.loaders.size()));
+        auto entrySize = entries->getBufferSpecs().size / other.loaders.size();
+        for (size_t idx = 0; idx < other.loaders.size(); ++idx) {
+            loaders.push_back(std::make_unique<VPUXLoader>(*other.loaders[idx]));
+
+            auto entryDeviceBuffer = loaders[idx]->getEntry();
+            std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize, (void*)entryDeviceBuffer.cpu_addr(),
+                        entrySize);
+            entriesVct.push_back((entries->getBuffer().vpu_addr() + idx * entrySize));
+        }
+    } else {
+        loaders.push_back(std::make_unique<VPUXLoader>(*other.loaders.front()));
+        entriesVct.push_back(loaders.front()->getEntry().vpu_addr());
+    }
+
     // Every new loader object means a new parsedInference struct as well
     parsedInference =
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
     auto parsedInferenceBuffer = parsedInference->getBuffer();
-    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements,
+    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
                                             readPerfMetrics());
 };
 
@@ -194,8 +247,9 @@ HostParsedInference::HostParsedInference(HostParsedInference&& other)
           accessManager(other.accessManager),
           metadata(other.metadata),
           platformInfo(other.platformInfo),
-          loader(std::move(other.loader)),
-          parsedInference(other.parsedInference) {
+          loaders(std::move(other.loaders)),
+          parsedInference(other.parsedInference),
+          entries(other.entries) {
 }
 
 HostParsedInference::~HostParsedInference() {
@@ -214,12 +268,31 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
     // TODO: E#79344
     auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
     // Use clone semantics here by copy-constructing the loader object
-    loader = std::make_unique<VPUXLoader>(*rhs.loader);
+    loaders.reserve(rhs.loaders.size());
+    std::vector<uint64_t> entriesVct;
+    entriesVct.reserve(rhs.loaders.size());
+    if (platformInfo->mArchKind == elf::platform::ArchKind::VPUX37XX &&
+        metadata->mResourceRequirements.nn_slice_count_ < archSpecificHpi->getArchTilesCount()) {
+        entries = std::make_unique<AllocatedDeviceBuffer>(bufferManager,
+                                                          archSpecificHpi->getEntryBufferSpecs(rhs.loaders.size()));
+        auto entrySize = entries->getBufferSpecs().size / rhs.loaders.size();
+        for (size_t idx = 0; idx < rhs.loaders.size(); ++idx) {
+            loaders.push_back(std::make_unique<VPUXLoader>(*rhs.loaders[idx]));
+
+            auto entryDeviceBuffer = loaders[idx]->getEntry();
+            std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize, (void*)entryDeviceBuffer.cpu_addr(),
+                        entrySize);
+            entriesVct.push_back((entries->getBuffer().vpu_addr() + idx * entrySize));
+        }
+    } else {
+        loaders.push_back(std::make_unique<VPUXLoader>(*rhs.loaders.front()));
+        entriesVct.push_back(loaders.front()->getEntry().vpu_addr());
+    }
     // Every new loader object means a new parsedInference struct as well
     parsedInference =
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
     auto parsedInferenceBuffer = parsedInference->getBuffer();
-    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, loader->getEntry(), metadata->mResourceRequirements,
+    archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
                                             readPerfMetrics());
 
     return *this;
@@ -233,8 +306,9 @@ HostParsedInference& HostParsedInference::operator=(HostParsedInference&& rhs) {
     accessManager = rhs.accessManager;
     metadata = rhs.metadata;
     platformInfo = rhs.platformInfo;
-    loader = std::move(rhs.loader);
+    loaders = std::move(rhs.loaders);
     parsedInference = rhs.parsedInference;
+    entries = rhs.entries;
 
     return *this;
 }
@@ -244,19 +318,29 @@ DeviceBuffer HostParsedInference::getParsedInference() const {
 }
 
 std::vector<DeviceBuffer> HostParsedInference::getAllocatedBuffers() const {
-    return loader->getAllocatedBuffers();
+    std::vector<DeviceBuffer> vct;
+    for (auto& loader : loaders) {
+        std::vector<DeviceBuffer> loaderAllocations = loader->getAllocatedBuffers();
+        vct.insert(vct.end(), loaderAllocations.begin(), loaderAllocations.end());
+    }
+
+    if (entries) {
+        vct.push_back(entries->getBuffer());
+    }
+
+    return vct;
 }
 
 std::vector<DeviceBuffer> HostParsedInference::getInputBuffers() const {
-    return loader->getInputBuffers();
+    return loaders.front()->getInputBuffers();
 }
 
 std::vector<DeviceBuffer> HostParsedInference::getOutputBuffers() const {
-    return loader->getOutputBuffers();
+    return loaders.front()->getOutputBuffers();
 }
 
 std::vector<DeviceBuffer> HostParsedInference::getProfBuffers() const {
-    return loader->getProfBuffers();
+    return loaders.front()->getProfBuffers();
 }
 
 std::shared_ptr<const elf::NetworkMetadata> HostParsedInference::getMetadata() {
@@ -269,7 +353,11 @@ std::shared_ptr<const elf::platform::PlatformInfo> HostParsedInference::getPlatf
 
 void HostParsedInference::applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,
                                            std::vector<DeviceBuffer>& profiling) {
-    return loader->applyJitRelocations(inputs, outputs, profiling);
+    // apply same relocation for all the copies as at this point in time
+    // we don't know which one would be used.
+    for (auto& loader : loaders) {
+        loader->applyJitRelocations(inputs, outputs, profiling);
+    }
 }
 
 }  // namespace elf
