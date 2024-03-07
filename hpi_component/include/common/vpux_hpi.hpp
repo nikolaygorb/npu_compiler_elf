@@ -11,6 +11,7 @@
 #include <vpux_elf/accessor.hpp>
 #include <vpux_headers/buffer_manager.hpp>
 #include <vpux_headers/device_buffer.hpp>
+#include <vpux_headers/managed_buffer.hpp>
 #include <vpux_headers/metadata.hpp>
 #include <vpux_headers/platform.hpp>
 #include <vpux_elf/utils/version.hpp>
