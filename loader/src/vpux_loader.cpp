@@ -991,6 +991,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
             auto symIdx = elf64RSym(relocation.r_info);
 
             VPUX_ELF_THROW_WHEN(symIdx > symTabSize, RelocError, "SymTab index out of bounds!");
+            VPUX_ELF_THROW_WHEN(symIdx > userAddrs.size(), RelocError, "Invalid symbol index. It exceeds the number of relevant device buffers");
 
             auto relType = elf64RType(relocation.r_info);
             auto addend = relocation.r_addend;
