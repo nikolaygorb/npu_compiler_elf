@@ -46,6 +46,8 @@ public:
     std::shared_ptr<const elf::platform::PlatformInfo> getPlatformInfo();
     elf::Version getElfABIVersion() const;
     elf::Version getMIVersion() const;
+    elf::Version getLibraryELFVersion() const;
+    elf::Version getLibraryMIVersion() const;
 
     void applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,
                           std::vector<DeviceBuffer>& profiling);
