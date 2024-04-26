@@ -27,6 +27,14 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS} ${SOURCES})
 add_library(${LIB_NAME} STATIC ${SOURCES})
 add_library(vpux_elf STATIC ${SOURCES})
 
+if(MSVC)
+    string(TOUPPER ${CMAKE_BUILD_TYPE} BUILD_TYPE_CONFIG)
+    if(${CMAKE_CXX_FLAGS_${BUILD_TYPE_CONFIG}} MATCHES "/MT")
+        message(STATUS "/MT in CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}, set ${LIB_NAME}'s and vpux_elf's MSVC_RUNTIME_LIBRARY to MT")
+        set_target_properties(${LIB_NAME} vpux_elf PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
+endif()
+
 target_compile_definitions(${LIB_NAME} PUBLIC HOST_BUILD)
 target_compile_definitions(vpux_elf PUBLIC HOST_BUILD)
 
