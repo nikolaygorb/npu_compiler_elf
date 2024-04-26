@@ -26,8 +26,8 @@ private:
     std::vector<elf::Elf_Word> secTypeContainers_;
 
     static constexpr uint32_t VERSION_MAJOR = 1;
-    static constexpr uint32_t VERSION_MINOR = 1;
-    static constexpr uint32_t VERSION_PATCH = 1;
+    static constexpr uint32_t VERSION_MINOR = 2;
+    static constexpr uint32_t VERSION_PATCH = 0;
 };
 
 }  // namespace elf
