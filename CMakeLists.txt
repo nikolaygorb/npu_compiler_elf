@@ -27,6 +27,17 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS} ${SOURCES})
 add_library(${LIB_NAME} STATIC ${SOURCES})
 add_library(vpux_elf STATIC ${SOURCES})
 
+if(MSVC)
+    target_compile_options(${LIB_NAME}
+        PRIVATE
+            /Zf
+    )
+    target_compile_options(vpux_elf
+        PRIVATE
+            /Zf
+    )
+endif()
+
 target_compile_definitions(${LIB_NAME} PUBLIC HOST_BUILD)
 target_compile_definitions(vpux_elf PUBLIC HOST_BUILD)
 
