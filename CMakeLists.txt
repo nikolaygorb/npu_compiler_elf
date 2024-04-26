@@ -27,17 +27,6 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS} ${SOURCES})
 add_library(${LIB_NAME} STATIC ${SOURCES})
 add_library(vpux_elf STATIC ${SOURCES})
 
-if(MSVC)
-    target_compile_options(${LIB_NAME}
-        PRIVATE
-            /Zf
-    )
-    target_compile_options(vpux_elf
-        PRIVATE
-            /Zf
-    )
-endif()
-
 target_compile_definitions(${LIB_NAME} PUBLIC HOST_BUILD)
 target_compile_definitions(vpux_elf PUBLIC HOST_BUILD)
 
@@ -61,16 +50,24 @@ if (DEFINED IE_MAIN_VPUX_PLUGIN_SOURCE_DIR)
         "${IE_MAIN_VPUX_PLUGIN_SOURCE_DIR}/src/vpux_compiler/include/vpux/compiler/NPU40XX/dialect/NPUReg40XX")
 endif()
 
+set(ADDITIONAL_FLAG "")
+if(MSVC)
+    # To avoid MSVC C1090 fatal error (PDB API call fail)
+    set(ADDITIONAL_FLAG "/Zf")
+endif()
+
 # Set compiler options
 target_compile_options(${LIB_NAME} PRIVATE
     $<$<CONFIG:Release>:${UMD_COMPILER_OPTIONS_RELEASE}>
     $<$<CONFIG:Debug>:${UMD_COMPILER_OPTIONS_DEBUG}>
-    $<$<CONFIG:RelWithDebInfo>:${UMD_COMPILER_OPTIONS_RELEASE}>)
+    $<$<CONFIG:RelWithDebInfo>:${UMD_COMPILER_OPTIONS_RELEASE}>
+    ${ADDITIONAL_FLAG})
 
 target_compile_options(vpux_elf PRIVATE
     $<$<CONFIG:Release>:${UMD_COMPILER_OPTIONS_RELEASE}>
     $<$<CONFIG:Debug>:${UMD_COMPILER_OPTIONS_DEBUG}>
-    $<$<CONFIG:RelWithDebInfo>:${UMD_COMPILER_OPTIONS_RELEASE}>)
+    $<$<CONFIG:RelWithDebInfo>:${UMD_COMPILER_OPTIONS_RELEASE}>
+    ${ADDITIONAL_FLAG})
 
 # Set linker options
 target_link_options(${LIB_NAME} PRIVATE
