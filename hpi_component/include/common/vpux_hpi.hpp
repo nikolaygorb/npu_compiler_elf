@@ -19,12 +19,24 @@
 namespace elf {
 
 class VPUXLoader;
+class HostParsedInferenceCommon;
 
 // Structure that gathers configuration options for HPI instances.
 // Subject to various additions/modifications in the future
 struct HPIConfigs {
     elf::Version nnVersion;
     elf::platform::ArchKind archKind = elf::platform::ArchKind::UNKNOWN;
+};
+
+class VersionsProvider final {
+public:
+    explicit VersionsProvider(platform::ArchKind architecture);
+    ~VersionsProvider();
+    Version getLibraryELFVersion() const;
+    Version getLibraryMIVersion() const;
+
+private:
+    std::unique_ptr<HostParsedInferenceCommon> impl;
 };
 
 class HostParsedInference final {
