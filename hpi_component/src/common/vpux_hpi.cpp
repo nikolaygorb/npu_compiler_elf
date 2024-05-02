@@ -61,6 +61,11 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const elf::
 
 }  // namespace
 
+VersionsProvider::VersionsProvider(platform::ArchKind architecture) : impl(getArchSpecificHPI(architecture)) {}
+VersionsProvider::~VersionsProvider() = default;
+Version VersionsProvider::getLibraryELFVersion() const { return impl->getELFLibABIVersion(); }
+Version VersionsProvider::getLibraryMIVersion() const { return impl->getStaticMIVersion(); }
+
 const uint64_t* HostParsedInference::readPerfMetrics() {
     const auto& sections = loader->getSectionsOfType(elf::VPU_SHT_PERF_METRICS);
     VPUX_ELF_THROW_WHEN(sections.size() > 1, RangeError, "Expected only a single section of performance metrics.");
