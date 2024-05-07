@@ -50,24 +50,20 @@ if (DEFINED IE_MAIN_VPUX_PLUGIN_SOURCE_DIR)
         "${IE_MAIN_VPUX_PLUGIN_SOURCE_DIR}/src/vpux_compiler/include/vpux/compiler/NPU40XX/dialect/NPUReg40XX")
 endif()
 
-set(ADDITIONAL_FLAG "")
-if(MSVC)
-    # To avoid MSVC C1090 fatal error (PDB API call fail)
-    set(ADDITIONAL_FLAG "/Zf")
-endif()
-
 # Set compiler options
 target_compile_options(${LIB_NAME} PRIVATE
     $<$<CONFIG:Release>:${UMD_COMPILER_OPTIONS_RELEASE}>
     $<$<CONFIG:Debug>:${UMD_COMPILER_OPTIONS_DEBUG}>
     $<$<CONFIG:RelWithDebInfo>:${UMD_COMPILER_OPTIONS_RELEASE}>
-    ${ADDITIONAL_FLAG})
+    # /Zf enables compiler support for faster generation of PDB files when compiled concurrently
+    $<$<CXX_COMPILER_ID:MSVC>:/Zf>)
 
 target_compile_options(vpux_elf PRIVATE
     $<$<CONFIG:Release>:${UMD_COMPILER_OPTIONS_RELEASE}>
     $<$<CONFIG:Debug>:${UMD_COMPILER_OPTIONS_DEBUG}>
     $<$<CONFIG:RelWithDebInfo>:${UMD_COMPILER_OPTIONS_RELEASE}>
-    ${ADDITIONAL_FLAG})
+    # see ${LIB_NAME} compile options
+    $<$<CXX_COMPILER_ID:MSVC>:/Zf>)
 
 # Set linker options
 target_link_options(${LIB_NAME} PRIVATE
