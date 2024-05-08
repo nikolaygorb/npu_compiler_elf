@@ -79,21 +79,25 @@ const uint64_t* HostParsedInference::readPerfMetrics() {
 }
 
 void HostParsedInference::readMetadata() {
-    const auto& sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_NETDESC);
+    auto sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_NETDESC);
     VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one metadata section.");
 
+    bufferManager->lock(sections[0]);
     auto metadataBufferPtr = sections[0].cpu_addr();
     auto metadataBufferSize = sections[0].size();
     metadata = MetadataSerialization::deserialize(metadataBufferPtr, metadataBufferSize);
+    bufferManager->unlock(sections[0]);
 }
 
 void HostParsedInference::readPlatformInfo() {
-    const auto& sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_PLATFORM_INFO);
+    auto sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_PLATFORM_INFO);
     VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one Platform Info section.");
 
+    bufferManager->lock(sections[0]);
     auto platformInfoBufferPtr = sections[0].cpu_addr();
     auto platformInfoBufferSize = sections[0].size();
     platformInfo = elf::platform::PlatformInfoSerialization::deserialize(platformInfoBufferPtr, platformInfoBufferSize);
+    bufferManager->unlock(sections[0]);
 }
 
 elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType) const {
@@ -101,8 +105,10 @@ elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType) const
     for (auto section : noteSections) {
         VPUX_ELF_THROW_UNLESS(section.size() == sizeof(elf::elf_note::VersionNote), SectionError,
                               "Wrong Versioning Note size");
+        bufferManager->lock(section);
         elf::elf_note::VersionNote elfABIVersionNote{};
         std::memcpy(&elfABIVersionNote, section.cpu_addr(), sizeof(elf::elf_note::VersionNote));
+        bufferManager->unlock(section);
         if (elfABIVersionNote.n_type == versionType) {
             return elf::Version(elfABIVersionNote);
         }
