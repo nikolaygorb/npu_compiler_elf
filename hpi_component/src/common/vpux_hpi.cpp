@@ -174,6 +174,7 @@ void HostParsedInference::load() {
         metadata->mResourceRequirements.nn_slice_count_ < archSpecificHpi->getArchTilesCount()) {
         entries = std::make_shared<AllocatedDeviceBuffer>(
                 bufferManager, archSpecificHpi->getEntryBufferSpecs(archSpecificHpi->getArchTilesCount()));
+        entries->lock();
         entriesVct.reserve(loaders.size());
         auto entrySize = entries->getBufferSpecs().size / archSpecificHpi->getArchTilesCount();
         for (uint8_t idx = 0; idx < archSpecificHpi->getArchTilesCount(); ++idx) {
@@ -188,10 +189,13 @@ void HostParsedInference::load() {
                 loaders.push_back(std::make_unique<VPUXLoader>(*loaders.front(), symbolTable));
             }
             auto entryDeviceBuffer = loaders[idx]->getEntry();
+            bufferManager->lock(entryDeviceBuffer);
             std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize, (void*)entryDeviceBuffer.cpu_addr(),
                         entrySize);
             entriesVct.push_back((entries->getBuffer().vpu_addr() + idx * entrySize));
+            bufferManager->unlock(entryDeviceBuffer);
         }
+        entries->unlock();
     } else {
         auto symbolTable = archSpecificHpi->getSymbolTable(metadata->mResourceRequirements.nn_slice_count_);
         loaders.front()->load(symbolTable, symTabOverrideMode, symbolSectionTypes);
@@ -200,9 +204,11 @@ void HostParsedInference::load() {
 
     parsedInference =
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
+    parsedInference->lock();
     auto parsedInferenceBuffer = parsedInference->getBuffer();
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
                                             readPerfMetrics());
+    parsedInference->unlock();
 }
 
 HostParsedInference::HostParsedInference(const HostParsedInference& other)
@@ -220,15 +226,19 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
         metadata->mResourceRequirements.nn_slice_count_ < archSpecificHpi->getArchTilesCount()) {
         entries = std::make_shared<AllocatedDeviceBuffer>(bufferManager,
                                                           archSpecificHpi->getEntryBufferSpecs(other.loaders.size()));
+        entries->lock();
         auto entrySize = entries->getBufferSpecs().size / other.loaders.size();
         for (size_t idx = 0; idx < other.loaders.size(); ++idx) {
             loaders.push_back(std::make_unique<VPUXLoader>(*other.loaders[idx]));
 
             auto entryDeviceBuffer = loaders[idx]->getEntry();
+            bufferManager->lock(entryDeviceBuffer);
             std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize, (void*)entryDeviceBuffer.cpu_addr(),
                         entrySize);
             entriesVct.push_back((entries->getBuffer().vpu_addr() + idx * entrySize));
+            bufferManager->unlock(entryDeviceBuffer);
         }
+        entries->unlock();
     } else {
         loaders.push_back(std::make_unique<VPUXLoader>(*other.loaders.front()));
         entriesVct.push_back(loaders.front()->getEntry().vpu_addr());
@@ -237,9 +247,12 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
     // Every new loader object means a new parsedInference struct as well
     parsedInference =
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
+
+    parsedInference->lock();
     auto parsedInferenceBuffer = parsedInference->getBuffer();
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
                                             readPerfMetrics());
+    parsedInference->unlock();
 };
 
 HostParsedInference::HostParsedInference(HostParsedInference&& other)
@@ -275,15 +288,19 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
         metadata->mResourceRequirements.nn_slice_count_ < archSpecificHpi->getArchTilesCount()) {
         entries = std::make_unique<AllocatedDeviceBuffer>(bufferManager,
                                                           archSpecificHpi->getEntryBufferSpecs(rhs.loaders.size()));
+        entries->lock();
         auto entrySize = entries->getBufferSpecs().size / rhs.loaders.size();
         for (size_t idx = 0; idx < rhs.loaders.size(); ++idx) {
             loaders.push_back(std::make_unique<VPUXLoader>(*rhs.loaders[idx]));
 
             auto entryDeviceBuffer = loaders[idx]->getEntry();
+            bufferManager->lock(entryDeviceBuffer);
             std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize, (void*)entryDeviceBuffer.cpu_addr(),
                         entrySize);
             entriesVct.push_back((entries->getBuffer().vpu_addr() + idx * entrySize));
+            bufferManager->unlock(entryDeviceBuffer);
         }
+        entries->unlock();
     } else {
         loaders.push_back(std::make_unique<VPUXLoader>(*rhs.loaders.front()));
         entriesVct.push_back(loaders.front()->getEntry().vpu_addr());
@@ -291,9 +308,11 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
     // Every new loader object means a new parsedInference struct as well
     parsedInference =
             std::make_shared<AllocatedDeviceBuffer>(bufferManager, archSpecificHpi->getParsedInferenceBufferSpecs());
+    parsedInference->lock();
     auto parsedInferenceBuffer = parsedInference->getBuffer();
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
                                             readPerfMetrics());
+    parsedInference->unlock();
 
     return *this;
 }

@@ -665,7 +665,7 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
             // This is needed for sections that contain relocations in order to be able to apply them again
             if (!isShared) {
                 bufferInfo.mBuffer = sectionBuffer->createNew();
-                bufferInfo.mBuffer->load(sectionBuffer->getBuffer().cpu_addr(), sectionBuffer->getBuffer().size());
+                bufferInfo.mBuffer->loadWithLock(sectionBuffer->getBuffer().cpu_addr(), sectionBuffer->getBuffer().size());
             }
             m_bufferContainer.replaceBufferInfoAtIndex(sectionCtr, bufferInfo);
 
@@ -801,7 +801,7 @@ void VPUXLoader::updateSharedBuffers(const std::vector<std::size_t>& relocationS
         if (!bufferInfo.mBufferDetails.mIsProcessed) {
             VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Processing buffer for section %zu", targetSectionIdx);
             DeviceBufferContainer::BufferPtr newBuffer = bufferInfo.mBuffer->createNew();
-            newBuffer->load(bufferInfo.mBuffer->getBuffer().cpu_addr(), bufferInfo.mBuffer->getBuffer().size());
+            newBuffer->loadWithLock(bufferInfo.mBuffer->getBuffer().cpu_addr(), bufferInfo.mBuffer->getBuffer().size());
             bufferInfo.mBufferDetails.mIsShared = false;
             bufferInfo.mBufferDetails.mIsProcessed = true;
             bufferInfo.mBuffer = newBuffer;
