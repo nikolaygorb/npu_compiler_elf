@@ -66,49 +66,47 @@ VersionsProvider::~VersionsProvider() = default;
 Version VersionsProvider::getLibraryELFVersion() const { return impl->getELFLibABIVersion(); }
 Version VersionsProvider::getLibraryMIVersion() const { return impl->getStaticMIVersion(); }
 
-const uint64_t* HostParsedInference::readPerfMetrics() {
+std::shared_ptr<ManagedBuffer> HostParsedInference::readPerfMetrics() {
     const auto& sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_PERF_METRICS);
     VPUX_ELF_THROW_WHEN(sections.size() > 1, RangeError, "Expected only a single section of performance metrics.");
 
     if (sections.size() == 1) {
-        return reinterpret_cast<const uint64_t*>(sections[0].cpu_addr());
+        return sections[0];
     }
 
     VPUX_ELF_LOG(LogLevel::LOG_WARN, "No performance metrics. Default to be used!");
-    return nullptr;
+    return {};
 }
 
 void HostParsedInference::readMetadata() {
     auto sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_NETDESC);
     VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one metadata section.");
 
-    bufferManager->lock(sections[0]);
-    auto metadataBufferPtr = sections[0].cpu_addr();
-    auto metadataBufferSize = sections[0].size();
+    auto metadataLock = ElfBufferLockGuard(sections[0].get());
+    auto metadataBufferPtr = sections[0]->getBuffer().cpu_addr();
+    auto metadataBufferSize = sections[0]->getBuffer().size();
     metadata = MetadataSerialization::deserialize(metadataBufferPtr, metadataBufferSize);
-    bufferManager->unlock(sections[0]);
 }
 
 void HostParsedInference::readPlatformInfo() {
     auto sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_PLATFORM_INFO);
     VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one Platform Info section.");
 
-    bufferManager->lock(sections[0]);
-    auto platformInfoBufferPtr = sections[0].cpu_addr();
-    auto platformInfoBufferSize = sections[0].size();
+    auto platformInfoLock = ElfBufferLockGuard(sections[0].get());
+    auto platformInfoBufferPtr = sections[0]->getBuffer().cpu_addr();
+    auto platformInfoBufferSize = sections[0]->getBuffer().size();
     platformInfo = elf::platform::PlatformInfoSerialization::deserialize(platformInfoBufferPtr, platformInfoBufferSize);
-    bufferManager->unlock(sections[0]);
 }
 
 elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType) const {
     const auto& noteSections = loaders.front()->getSectionsOfType(elf::SHT_NOTE);
     for (auto section : noteSections) {
-        VPUX_ELF_THROW_UNLESS(section.size() == sizeof(elf::elf_note::VersionNote), SectionError,
+        VPUX_ELF_THROW_UNLESS(section->getBuffer().size() == sizeof(elf::elf_note::VersionNote), SectionError,
                               "Wrong Versioning Note size");
-        bufferManager->lock(section);
+
+        auto sectionLock = ElfBufferLockGuard(section.get());
         elf::elf_note::VersionNote elfABIVersionNote{};
-        std::memcpy(&elfABIVersionNote, section.cpu_addr(), sizeof(elf::elf_note::VersionNote));
-        bufferManager->unlock(section);
+        std::memcpy(&elfABIVersionNote, section->getBuffer().cpu_addr(), sizeof(elf::elf_note::VersionNote));
         if (elfABIVersionNote.n_type == versionType) {
             return elf::Version(elfABIVersionNote);
         }
@@ -216,8 +214,11 @@ void HostParsedInference::load() {
     auto parsedInferenceLock = ElfBufferLockGuard(parsedInference.get());
 
     auto parsedInferenceBuffer = parsedInference->getBuffer();
+    auto perfMetrics = readPerfMetrics();
+    auto perfMetricsLock = ElfBufferLockGuard(perfMetrics.get());
+    auto perfMetricsPtr = perfMetrics ? reinterpret_cast<uint64_t*>(perfMetrics->getBuffer().cpu_addr()) : nullptr;
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
-                                            readPerfMetrics());
+                                            perfMetricsPtr);
 }
 
 HostParsedInference::HostParsedInference(const HostParsedInference& other)
@@ -260,8 +261,11 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
     auto parsedInferenceLock = ElfBufferLockGuard(parsedInference.get());
 
     auto parsedInferenceBuffer = parsedInference->getBuffer();
+    auto perfMetrics = readPerfMetrics();
+    auto perfMetricsLock = ElfBufferLockGuard(perfMetrics.get());
+    auto perfMetricsPtr = perfMetrics ? reinterpret_cast<uint64_t*>(perfMetrics->getBuffer().cpu_addr()) : nullptr;
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
-                                            readPerfMetrics());
+                                            perfMetricsPtr);
 };
 
 HostParsedInference::HostParsedInference(HostParsedInference&& other)
@@ -321,8 +325,11 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
     auto parsedInferenceLock = ElfBufferLockGuard(parsedInference.get());
 
     auto parsedInferenceBuffer = parsedInference->getBuffer();
+    auto perfMetrics = readPerfMetrics();
+    auto perfMetricsLock = ElfBufferLockGuard(perfMetrics.get());
+    auto perfMetricsPtr = perfMetrics ? reinterpret_cast<uint64_t*>(perfMetrics->getBuffer().cpu_addr()) : nullptr;
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
-                                            readPerfMetrics());
+                                            perfMetricsPtr);
 
     return *this;
 }

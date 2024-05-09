@@ -1129,13 +1129,13 @@ bool VPUXLoader::checkSectionType(const elf::SectionHeader* section, Elf_Word se
     return section->sh_type == secType;
 }
 
-std::vector<DeviceBuffer> VPUXLoader::getSectionsOfType(elf::Elf_Word type) {
+std::vector<std::shared_ptr<ManagedBuffer>> VPUXLoader::getSectionsOfType(elf::Elf_Word type) {
     VPUX_ELF_THROW_WHEN(!hasMemoryFootprint(type), elf::RuntimeError, "Can't access data of NOBITS-like section");
     VPUX_ELF_THROW_UNLESS(m_sectionMap->find(type) != m_sectionMap->end(), RangeError, "Section type not registered!");
-    std::vector<DeviceBuffer> retVector;
+    std::vector<std::shared_ptr<ManagedBuffer>> retVector;
     for (auto sectionIndex : (*m_sectionMap)[type]) {
         auto sectionBuffer = m_reader->getSection(sectionIndex).getDataBuffer();
-        retVector.push_back(sectionBuffer->getBuffer());
+        retVector.push_back(sectionBuffer);
     }
 
     return retVector;

@@ -76,7 +76,7 @@ public:
     std::vector<DeviceBuffer> getInputBuffers() const;
     std::vector<DeviceBuffer> getOutputBuffers() const;
     std::vector<DeviceBuffer> getProfBuffers() const;
-    std::vector<DeviceBuffer> getSectionsOfType(elf::Elf_Word type);
+    std::vector<std::shared_ptr<ManagedBuffer>> getSectionsOfType(elf::Elf_Word type);
 
 private:
     bool checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const;

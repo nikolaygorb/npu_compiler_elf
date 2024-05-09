@@ -78,7 +78,7 @@ private:
     // helpers
     void readMetadata();
     void readPlatformInfo();
-    const uint64_t* readPerfMetrics();
+    std::shared_ptr<ManagedBuffer> readPerfMetrics();
     elf::Version readVersioningInfo(uint32_t versionType) const;
 };
 
