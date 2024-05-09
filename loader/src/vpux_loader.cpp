@@ -561,7 +561,7 @@ VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other) {
 VPUXLoader::~VPUXLoader() {
 }
 
-elf::DeviceBuffer VPUXLoader::getEntry() {
+elf::DeviceBufferContainer::BufferPtr VPUXLoader::getEntry() {
     // this is very very temporary version E#73309
     auto numSections = m_reader->getSectionsNum();
 
@@ -578,7 +578,7 @@ elf::DeviceBuffer VPUXLoader::getEntry() {
                 auto symType = elf64STType(symTab.st_info);
                 if (symType == VPU_STT_ENTRY) {
                     auto secIndx = symTab.st_shndx;
-                    return m_bufferContainer.getBufferInfoFromIndex(secIndx).mBuffer->getBuffer();
+                    return m_bufferContainer.getBufferInfoFromIndex(secIndx).mBuffer;
                 }
             }
         }

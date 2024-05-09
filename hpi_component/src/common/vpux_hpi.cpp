@@ -199,16 +199,16 @@ void HostParsedInference::load() {
                 loaders.push_back(std::make_unique<VPUXLoader>(*loaders.front(), symbolTable));
             }
             auto entryDeviceBuffer = loaders[idx]->getEntry();
-            bufferManager->lock(entryDeviceBuffer);
-            std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize, (void*)entryDeviceBuffer.cpu_addr(),
+            auto entryLock = ElfBufferLockGuard(entryDeviceBuffer.get());
+
+            std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize, (void*)entryDeviceBuffer->getBuffer().cpu_addr(),
                         entrySize);
             entriesVct.push_back((entries->getBuffer().vpu_addr() + idx * entrySize));
-            bufferManager->unlock(entryDeviceBuffer);
         }
     } else {
         auto symbolTable = archSpecificHpi->getSymbolTable(metadata->mResourceRequirements.nn_slice_count_);
         loaders.front()->load(symbolTable, symTabOverrideMode, symbolSectionTypes);
-        entriesVct.push_back(loaders.front()->getEntry().vpu_addr());
+        entriesVct.push_back(loaders.front()->getEntry()->getBuffer().vpu_addr());
     }
 
     parsedInference =
@@ -243,15 +243,15 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
             loaders.push_back(std::make_unique<VPUXLoader>(*other.loaders[idx]));
 
             auto entryDeviceBuffer = loaders[idx]->getEntry();
-            bufferManager->lock(entryDeviceBuffer);
-            std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize, (void*)entryDeviceBuffer.cpu_addr(),
+            auto entryLock = ElfBufferLockGuard(entryDeviceBuffer.get());
+
+            std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize, (void*)entryDeviceBuffer->getBuffer().cpu_addr(),
                         entrySize);
             entriesVct.push_back((entries->getBuffer().vpu_addr() + idx * entrySize));
-            bufferManager->unlock(entryDeviceBuffer);
         }
     } else {
         loaders.push_back(std::make_unique<VPUXLoader>(*other.loaders.front()));
-        entriesVct.push_back(loaders.front()->getEntry().vpu_addr());
+        entriesVct.push_back(loaders.front()->getEntry()->getBuffer().vpu_addr());
     }
 
     // Every new loader object means a new parsedInference struct as well
@@ -305,15 +305,15 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
             loaders.push_back(std::make_unique<VPUXLoader>(*rhs.loaders[idx]));
 
             auto entryDeviceBuffer = loaders[idx]->getEntry();
-            bufferManager->lock(entryDeviceBuffer);
-            std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize, (void*)entryDeviceBuffer.cpu_addr(),
+            auto entryLock = ElfBufferLockGuard(entryDeviceBuffer.get());
+
+            std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize, (void*)entryDeviceBuffer->getBuffer().cpu_addr(),
                         entrySize);
             entriesVct.push_back((entries->getBuffer().vpu_addr() + idx * entrySize));
-            bufferManager->unlock(entryDeviceBuffer);
         }
     } else {
         loaders.push_back(std::make_unique<VPUXLoader>(*rhs.loaders.front()));
-        entriesVct.push_back(loaders.front()->getEntry().vpu_addr());
+        entriesVct.push_back(loaders.front()->getEntry()->getBuffer().vpu_addr());
     }
     // Every new loader object means a new parsedInference struct as well
     parsedInference =
