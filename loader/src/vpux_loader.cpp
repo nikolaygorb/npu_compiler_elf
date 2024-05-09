@@ -892,7 +892,8 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSect
         // at this point we assume that all sections have an address, to which we can apply a simple lookup
         // auto targetSectionDevBuf = m_sectionToAddr[targetSectionIdx];
         auto& targetSectionBuf = m_bufferContainer.getBufferInfoFromIndex(targetSectionIdx).mBuffer;
-        targetSectionBuf->lock();
+        auto targetSectionLock = ElfBufferLockGuard(targetSectionBuf.get());
+
         auto targetSectionAddr = targetSectionBuf->getBuffer().cpu_addr();
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Relocations are targeting section at addr %p named %s", targetSectionAddr,
                      targetSection.getName());
@@ -964,8 +965,6 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSect
 
             relocFunc((void*)relocationTargetAddr, targetSymbol, addend);
         }
-
-        targetSectionBuf->unlock();
     }
 
     return;
@@ -1039,7 +1038,8 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
 
         // at this point we assume that all sections have an address, to which we can apply a simple lookup
         auto targetSectionBuf = m_bufferContainer.getBufferInfoFromIndex(targetSectionIdx).mBuffer;
-        targetSectionBuf->lock();
+        auto targetSectionLock = ElfBufferLockGuard(targetSectionBuf.get());
+
         auto targetSectionAddr = targetSectionBuf->getBuffer().cpu_addr();
 
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t targetSectionAddr %p", targetSectionAddr);
@@ -1090,8 +1090,6 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
 
             relocFunc((void*)targetAddr, targetSymbol, addend);
         }
-
-        targetSectionBuf->unlock();
     }
 }
 
