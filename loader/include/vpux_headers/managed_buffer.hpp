@@ -85,14 +85,18 @@ public:
 class ElfBufferLockGuard {
 public:
     ElfBufferLockGuard(ManagedBuffer* devBuff) {
-        mDevBuffer = devBuff;
-        mDevBuffer->lock();
+        if(devBuff) {
+            mDevBuffer = devBuff;
+            mDevBuffer->lock();
+        }
     }
     ~ElfBufferLockGuard() {
-        mDevBuffer->unlock();
+        if(mDevBuffer) {
+            mDevBuffer->unlock();
+        }
     }
 private:
-    ManagedBuffer* mDevBuffer;
+    ManagedBuffer* mDevBuffer = nullptr;
 };
 
 }  // namespace elf
