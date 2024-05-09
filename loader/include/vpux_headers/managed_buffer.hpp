@@ -77,4 +77,22 @@ public:
     std::unique_ptr<ManagedBuffer> createNew() const override;
 };
 
+
+/**
+ * Class wrapper which ensures that a locked buffer will be unlocked in case of
+ * an event that prevents further execution.
+*/
+class ElfBufferLockGuard {
+public:
+    ElfBufferLockGuard(ManagedBuffer* devBuff) {
+        mDevBuffer = devBuff;
+        mDevBuffer->lock();
+    }
+    ~ElfBufferLockGuard() {
+        mDevBuffer->unlock();
+    }
+private:
+    ManagedBuffer* mDevBuffer;
+};
+
 }  // namespace elf
