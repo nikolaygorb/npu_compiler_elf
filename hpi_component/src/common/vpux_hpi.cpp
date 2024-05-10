@@ -79,7 +79,7 @@ std::shared_ptr<ManagedBuffer> HostParsedInference::readPerfMetrics() {
 }
 
 void HostParsedInference::readMetadata() {
-    auto sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_NETDESC);
+    const auto& sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_NETDESC);
     VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one metadata section.");
 
     auto metadataLock = ElfBufferLockGuard(sections[0].get());
@@ -89,7 +89,7 @@ void HostParsedInference::readMetadata() {
 }
 
 void HostParsedInference::readPlatformInfo() {
-    auto sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_PLATFORM_INFO);
+    const auto& sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_PLATFORM_INFO);
     VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one Platform Info section.");
 
     auto platformInfoLock = ElfBufferLockGuard(sections[0].get());
