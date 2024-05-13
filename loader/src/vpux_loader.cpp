@@ -71,6 +71,36 @@ uint32_t to_dpu_multicast_base(uint32_t addr) {
     return to_dpu_multicast(addr, offset1, offset2, offset3);
 }
 
+const auto VPU_16_BIT_SUM_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                      const Elf_Sxword addend) -> void {
+    auto addr = reinterpret_cast<uint16_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t16Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr,
+                 *addr, symVal, addend);
+
+    *addr += static_cast<uint16_t>(symVal + addend);
+};
+
+const auto VPU_64_BIT_MULT_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                          const Elf_Sxword addend) -> void {
+    auto addr = reinterpret_cast<uint64_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t64Bit MULT reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr,
+                 *addr, symVal, addend);
+
+    *addr *= static_cast<uint64_t>(symVal);
+};
+
+const auto VPU_64_BIT_MULT_SUB_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                           const Elf_Sxword addend) -> void {
+    auto addr = reinterpret_cast<uint64_t*>(targetAddr);
+    auto symVal = targetSym.st_value;
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t64Bit MULT after SUB reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr,
+                 *addr, symVal, addend);
+
+    *addr *= static_cast<int64_t>(addend) - static_cast<int64_t>(symVal);
+};
+
 const auto VPU_64_BIT_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
                                       const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint64_t*>(targetAddr);
@@ -406,6 +436,9 @@ const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
 
 const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoader::relocationMap = {
         {R_VPU_64, VPU_64_BIT_Relocation},
+        {R_VPU_16_SUM, VPU_16_BIT_SUM_Relocation},
+        {R_VPU_64_MULT, VPU_64_BIT_MULT_Relocation},
+        {R_VPU_64_MULT_SUB, VPU_64_BIT_MULT_SUB_Relocation},
         {R_VPU_64_OR, VPU_64_BIT_OR_Relocation},
         {R_VPU_DISP40_RTM, VPU_DISP40_RTM_RELOCATION},
         {R_VPU_64_LSHIFT, VPU_64_BIT_LSHIFT_Relocation},
@@ -479,6 +512,26 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
     applyRelocations(*m_relocationSectionIndexes);
 }
 
+// override the symbol table for the newly created loader
+VPUXLoader::VPUXLoader(const VPUXLoader& other, const std::vector<SymbolEntry>& runtimeSymTabs)
+        : m_bufferManager(other.m_bufferManager),
+          m_reader(other.m_reader),
+          m_bufferContainer(other.m_bufferContainer),
+          m_runtimeSymTabs(runtimeSymTabs),
+          m_relocationSectionIndexes(other.m_relocationSectionIndexes),
+          m_jitRelocations(other.m_jitRelocations),
+          m_userInputsDescriptors(other.m_userInputsDescriptors),
+          m_userOutputsDescriptors(other.m_userOutputsDescriptors),
+          m_profOutputsDescriptors(other.m_profOutputsDescriptors),
+          m_sectionMap(other.m_sectionMap),
+          m_symTabOverrideMode(other.m_symTabOverrideMode),
+          m_explicitAllocations(other.m_explicitAllocations),
+          m_loaded(other.m_loaded),
+          m_symbolSectionTypes(other.m_symbolSectionTypes) {
+    reloadNewBuffers();
+    applyRelocations(*m_relocationSectionIndexes);
+}
+
 VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other) {
     if (this == &other) {
         return *this;
@@ -508,7 +561,7 @@ VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other) {
 VPUXLoader::~VPUXLoader() {
 }
 
-uint64_t VPUXLoader::getEntry() {
+elf::DeviceBuffer VPUXLoader::getEntry() {
     // this is very very temporary version E#73309
     auto numSections = m_reader->getSectionsNum();
 
@@ -525,13 +578,14 @@ uint64_t VPUXLoader::getEntry() {
                 auto symType = elf64STType(symTab.st_info);
                 if (symType == VPU_STT_ENTRY) {
                     auto secIndx = symTab.st_shndx;
-                    return m_bufferContainer.getBufferInfoFromIndex(secIndx).mBuffer->getBuffer().vpu_addr();
+                    return m_bufferContainer.getBufferInfoFromIndex(secIndx).mBuffer->getBuffer();
                 }
             }
         }
     }
 
-    return 0;
+    VPUX_ELF_THROW(ImplausibleState, "Can not continue without entry!");
+    return {};
 }
 
 void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTabOverrideMode,

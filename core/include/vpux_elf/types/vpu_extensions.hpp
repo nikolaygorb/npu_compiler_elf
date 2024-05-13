@@ -84,6 +84,18 @@ constexpr Elf_Word R_VPU_DISP28_MULTICAST_OFFSET = 9;
 ///     Where SLICE_LENGTH = 2 * 1024 * 1024
 constexpr Elf_Word R_VPU_DISP4_MULTICAST_OFFSET_CMP = 10;
 
+/// Originated from BarriersCountConfig::real_id_ relocation
+/// Formula: Dst += S + A
+constexpr Elf_Word R_VPU_16_SUM = 1011;
+
+/// Originated from DMA list relocations in case of linking to DDR
+/// Formula: Dst *= S
+constexpr Elf_Word R_VPU_64_MULT = 1012;
+
+/// Originated from the need of marking active DMA list
+/// Formula: Dst *= A - S
+constexpr Elf_Word R_VPU_64_MULT_SUB = 1013;
+
 //
 // NPU 4000 specific DPU relocs
 //

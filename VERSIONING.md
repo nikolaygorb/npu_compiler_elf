@@ -25,13 +25,15 @@ A given blob with ELF version bMajor.bMinor.bPatch is compatible with ELF librar
 Accompanying any ELF Library change, the Version must be incremented according to the description above.
 
 ### Version Major Update conditions
+- Major version increase will reset minor and patch to 0.
 - Update of the serialization expectations
-    - Examples: 
+    - Examples:
         - Loader has a new hard requirement on the existance of a specific section
         - Updated section content expectations: checks on newly added fields in dynamic structures, modifications of the static structures, etc.
 
-### Version Major Update conditions
-- New NPU-specific extensions that are not a loading requirement 
+### Version Minor Update conditions
+- Minor version increse will reset patch version to 0.
+- New NPU-specific extensions that are not a loading requirement
     - e.g. New relocation types, new section types/flags
 
 ### Version Patch Update conditions
