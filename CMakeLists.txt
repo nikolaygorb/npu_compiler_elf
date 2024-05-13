@@ -54,12 +54,16 @@ endif()
 target_compile_options(${LIB_NAME} PRIVATE
     $<$<CONFIG:Release>:${UMD_COMPILER_OPTIONS_RELEASE}>
     $<$<CONFIG:Debug>:${UMD_COMPILER_OPTIONS_DEBUG}>
-    $<$<CONFIG:RelWithDebInfo>:${UMD_COMPILER_OPTIONS_RELEASE}>)
+    $<$<CONFIG:RelWithDebInfo>:${UMD_COMPILER_OPTIONS_RELEASE}>
+    # /Zf enables compiler support for faster generation of PDB files when compiled concurrently
+    $<$<CXX_COMPILER_ID:MSVC>:/Zf>)
 
 target_compile_options(vpux_elf PRIVATE
     $<$<CONFIG:Release>:${UMD_COMPILER_OPTIONS_RELEASE}>
     $<$<CONFIG:Debug>:${UMD_COMPILER_OPTIONS_DEBUG}>
-    $<$<CONFIG:RelWithDebInfo>:${UMD_COMPILER_OPTIONS_RELEASE}>)
+    $<$<CONFIG:RelWithDebInfo>:${UMD_COMPILER_OPTIONS_RELEASE}>
+    # see ${LIB_NAME} compile options
+    $<$<CXX_COMPILER_ID:MSVC>:/Zf>)
 
 # Set linker options
 target_link_options(${LIB_NAME} PRIVATE
