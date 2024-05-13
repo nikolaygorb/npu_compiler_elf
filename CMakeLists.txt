@@ -28,7 +28,6 @@ add_library(${LIB_NAME} STATIC ${SOURCES})
 add_library(vpux_elf STATIC ${SOURCES})
 
 if(MSVC)
-    string(TOUPPER ${CMAKE_BUILD_TYPE} BUILD_TYPE_CONFIG)
     set_target_properties(${LIB_NAME} vpux_elf PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
