@@ -101,11 +101,16 @@ BufferSpecs HostParsedInference_4000::getParsedInferenceBufferSpecs() {
                        SHF_EXECINSTR);
 }
 
-void HostParsedInference_4000::setHostParsedInference(DeviceBuffer& devBuffer, uint64_t mapped_entry,
+uint32_t HostParsedInference_4000::getArchTilesCount() const {
+    return nn_public::VPU_MAX_TILES;
+}
+
+void HostParsedInference_4000::setHostParsedInference(DeviceBuffer& devBuffer,
+                                                      const std::vector<uint64_t>& mapped_entry,
                                                       ResourceRequirements resReq, const uint64_t* perf_metrics) {
     auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference*>(devBuffer.cpu_addr());
+    *hpi = {};
 
-    hpi->resource_requirements_ = {};
     hpi->resource_requirements_.nn_slice_count_ = resReq.nn_slice_count_;
     hpi->resource_requirements_.nn_barriers_ = resReq.nn_barriers_;
     if (perf_metrics) {
@@ -115,8 +120,8 @@ void HostParsedInference_4000::setHostParsedInference(DeviceBuffer& devBuffer, u
         setDefaultPerformanceMetrics(hpi->performance_metrics_);
     }
 
-    hpi->mapped_.address = mapped_entry;
-    hpi->mapped_.count = 1;
+    hpi->mapped_.address = mapped_entry[0];
+    hpi->mapped_.count = mapped_entry.size();
 }
 
 elf::Version HostParsedInference_4000::getELFLibABIVersion() const {

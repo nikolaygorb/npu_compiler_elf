@@ -6,25 +6,37 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 #include <vpux_elf/accessor.hpp>
+#include <vpux_elf/utils/version.hpp>
 #include <vpux_headers/buffer_manager.hpp>
 #include <vpux_headers/device_buffer.hpp>
 #include <vpux_headers/managed_buffer.hpp>
 #include <vpux_headers/metadata.hpp>
 #include <vpux_headers/platform.hpp>
-#include <vpux_elf/utils/version.hpp>
 
 namespace elf {
 
 class VPUXLoader;
+class HostParsedInferenceCommon;
 
 // Structure that gathers configuration options for HPI instances.
 // Subject to various additions/modifications in the future
 struct HPIConfigs {
     elf::Version nnVersion;
     elf::platform::ArchKind archKind = elf::platform::ArchKind::UNKNOWN;
+};
+
+class VersionsProvider final {
+public:
+    explicit VersionsProvider(platform::ArchKind architecture);
+    ~VersionsProvider();
+    Version getLibraryELFVersion() const;
+    Version getLibraryMIVersion() const;
+
+private:
+    std::unique_ptr<HostParsedInferenceCommon> impl;
 };
 
 class HostParsedInference final {
@@ -58,9 +70,10 @@ private:
     AccessManager* accessManager;
     std::shared_ptr<NetworkMetadata> metadata;
     std::shared_ptr<elf::platform::PlatformInfo> platformInfo;
-    std::unique_ptr<VPUXLoader> loader;
+    std::vector<std::unique_ptr<VPUXLoader>> loaders;
     std::shared_ptr<AllocatedDeviceBuffer> parsedInference;
     elf::HPIConfigs hpiCfg;
+    std::shared_ptr<AllocatedDeviceBuffer> entries;
 
     // helpers
     void readMetadata();
