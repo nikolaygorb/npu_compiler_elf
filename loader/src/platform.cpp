@@ -18,7 +18,8 @@ const std::unordered_map<std::string, elf::platform::ArchKind>& getKnownArchitec
                                                     {"VPUX30XX", elf::platform::ArchKind::VPUX30XX},
                                                     {"VPUX37XX", elf::platform::ArchKind::VPUX37XX},
                                                     {"VPUX40XX", elf::platform::ArchKind::VPUX40XX},
-                                                    {"VPUX50XX", elf::platform::ArchKind::VPUX50XX}};
+                                                    {"VPUX50XX", elf::platform::ArchKind::VPUX50XX},
+                                                    {"VPUX60XX", elf::platform::ArchKind::VPUX60XX}};
 
     return knownArch;
 }
