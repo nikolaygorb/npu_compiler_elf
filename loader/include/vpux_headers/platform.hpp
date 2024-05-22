@@ -22,6 +22,7 @@ enum class ArchKind : uint64_t {
     VPUX37XX = 3,
     VPUX40XX = 4,
     VPUX50XX = 5,
+    VPUX60XX = 6,
 };
 
 const std::unordered_map<std::string, elf::platform::ArchKind>& getKnownArchitectures();
