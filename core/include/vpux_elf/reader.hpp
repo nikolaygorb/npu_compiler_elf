@@ -117,7 +117,7 @@ public:
                               "Mismatch between expected and received section header size");
         VPUX_ELF_THROW_UNLESS(mElfHeader.e_shoff >= sizeof(mElfHeader), HeaderError,
                               "Section table overlaps ELF header");
-        VPUX_ELF_THROW_UNLESS(mElfHeader.e_shstrndx < mElfHeader.e_shnum, HeaderError,
+        VPUX_ELF_THROW_UNLESS(mElfHeader.e_shstrndx <= mElfHeader.e_shnum, HeaderError,
                               "Section name index exceeds section table");
 
         if (mElfHeader.e_shnum) {
