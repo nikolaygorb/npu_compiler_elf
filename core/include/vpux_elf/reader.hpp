@@ -117,7 +117,7 @@ public:
                               "Mismatch between expected and received section header size");
         VPUX_ELF_THROW_UNLESS(mElfHeader.e_shoff >= sizeof(mElfHeader), HeaderError,
                               "Section table overlaps ELF header");
-        VPUX_ELF_THROW_UNLESS(mElfHeader.e_shstrndx <= mElfHeader.e_shnum, HeaderError,
+        VPUX_ELF_THROW_UNLESS(mElfHeader.e_shstrndx < mElfHeader.e_shnum, HeaderError,
                               "Section name index exceeds section table");
 
         if (mElfHeader.e_shnum) {
@@ -136,6 +136,8 @@ public:
                 readBuffer = buildBufferFromMember(&mSectionNames[0], mSectionNames.size() * sizeof(mSectionNames[0]));
                 mAccessManager->readExternal(secNamesSection.sh_offset, readBuffer);
             }
+        } else {
+            VPUX_ELF_THROW(HeaderError, "Undefined behavior for section count equal to 0!");
         }
     }
 
