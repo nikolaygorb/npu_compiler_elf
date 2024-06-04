@@ -137,7 +137,7 @@ public:
                 mAccessManager->readExternal(secNamesSection.sh_offset, readBuffer);
             }
         } else {
-            VPUX_ELF_THROW(HeaderError, "Undefined behavior for section count equal to 0!");
+            VPUX_ELF_THROW(HeaderError, "No sections detected, ELF blob without sections is unsupported!");
         }
     }
 
