@@ -113,6 +113,8 @@ void HostParsedInference_4000::setHostParsedInference(DeviceBuffer& devBuffer,
 
     hpi->resource_requirements_.nn_slice_count_ = resReq.nn_slice_count_;
     hpi->resource_requirements_.nn_barriers_ = resReq.nn_barriers_;
+    hpi->resource_requirements_.nn_slice_length_ = resReq.nn_slice_length_;
+
     if (perf_metrics) {
         memcpy(static_cast<void*>(&hpi->performance_metrics_), static_cast<const void*>(perf_metrics),
                sizeof(nn_public::VpuPerformanceMetrics));
