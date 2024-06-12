@@ -27,7 +27,10 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS} ${SOURCES})
 add_library(${LIB_NAME} STATIC ${SOURCES})
 add_library(vpux_elf STATIC ${SOURCES})
 
-if(MSVC)
+if(MSVC AND BUILD_COMPILER_FOR_DRIVER)
+    # For compiler in driver build, npu_elf or vpux_elf static lib needs to build with /MT to avoid mismatch with level zero targets.
+    # From cmake >= 3.15, the default CMAKE_MSVC_RUNTIME_LIBRARY is /MD, thus causing always overriding /MT with /MD.
+    # So here we set the target's MSVC_RUNTIME_LIBRARY to MT to avoid such overriding behavior.
     set_target_properties(${LIB_NAME} vpux_elf PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
