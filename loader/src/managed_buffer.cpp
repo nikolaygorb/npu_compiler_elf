@@ -13,7 +13,7 @@
 
 namespace elf {
 
-static_assert(sizeof(size_t) >= sizeof(uintptr_t));
+static_assert(sizeof(size_t) >= sizeof(uintptr_t), "");
 
 ManagedBuffer::ManagedBuffer(BufferSpecs bSpecs): mDevBuffer(), mBufferSpecs(bSpecs), mUserPrivateData(nullptr) {
 }
