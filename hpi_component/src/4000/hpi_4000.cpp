@@ -40,6 +40,18 @@ const std::array<uint64_t, nn_public::VPU_SCALABILITY_VALUES_PER_FREQ> byBWTicks
 
 }  // namespace
 
+namespace {
+
+constexpr uint32_t VPUX40XX_VERSION_MAJOR = 1;
+constexpr uint32_t VPUX40XX_VERSION_MINOR = 2;
+constexpr uint32_t VPUX40XX_VERSION_PATCH = 1;
+
+constexpr uint32_t VPUX50XX_VERSION_MAJOR = 1;
+constexpr uint32_t VPUX50XX_VERSION_MINOR = 2;
+constexpr uint32_t VPUX50XX_VERSION_PATCH = 1;
+
+} // namespace
+
 void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics& metrics) {
     metrics.bw_base = BW_BASE;
     metrics.bw_step = BW_STEP;
@@ -52,7 +64,7 @@ void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics& metrics) {
     }
 }
 
-HostParsedInference_4000::HostParsedInference_4000() {
+HostParsedInference_4000::HostParsedInference_4000(elf::platform::ArchKind archKind) :  archKind_(archKind) {
     symTab_.reserve(2);
     secTypeContainers_.reserve(2);
     {
@@ -127,7 +139,16 @@ void HostParsedInference_4000::setHostParsedInference(DeviceBuffer& devBuffer,
 }
 
 elf::Version HostParsedInference_4000::getELFLibABIVersion() const {
-    return {VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH};
+    switch (archKind_) {
+        case elf::platform::ArchKind::VPUX40XX:
+            return {VPUX40XX_VERSION_MAJOR, VPUX40XX_VERSION_MINOR, VPUX40XX_VERSION_PATCH};
+        case elf::platform::ArchKind::VPUX50XX:
+            return {VPUX50XX_VERSION_MAJOR, VPUX50XX_VERSION_MINOR, VPUX50XX_VERSION_PATCH};
+        default:
+            break;
+    }
+    VPUX_ELF_THROW(RangeError, (elf::platform::stringifyArchKind(archKind_) + " arch is not supported").c_str());
+    return {0, 0, 0};
 }
 
 elf::Version HostParsedInference_4000::getStaticMIVersion() const {

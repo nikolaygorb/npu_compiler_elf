@@ -32,7 +32,7 @@
 namespace elf {
 namespace {
 
-static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const elf::platform::ArchKind& archKind) {
+static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(elf::platform::ArchKind archKind) {
     VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Creating specialized HPI for arch %u", archKind);
 
     std::unique_ptr<HostParsedInferenceCommon> archSpecificHPI;
@@ -48,7 +48,7 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(const elf::
 #if defined(CONFIG_TARGET_SOC_4000) || (CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)
     case elf::platform::ArchKind::VPUX40XX:
     case elf::platform::ArchKind::VPUX50XX:
-        archSpecificHPI = std::make_unique<HostParsedInference_4000>();
+        archSpecificHPI = std::make_unique<HostParsedInference_4000>(archKind);
         break;
 #endif
     default:
