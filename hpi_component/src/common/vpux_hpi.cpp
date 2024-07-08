@@ -26,6 +26,12 @@
 #include <hpi_4000.hpp>
 #endif
 
+//to be removed with E#88139:
+//temporary fix to support NPU 6000 arch
+#if defined(CONFIG_TARGET_SOC_6000) || defined(HOST_BUILD)
+#include <hpi_4000.hpp>
+#endif
+
 #include <string.h>
 // clang-format on
 
@@ -44,10 +50,11 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(elf::platfo
 #endif
 
 // to be updated with E#88139:
-// temporary fix to support NPU 5000 arch
-#if defined(CONFIG_TARGET_SOC_4000) || (CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)
+// temporary fix to support NPU 5000 and NPU 6000 arch
+#if defined(CONFIG_TARGET_SOC_4000) || (CONFIG_TARGET_SOC_5000) || (CONFIG_TARGET_SOC_6000) || defined(HOST_BUILD)
     case elf::platform::ArchKind::VPUX40XX:
     case elf::platform::ArchKind::VPUX50XX:
+    case elf::platform::ArchKind::VPUX60XX:
         archSpecificHPI = std::make_unique<HostParsedInference_4000>(archKind);
         break;
 #endif
