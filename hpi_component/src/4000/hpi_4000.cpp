@@ -143,6 +143,7 @@ elf::Version HostParsedInference_4000::getELFLibABIVersion() const {
         case elf::platform::ArchKind::VPUX40XX:
             return {VPUX40XX_VERSION_MAJOR, VPUX40XX_VERSION_MINOR, VPUX40XX_VERSION_PATCH};
         case elf::platform::ArchKind::VPUX50XX:
+        case elf::platform::ArchKind::VPUX60XX:
             return {VPUX50XX_VERSION_MAJOR, VPUX50XX_VERSION_MINOR, VPUX50XX_VERSION_PATCH};
         default:
             break;
