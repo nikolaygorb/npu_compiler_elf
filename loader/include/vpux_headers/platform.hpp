@@ -6,9 +6,9 @@
 #pragma once
 
 #include <cstring>
-#include <functional>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <vpux_headers/serial_struct_base.hpp>
 
