@@ -104,8 +104,10 @@ if(NOT BUILD_SHARED_LIBS)
             LIBRARY DESTINATION ${IE_CPACK_LIBRARY_PATH} COMPONENT ${VPUX_PLUGIN_COMPONENT})
 endif()
 
-# This cmake code snippet should always be put at the end
+# This cmake code snippet should always be put at the end to make sure it's not updated finally.
 if(MSVC AND BUILD_COMPILER_FOR_DRIVER)
+    # To avoid the RuntimeLibrary mismatch in #E-109895 and #E-111901
+    # Check targets's msvc runtime for 1click pipeline flow which isn't covered in NPU plugin's repo pr-check
     set(MODULE_DIR "build-modules")
     if(NOT ${PROJECT_BINARY_DIR} MATCHES ${MODULE_DIR})
         get_target_property(LIB_MSVC_RUNTIME_LIBRARY ${LIB_NAME} MSVC_RUNTIME_LIBRARY)
