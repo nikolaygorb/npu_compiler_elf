@@ -7,6 +7,7 @@
 
 #include <cstring>
 #include <vpux_loader/vpux_loader.hpp>
+#include "vpux_elf/types/section_header.hpp"
 
 #ifndef VPUX_ELF_LOG_UNIT_NAME
 #define VPUX_ELF_LOG_UNIT_NAME "VpuxLoader"
@@ -72,7 +73,7 @@ uint32_t to_dpu_multicast_base(uint32_t addr) {
 }
 
 const auto VPU_16_BIT_SUM_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
-                                      const Elf_Sxword addend) -> void {
+                                          const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint16_t*>(targetAddr);
     auto symVal = targetSym.st_value;
     VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t16Bit SUM reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr,
@@ -82,7 +83,7 @@ const auto VPU_16_BIT_SUM_Relocation = [](void* targetAddr, const elf::SymbolEnt
 };
 
 const auto VPU_64_BIT_MULT_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
-                                          const Elf_Sxword addend) -> void {
+                                           const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint64_t*>(targetAddr);
     auto symVal = targetSym.st_value;
     VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t64Bit MULT reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr,
@@ -92,11 +93,11 @@ const auto VPU_64_BIT_MULT_Relocation = [](void* targetAddr, const elf::SymbolEn
 };
 
 const auto VPU_64_BIT_MULT_SUB_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
-                                           const Elf_Sxword addend) -> void {
+                                               const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint64_t*>(targetAddr);
     auto symVal = targetSym.st_value;
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t64Bit MULT after SUB reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu", addr,
-                 *addr, symVal, addend);
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\t64Bit MULT after SUB reloc, addr %p addrVal 0x%x symVal 0x%llx addend %llu",
+                 addr, *addr, symVal, addend);
 
     *addr *= static_cast<int64_t>(addend) - static_cast<int64_t>(symVal);
 };
@@ -398,17 +399,17 @@ const auto VPU_32_BIT_OR_B21_B26_UNSET_LOW_16_Relocation = [](void* targetAddr, 
 };
 
 // NPU5 only
-const auto VPU_HIGH_27_BIT_OR_Relocation = [](void *targetAddr, const elf::SymbolEntry &targetSym,
+const auto VPU_HIGH_27_BIT_OR_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
                                               const Elf_Sxword addend) -> void {
-    auto addr = reinterpret_cast<uint64_t *>(targetAddr);
+    auto addr = reinterpret_cast<uint64_t*>(targetAddr);
     auto symVal = targetSym.st_value;
     VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tHigh 27 bits reloc, addr %p addrVal 0x%llx  symVal 0x%llx addend %llu", addr,
                  *addr, symVal, addend);
 
     auto patchAddrUnsetTile = static_cast<uint32_t>(symVal + addend) &
-                              ~0xE0'0000; // unsetting 3 tile bits as NPU5 only uses 3 bits for tile selection
-    auto patchAddr = (patchAddrUnsetTile >> 4) & (0x7FFF'FFFF >> 4); // only [30:4]
-    *addr |= (static_cast<uint64_t>(patchAddr) << 37);               // set [64:37]
+                              ~0xE0'0000;  // unsetting 3 tile bits as NPU5 only uses 3 bits for tile selection
+    auto patchAddr = (patchAddrUnsetTile >> 4) & (0x7FFF'FFFF >> 4);  // only [30:4]
+    *addr |= (static_cast<uint64_t>(patchAddr) << 37);                // set [64:37]
 };
 
 }  // namespace
@@ -485,6 +486,12 @@ VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager)
 
         (*m_sectionMap)[sectionType].emplace_back(sectionCtr);
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "[%lu] Section name: %s", sectionCtr, section.getName());
+
+        // Early fetch of IO buffer specs
+        const auto action = actionMap.find(sectionType);
+        if (action->second == Action::RegisterUserIO) {
+            earlyFetchIO(section);
+        }
     }
 
     // accomodate missing section due to compatibility with older ELFs
@@ -665,7 +672,8 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
             // This is needed for sections that contain relocations in order to be able to apply them again
             if (!isShared) {
                 bufferInfo.mBuffer = sectionBuffer->createNew();
-                bufferInfo.mBuffer->loadWithLock(sectionBuffer->getBuffer().cpu_addr(), sectionBuffer->getBuffer().size());
+                bufferInfo.mBuffer->loadWithLock(sectionBuffer->getBuffer().cpu_addr(),
+                                                 sectionBuffer->getBuffer().size());
             }
             m_bufferContainer.replaceBufferInfoAtIndex(sectionCtr, bufferInfo);
 
@@ -712,36 +720,12 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
             break;
         }
 
-        case Action::RegisterUserIO: {
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Parsed symtab section with flags %llx", sectionFlags);
-
-            if (sectionFlags & VPU_SHF_USERINPUT) {
-                VPUX_ELF_THROW_WHEN(m_userInputsDescriptors->size(), SequenceError,
-                                    "User inputs already read.... potential more than one input section?");
-
-                VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRegistering %zu inputs", section.getEntriesNum() - 1);
-                registerUserIO(*m_userInputsDescriptors, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
-            } else if (sectionFlags & VPU_SHF_USEROUTPUT) {
-                VPUX_ELF_THROW_WHEN(m_userOutputsDescriptors->size(), SequenceError,
-                                    "User outputs already read.... potential more than one output section?");
-
-                VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRegistering %zu outputs", section.getEntriesNum() - 1);
-                registerUserIO(*m_userOutputsDescriptors, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
-            } else if (sectionFlags & VPU_SHF_PROFOUTPUT) {
-                VPUX_ELF_THROW_WHEN(m_profOutputsDescriptors->size(), SequenceError,
-                                    "Profiling outputs already read.... potential more than one output section?");
-
-                VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRegistering %zu prof outputs", section.getEntriesNum() - 1);
-                registerUserIO(*m_profOutputsDescriptors, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
-            }
-            break;
-        }
-
         case Action::Error: {
             VPUX_ELF_THROW(SectionError, "Unexpected section type");
             return;
         }
 
+        case Action::RegisterUserIO:
         case Action::None: {
             break;
         }
@@ -760,18 +744,6 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
     applyRelocations(*m_relocationSectionIndexes);
 
     VPUX_ELF_LOG(LogLevel::LOG_INFO, "Allocated %zu sections", m_bufferContainer.getBufferInfoCount());
-    VPUX_ELF_LOG(LogLevel::LOG_INFO, "Registered %zu inputs of sizes: ", m_userInputsDescriptors->size());
-    for (size_t inputCtr = 0; inputCtr < m_userInputsDescriptors->size(); ++inputCtr) {
-        VPUX_ELF_LOG(LogLevel::LOG_INFO, "\t %zu : %zu", inputCtr, (*m_userInputsDescriptors)[inputCtr].size());
-    }
-    VPUX_ELF_LOG(LogLevel::LOG_INFO, "Registered %zu outputs of sizes: ", m_userOutputsDescriptors->size());
-    for (size_t outputCtr = 0; outputCtr < m_userOutputsDescriptors->size(); ++outputCtr) {
-        VPUX_ELF_LOG(LogLevel::LOG_INFO, "\t %zu : %zu", outputCtr, (*m_userOutputsDescriptors)[outputCtr].size());
-    }
-    VPUX_ELF_LOG(LogLevel::LOG_INFO, "Registered %zu prof outputs of sizes: ", m_profOutputsDescriptors->size());
-    for (size_t outputCtr = 0; outputCtr < m_profOutputsDescriptors->size(); ++outputCtr) {
-        VPUX_ELF_LOG(LogLevel::LOG_INFO, "\t %zu : %zu", outputCtr, (*m_profOutputsDescriptors)[outputCtr].size());
-    }
 
     // sections were loaded. other calls to this method will throw an error
     m_loaded = true;
@@ -1060,7 +1032,8 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
             auto symIdx = elf64RSym(relocation.r_info);
 
             VPUX_ELF_THROW_WHEN(symIdx > symTabSize, RelocError, "SymTab index out of bounds!");
-            VPUX_ELF_THROW_WHEN(symIdx > userAddrs.size(), RelocError, "Invalid symbol index. It exceeds the number of relevant device buffers");
+            VPUX_ELF_THROW_WHEN(symIdx > userAddrs.size(), RelocError,
+                                "Invalid symbol index. It exceeds the number of relevant device buffers");
 
             auto relType = elf64RType(relocation.r_info);
             auto addend = relocation.r_addend;
@@ -1110,6 +1083,33 @@ void VPUXLoader::registerUserIO(std::vector<DeviceBuffer>& userIO, const elf::Sy
     for (size_t symbolCtr = 1; symbolCtr < symbolCount; ++symbolCtr) {
         const elf::SymbolEntry& sym = symbols[symbolCtr];
         userIO[symbolCtr - 1] = DeviceBuffer(nullptr, 0, sym.st_size);
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t index %zu : size %zu\n", symbolCtr - 1, sym.st_size);
+    }
+}
+
+void VPUXLoader::earlyFetchIO(const elf::Reader<Elf64>::Section& section) {
+    const auto sectionFlags = section.getHeader()->sh_flags;
+
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Parsed symtab section with flags %llx", sectionFlags);
+
+    if (sectionFlags & VPU_SHF_USERINPUT) {
+        VPUX_ELF_THROW_WHEN(m_userInputsDescriptors->size(), SequenceError,
+                            "User inputs already read.... potential more than one input section?");
+
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRegistering %zu inputs", section.getEntriesNum() - 1);
+        registerUserIO(*m_userInputsDescriptors, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
+    } else if (sectionFlags & VPU_SHF_USEROUTPUT) {
+        VPUX_ELF_THROW_WHEN(m_userOutputsDescriptors->size(), SequenceError,
+                            "User outputs already read.... potential more than one output section?");
+
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRegistering %zu outputs", section.getEntriesNum() - 1);
+        registerUserIO(*m_userOutputsDescriptors, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
+    } else if (sectionFlags & VPU_SHF_PROFOUTPUT) {
+        VPUX_ELF_THROW_WHEN(m_profOutputsDescriptors->size(), SequenceError,
+                            "Profiling outputs already read.... potential more than one output section?");
+
+        VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRegistering %zu prof outputs", section.getEntriesNum() - 1);
+        registerUserIO(*m_profOutputsDescriptors, section.getData<elf::SymbolEntry>(), section.getEntriesNum());
     }
 }
 
