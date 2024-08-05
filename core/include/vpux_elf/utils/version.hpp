@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <sstream>
+#include <tuple>
 #include <vpux_elf/utils/log.hpp>
 #include <vpux_elf/utils/error.hpp>
 
@@ -39,6 +40,14 @@ public:
         return stream;
     }
 
+    // Comparison operators
+    bool operator== (const Version& other) const;
+    bool operator!= (const Version& other) const;
+    bool operator< (const Version& other) const;
+    bool operator> (const Version& other) const;
+    bool operator<= (const Version& other) const;
+    bool operator>= (const Version& other) const;
+
     /**
      * Helper static function to check the compatibility between different versions
      *
@@ -61,13 +70,12 @@ public:
     bool checkValidity() const;
 
 private:
-    uint32_t major;
-    uint32_t minor;
-    uint32_t patch;
+    uint32_t major = 0;
+    uint32_t minor = 0;
+    uint32_t patch = 0;
 
     bool isValid = false;
 };
-
 
 
 //
