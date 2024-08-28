@@ -5,12 +5,16 @@
 
 //
 
+#include <utility>
 #include <vpux_elf/utils/error.hpp>
 #include <vpux_elf/utils/utils.hpp>
 #include <vpux_elf/writer.hpp>
+#include <vpux_elf/writer/empty_section.hpp>
 
 #include <algorithm>
 #include <unordered_set>
+
+#include <iostream>
 
 using namespace elf;
 using namespace elf::writer;
@@ -67,29 +71,47 @@ std::vector<uint8_t> Writer::generateELF() {
     auto totalBinarySize = dataOffset;
 
     for (auto& section : m_sections) {
-        totalBinarySize = utils::alignUp(totalBinarySize, section->m_header.sh_addralign) + section->m_data.size();
+        // account for alignment requirement of all sections, including those that don't occupy space in the blob
+        // it's temporary solution to keep blobs of the same hash as before optimization and simplify validation
+        // extra memory overhead is negligible, e.g. for Age&Gender blob of size 4.4MB we save around 3KB
+        // E#136376
+        totalBinarySize = utils::alignUp(totalBinarySize, section->getAddrAlign());
+
+        const auto isNotEmptySection = dynamic_cast<elf::writer::EmptySection*>(section.get()) == nullptr;
+        const auto hasData = section->getSize() != 0;
+
+        if (isNotEmptySection && hasData) {
+            // to keep "no-data" sections with zero offset (and don't allocate space for them in blob)
+            // check for both not empty section & has data as there could be sections without data
+            // that have type different from EmptySection e.g. shave.data being binary section
+            // that maybe missing for a given blob
+            section->m_header.sh_offset = totalBinarySize;
+            totalBinarySize += section->getSize();
+        }
+        sectionHeaders.push_back(section->m_header);
     }
+
     for (auto& segment : m_segments) {
         for (auto& section : segment->m_sections) {
-            totalBinarySize = utils::alignUp(totalBinarySize, section->m_header.sh_addralign) + section->m_data.size();
+            totalBinarySize = utils::alignUp(totalBinarySize, section->getAddrAlign()) + section->m_data.size();
         }
         totalBinarySize = utils::alignUp(totalBinarySize, segment->m_header.p_align) + segment->m_data.size();
     }
 
+    // make blob allocation external to elf::Writer and eventually external to compiler
+    // to save extra memory consumption & blob copies
+    // E#-136375
     std::vector<uint8_t> data(totalBinarySize);
 
-    const auto serializeSection = [&data, &sectionHeaders, &dataOffset](Section* section) {
-        const auto sectionData = section->m_data;
-        auto sectionHeader = section->m_header;
-
-        dataOffset = utils::alignUp(dataOffset, section->getAddrAlign());
-
-        if (!sectionData.empty()) {
-            sectionHeader.sh_offset = dataOffset;
-            sectionHeader.sh_size = sectionData.size();
+    const auto serializeSection = [&data](Section* section) {
+        if (!section->m_data.empty()) {
+            // there are still sections that get serialized in 2 stages: first to internal storage of elf::Writer
+            // then to final blob here, e.g. relocation sections and symbol tables
+            // it's temporary solution for sections with internal states (e.g. relocation and symbol entries)
+            // note: it needs to be done after blob size calculation as section offsets are being updated there
+            // E#-136375
+            Writer::writeContainerToStorageVector(data, section->getOffset(), section->m_data, 0, section->m_data.size());
         }
-        sectionHeaders.push_back(sectionHeader);
-        dataOffset = Writer::writeContainerToStorageVector(data, dataOffset, sectionData, 0, sectionData.size());
     };
 
     for (auto& section : m_sections) {
@@ -118,7 +140,8 @@ std::vector<uint8_t> Writer::generateELF() {
             programHeader.p_filesz += segment->m_data.size();
             data.insert(data.end(), segment->m_data.data(), segment->m_data.data() + segment->m_data.size());
             dataOffset =
-                    Writer::writeContainerToStorageVector(data, dataOffset, segment->m_data, 0, segment->m_data.size());
+                    Writer::writeContainerToStorageVector(data, dataOffset, segment->m_data, 0,
+                    segment->m_data.size());
         }
 
         programHeader.p_memsz = programHeader.p_filesz;
@@ -136,6 +159,13 @@ std::vector<uint8_t> Writer::generateELF() {
     }
 
     return data;
+}
+
+void Writer::setSegmentsStartAddr(std::vector<uint8_t>& elfBinary) {
+    auto elfBinaryAddr = elfBinary.data();
+    for (auto& section : m_sections) {
+        section->m_startAddr = elfBinaryAddr + section->m_header.sh_offset;
+    }
 }
 
 Segment* Writer::addSegment() {

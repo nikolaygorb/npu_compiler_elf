@@ -34,6 +34,10 @@ public:
 
     std::vector<uint8_t> generateELF();
 
+    // E#136375: revisit name of the method and try to avoid need to call it
+    // separately from generateELF
+    void setSegmentsStartAddr(std::vector<uint8_t>& elfBinary);
+
     writer::Segment* addSegment();
 
     writer::RelocationSection* addRelocationSection(const std::string& name = {});
