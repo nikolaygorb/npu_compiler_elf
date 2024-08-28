@@ -172,6 +172,18 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
 
     elf::Version::checkVersionCompatibility(nnExpectedVersion, getMIVersion(),
                                             elf::VersionType::MAPPED_INFERENCE_VERSION);
+
+    // Check ELF Library tile count Compatibility
+    auto tileCount = metadata->mResourceRequirements.nn_slice_count_;
+    // get hardware tile count, archKind has already been checked above
+    uint8_t hardwareTileCount = elf::platform::getHardwareTileCount(archKind);
+    // throw exception if tile count is greater than hardware tile count
+    if (tileCount > hardwareTileCount) {
+        std::stringstream tileCountLogBuffer;
+        tileCountLogBuffer << "Incorrect tile count. Requested tile count '" << static_cast<int>(tileCount)
+                           << "' exceeds hardware tile count '" << static_cast<int>(hardwareTileCount) << "'";
+        VPUX_ELF_THROW(ArgsError, tileCountLogBuffer.str().c_str());
+    }
 }
 
 void HostParsedInference::load() {
