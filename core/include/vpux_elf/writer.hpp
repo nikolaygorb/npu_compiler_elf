@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <vpux_elf/writer/section.hpp>
 #include <vpux_elf/writer/segment.hpp>
 
@@ -32,7 +33,10 @@ class Writer {
 public:
     Writer();
 
-    std::vector<uint8_t> generateELF();
+    // Prepare elf header internals, register section headers and compute total size required.
+    void prepareWriter();
+    size_t getTotalSize() const;
+    void generateELF(std::vector<uint8_t> &data);
 
     // E#136375: revisit name of the method and try to avoid need to call it
     // separately from generateELF
@@ -91,10 +95,14 @@ private:
     }
 
 private:
+    elf::ELFHeader m_elfHeader;
+    size_t m_totalBinarySize = 0;
+    size_t m_dataOffset = 0;
     writer::StringSection* m_sectionHeaderNames;
     writer::StringSection* m_symbolNames;
     std::vector<std::unique_ptr<writer::Section>> m_sections;
     std::vector<std::unique_ptr<writer::Segment>> m_segments;
+    std::vector<elf::SectionHeader> m_sectionHeaders;
 };
 
 }  // namespace elf
