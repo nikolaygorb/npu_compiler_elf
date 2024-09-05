@@ -51,7 +51,7 @@ uint8_t getHardwareTileCount(const elf::platform::ArchKind& arch) {
         {elf::platform::ArchKind::VPUX30XX, 2},
         {elf::platform::ArchKind::VPUX37XX, 2},
         {elf::platform::ArchKind::VPUX40XX, 6},
-        {elf::platform::ArchKind::VPUX50XX, 3},
+        {elf::platform::ArchKind::VPUX50XX, 4},
         {elf::platform::ArchKind::VPUX60XX, 4}
     };
     // get maximum hardware tile count, archKind has already been checked before
