@@ -14,6 +14,7 @@
 #include <hpi_4000.hpp>
 #include <api/vpu_nnrt_api_40xx.h>
 #include <api/vpu_cmx_info_40xx.h>
+#include <api/vpu_pwrmgr_api.h>
 #include <string>
 #include <vector>
 #include <array>
@@ -34,9 +35,9 @@ constexpr uint32_t BW_BASE = 2000;
 constexpr uint32_t BW_STEP = 100;
 
 // value in [0.0..1.0] range indicating scalability of network for a given DDR bandwidth.
-const std::array<float, nn_public::VPU_SCALABILITY_VALUES_PER_FREQ> byBWScales({0.0F, 0.2F, 0.4F, 0.6F, 0.8F});
+const std::array<float, VPU_SCALABILITY_VALUES_PER_FREQ> byBWScales({0.0F, 0.2F, 0.4F, 0.6F, 0.8F});
 // expected ticks (based on FRC @37.5MHz) an inference should take for a given DDR bandwidth.
-const std::array<uint64_t, nn_public::VPU_SCALABILITY_VALUES_PER_FREQ> byBWTicks({10UL, 12UL, 14UL, 16UL, 18UL});
+const std::array<uint64_t, VPU_SCALABILITY_VALUES_PER_FREQ> byBWTicks({10UL, 12UL, 14UL, 16UL, 18UL});
 
 }  // namespace
 
@@ -52,13 +53,13 @@ constexpr uint32_t VPUX50XX_VERSION_PATCH = 1;
 
 } // namespace
 
-void setDefaultPerformanceMetrics(nn_public::VpuPerformanceMetrics& metrics) {
+void setDefaultPerformanceMetrics(VpuPerformanceMetrics& metrics) {
     metrics.bw_base = BW_BASE;
     metrics.bw_step = BW_STEP;
     metrics.freq_base = FREQ_BASE;
     metrics.freq_step = FREQ_STEP;
 
-    for (uint32_t i = 0; i < nn_public::VPU_SCALABILITY_NUM_OF_FREQ; ++i) {
+    for (uint32_t i = 0; i < VPU_SCALABILITY_NUM_OF_FREQ; ++i) {
         std::copy(byBWScales.begin(), byBWScales.end(), std::begin(metrics.scalability[i]));
         std::copy(byBWTicks.begin(), byBWTicks.end(), std::begin(metrics.ticks[i]));
     }
@@ -129,7 +130,7 @@ void HostParsedInference_4000::setHostParsedInference(DeviceBuffer& devBuffer,
 
     if (perf_metrics) {
         memcpy(static_cast<void*>(&hpi->performance_metrics_), static_cast<const void*>(perf_metrics),
-               sizeof(nn_public::VpuPerformanceMetrics));
+               sizeof(VpuPerformanceMetrics));
     } else {
         setDefaultPerformanceMetrics(hpi->performance_metrics_);
     }
