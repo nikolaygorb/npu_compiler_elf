@@ -10,7 +10,6 @@
 #include <vpux_elf/types/data_types.hpp>
 #include <vpux_elf/types/elf_header.hpp>
 #include <vpux_elf/types/elf_structs.hpp>
-#include <vpux_elf/types/program_header.hpp>
 #include <vpux_elf/types/section_header.hpp>
 #include <vpux_elf/types/vpu_extensions.hpp>
 #include <vpux_elf/utils/error.hpp>
@@ -82,25 +81,6 @@ public:
         mutable std::shared_ptr<ManagedBuffer> mDataBuffer;
     };
 
-    class Segment {
-    public:
-        Segment(const typename ElfTypes<B>::ProgramHeader* programHeader, const uint8_t* data)
-                : mProgramHeader(programHeader), mData(data) {
-        }
-
-        const typename ElfTypes<B>::ProgramHeader* getHeader() const {
-            return mProgramHeader;
-        }
-
-        const uint8_t* getData() const {
-            return mData;
-        }
-
-    private:
-        const typename ElfTypes<B>::ProgramHeader* mProgramHeader = nullptr;
-        const uint8_t* mData = nullptr;
-    };
-
 public:
     explicit Reader(AccessManager* accessor): Reader(nullptr, accessor) {
     }
@@ -147,11 +127,6 @@ public:
         return mElfHeader.e_shnum;
     }
 
-    size_t getSegmentsNum() const {
-        VPUX_ELF_THROW_UNLESS(mElfHeader.e_phnum <= 1000, ArgsError, "Invalid e_phnum");
-        return mElfHeader.e_phnum;
-    }
-
     const Section& getSection(size_t index) const {
         VPUX_ELF_THROW_WHEN(index >= mElfHeader.e_shnum, RangeError, "Section index out of bounds");
 
@@ -171,7 +146,6 @@ private:
 
     typename ElfTypes<B>::ELFHeader mElfHeader;
     std::vector<typename ElfTypes<B>::SectionHeader> mSectionHeaders;
-    std::vector<typename ElfTypes<B>::ProgramHeader> mProgramHeaders;
     std::vector<char> mSectionNames;
 
     mutable std::unordered_map<size_t, Section> mSectionsCache;

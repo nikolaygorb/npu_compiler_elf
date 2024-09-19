@@ -9,7 +9,6 @@
 
 #include <cstddef>
 #include <vpux_elf/writer/section.hpp>
-#include <vpux_elf/writer/segment.hpp>
 
 #include <vpux_elf/writer/binary_data_section.hpp>
 #include <vpux_elf/writer/empty_section.hpp>
@@ -19,7 +18,6 @@
 
 #include <vpux_elf/types/data_types.hpp>
 #include <vpux_elf/types/elf_header.hpp>
-#include <vpux_elf/types/program_header.hpp>
 #include <vpux_elf/types/section_header.hpp>
 
 #include <vpux_elf/utils/error.hpp>
@@ -40,9 +38,7 @@ public:
 
     // E#136375: revisit name of the method and try to avoid need to call it
     // separately from generateELF
-    void setSegmentsStartAddr(std::vector<uint8_t>& elfBinary);
-
-    writer::Segment* addSegment();
+    void setSectionsStartAddr(std::vector<uint8_t>& elfBinary);
 
     writer::RelocationSection* addRelocationSection(const std::string& name = {});
     writer::SymbolSection* addSymbolSection(const std::string& name = {});
@@ -101,7 +97,6 @@ private:
     writer::StringSection* m_sectionHeaderNames;
     writer::StringSection* m_symbolNames;
     std::vector<std::unique_ptr<writer::Section>> m_sections;
-    std::vector<std::unique_ptr<writer::Segment>> m_segments;
     std::vector<elf::SectionHeader> m_sectionHeaders;
 };
 

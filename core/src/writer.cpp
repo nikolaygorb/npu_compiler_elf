@@ -49,15 +49,10 @@ void Writer::prepareWriter() {
         m_elfHeader.e_shoff = utils::alignUp(curOffset, m_elfHeader.e_shentsize);
         curOffset = static_cast<Elf_Half>(m_elfHeader.e_shoff);
     }
-    if (m_elfHeader.e_phnum) {
-        m_elfHeader.e_phoff =
-                utils::alignUp(curOffset + m_elfHeader.e_shnum * m_elfHeader.e_shentsize, m_elfHeader.e_phentsize);
-        curOffset = static_cast<Elf_Half>(m_elfHeader.e_phoff);
-    } else {
-        curOffset += m_elfHeader.e_shnum * m_elfHeader.e_shentsize;
-    }
 
-    m_dataOffset = static_cast<size_t>(curOffset + m_elfHeader.e_phnum * m_elfHeader.e_phentsize);
+    curOffset += m_elfHeader.e_shnum * m_elfHeader.e_shentsize;
+
+    m_dataOffset = static_cast<size_t>(curOffset);
     m_totalBinarySize = m_dataOffset;
 
     m_sectionHeaders.reserve(m_elfHeader.e_shnum);
@@ -82,13 +77,6 @@ void Writer::prepareWriter() {
         }
         m_sectionHeaders.push_back(section->m_header);
     }
-
-    for (auto& segment : m_segments) {
-        for (auto& section : segment->m_sections) {
-            m_totalBinarySize = utils::alignUp(m_totalBinarySize, section->getAddrAlign()) + section->m_data.size();
-        }
-        m_totalBinarySize = utils::alignUp(m_totalBinarySize, segment->m_header.p_align) + segment->m_data.size();
-    }
 }
 
 void Writer::generateELF(std::vector<uint8_t>& data) {
@@ -108,48 +96,8 @@ void Writer::generateELF(std::vector<uint8_t>& data) {
         }
     };
 
-    std::vector<Section*> sectionsFromSegments;
-    for (const auto& segment : m_segments) {
-        for (const auto& section : segment->m_sections) {
-            sectionsFromSegments.push_back(section);
-        }
-    }
-
     for (auto& section : m_sections) {
-        if (std::find(sectionsFromSegments.begin(), sectionsFromSegments.end(), section.get()) !=
-            sectionsFromSegments.end()) {
-            continue;
-        }
-
         serializeSection(section.get());
-    }
-
-    std::vector<elf::ProgramHeader> programHeaders;
-    programHeaders.reserve(m_elfHeader.e_phnum);
-
-    for (auto& segment : m_segments) {
-        if (segment->m_data.empty() && segment->m_sections.empty()) {
-            continue;
-        }
-
-        auto programHeader = segment->m_header;
-        programHeader.p_offset = m_dataOffset;
-
-        for (auto& section : segment->m_sections) {
-            programHeader.p_filesz += section->m_data.size();
-            serializeSection(section);
-        }
-
-        if (!segment->m_data.empty()) {
-            programHeader.p_filesz += segment->m_data.size();
-            data.insert(data.end(), segment->m_data.data(), segment->m_data.data() + segment->m_data.size());
-            m_dataOffset = Writer::writeContainerToStorageVector(data, m_dataOffset, segment->m_data, 0,
-                                                                 segment->m_data.size());
-        }
-
-        programHeader.p_memsz = programHeader.p_filesz;
-
-        programHeaders.push_back(programHeader);
     }
 
     m_dataOffset = writeObjectToStorageVector(data, 0, m_elfHeader);
@@ -157,25 +105,17 @@ void Writer::generateELF(std::vector<uint8_t>& data) {
     if (m_elfHeader.e_shoff) {
         m_dataOffset = writeContainerToStorageVector(data, m_dataOffset, m_sectionHeaders, 0, m_sectionHeaders.size());
     }
-    if (m_elfHeader.e_phoff) {
-        m_dataOffset = writeContainerToStorageVector(data, m_dataOffset, programHeaders, 0, programHeaders.size());
-    }
 }
 
 size_t Writer::getTotalSize() const {
     return m_totalBinarySize;
 }
 
-void Writer::setSegmentsStartAddr(std::vector<uint8_t>& elfBinary) {
+void Writer::setSectionsStartAddr(std::vector<uint8_t>& elfBinary) {
     auto elfBinaryAddr = elfBinary.data();
     for (auto& section : m_sections) {
         section->m_startAddr = elfBinaryAddr + section->m_header.sh_offset;
     }
-}
-
-Segment* Writer::addSegment() {
-    m_segments.push_back(std::unique_ptr<Segment>(new Segment));
-    return m_segments.back().get();
 }
 
 Section* Writer::addSection(const std::string& name) {
@@ -230,12 +170,9 @@ elf::ELFHeader Writer::generateELFHeader() const {
     fileHeader.e_shstrndx = 0;
 
     fileHeader.e_shnum = static_cast<Elf_Half>(m_sections.size());
-    fileHeader.e_phnum = static_cast<Elf_Half>(m_segments.size());
-
-    fileHeader.e_shoff = fileHeader.e_phoff = 0;
+    fileHeader.e_shoff = 0;
 
     fileHeader.e_ehsize = sizeof(ELFHeader);
-    fileHeader.e_phentsize = sizeof(ProgramHeader);
     fileHeader.e_shentsize = sizeof(SectionHeader);
 
     return fileHeader;
