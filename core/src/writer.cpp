@@ -79,19 +79,21 @@ void Writer::prepareWriter() {
     }
 }
 
-void Writer::generateELF(std::vector<uint8_t>& data) {
+void Writer::generateELF(uint8_t* data) {
+    VPUX_ELF_THROW_WHEN(data == nullptr, ArgsError, "Storage pointer is nullptr");
     VPUX_ELF_THROW_UNLESS(utils::checkELFMagic(reinterpret_cast<uint8_t*>(&m_elfHeader)), ImplausibleState,
                           "Can't generateELF without previous call to prepareWriter!");
-    VPUX_ELF_THROW_UNLESS(data.size() == m_totalBinarySize, RangeError, "Not enough space in the received buffer!");
+    VPUX_ELF_THROW_UNLESS(m_totalBinarySize != 0, RangeError, "Unknown size for blob storage. Check if you called Writer::prepareWriter");
+    const auto size = getTotalSize();
 
-    const auto serializeSection = [&data](Section* section) {
+    const auto serializeSection = [data, size](Section* section) {
         if (!section->m_data.empty()) {
             // there are still sections that get serialized in 2 stages: first to internal storage of elf::Writer
             // then to final blob here, e.g. relocation sections and symbol tables
             // it's temporary solution for sections with internal states (e.g. relocation and symbol entries)
             // note: it needs to be done after blob size calculation as section offsets are being updated there
             // E#-136375
-            Writer::writeContainerToStorageVector(data, section->getOffset(), section->m_data, 0,
+            Writer::writeContainerToStorageVector(data, size, section->getOffset(), section->m_data, 0,
                                                   section->m_data.size());
         }
     };
@@ -100,10 +102,10 @@ void Writer::generateELF(std::vector<uint8_t>& data) {
         serializeSection(section.get());
     }
 
-    m_dataOffset = writeObjectToStorageVector(data, 0, m_elfHeader);
+    m_dataOffset = writeObjectToStorageVector(data, size, 0, m_elfHeader);
 
     if (m_elfHeader.e_shoff) {
-        m_dataOffset = writeContainerToStorageVector(data, m_dataOffset, m_sectionHeaders, 0, m_sectionHeaders.size());
+        m_dataOffset = writeContainerToStorageVector(data, size, m_dataOffset, m_sectionHeaders, 0, m_sectionHeaders.size());
     }
 }
 
@@ -111,8 +113,8 @@ size_t Writer::getTotalSize() const {
     return m_totalBinarySize;
 }
 
-void Writer::setSectionsStartAddr(std::vector<uint8_t>& elfBinary) {
-    auto elfBinaryAddr = elfBinary.data();
+void Writer::setSectionsStartAddr(uint8_t* elfBinaryAddr) {
+    VPUX_ELF_THROW_WHEN(elfBinaryAddr == nullptr, ArgsError, "Storage pointer is nullptr");
     for (auto& section : m_sections) {
         section->m_startAddr = elfBinaryAddr + section->m_header.sh_offset;
     }
@@ -178,13 +180,16 @@ elf::ELFHeader Writer::generateELFHeader() const {
     return fileHeader;
 }
 
-size_t Writer::writeRawBytesToStorageVector(std::vector<uint8_t>& storageVector, size_t storageOffset,
+size_t Writer::writeRawBytesToStorageVector(uint8_t* storageVector, size_t storageSize, size_t storageOffset,
                                             const uint8_t* sourceData, size_t sourceByteCount) {
-    auto storagePos = storageVector.begin() + storageOffset;
+    VPUX_ELF_THROW_WHEN(storageVector == nullptr, ArgsError, "Storage pointer is nullptr");
+
+    auto storagePos = storageVector + storageOffset;
+    auto storageVectorEnd = storageVector + storageSize;
 
     // Check storage offset and size bounds
-    VPUX_ELF_THROW_WHEN(storagePos >= storageVector.end(), RuntimeError, "Write offset out of bounds");
-    VPUX_ELF_THROW_WHEN(storagePos + sourceByteCount > storageVector.end(), RuntimeError, "Write size exceeds bounds");
+    VPUX_ELF_THROW_WHEN(storagePos >= storageVectorEnd, RuntimeError, "Write offset out of bounds");
+    VPUX_ELF_THROW_WHEN(storagePos + sourceByteCount > storageVectorEnd, RuntimeError, "Write size exceeds bounds");
 
     std::copy_n(sourceData, sourceByteCount, storagePos);
 
