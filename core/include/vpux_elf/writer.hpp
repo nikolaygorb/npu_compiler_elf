@@ -9,7 +9,6 @@
 
 #include <cstddef>
 #include <vpux_elf/writer/section.hpp>
-#include <vpux_elf/writer/segment.hpp>
 
 #include <vpux_elf/writer/binary_data_section.hpp>
 #include <vpux_elf/writer/empty_section.hpp>
@@ -19,7 +18,6 @@
 
 #include <vpux_elf/types/data_types.hpp>
 #include <vpux_elf/types/elf_header.hpp>
-#include <vpux_elf/types/program_header.hpp>
 #include <vpux_elf/types/section_header.hpp>
 
 #include <vpux_elf/utils/error.hpp>
@@ -36,13 +34,11 @@ public:
     // Prepare elf header internals, register section headers and compute total size required.
     void prepareWriter();
     size_t getTotalSize() const;
-    void generateELF(std::vector<uint8_t> &data);
+    void generateELF(uint8_t* data);
 
     // E#136375: revisit name of the method and try to avoid need to call it
     // separately from generateELF
-    void setSegmentsStartAddr(std::vector<uint8_t>& elfBinary);
-
-    writer::Segment* addSegment();
+    void setSectionsStartAddr(uint8_t* elfBinary);
 
     writer::RelocationSection* addRelocationSection(const std::string& name = {});
     writer::SymbolSection* addSymbolSection(const std::string& name = {});
@@ -63,11 +59,11 @@ private:
 
     elf::ELFHeader generateELFHeader() const;
 
-    static size_t writeRawBytesToStorageVector(std::vector<uint8_t>& storageVector, size_t storageOffset,
+    static size_t writeRawBytesToStorageVector(uint8_t* storageVector, size_t storageSize, size_t storageOffset,
                                                const uint8_t* sourceData, size_t sourceByteCount);
 
     template <typename SourceType>
-    static size_t writeContainerToStorageVector(std::vector<uint8_t>& storageVector, size_t storageOffset,
+    static size_t writeContainerToStorageVector(uint8_t* storageVector, size_t storageSize, size_t storageOffset,
                                                 const SourceType& sourceContainer, size_t sourceOffset,
                                                 size_t sourceCount) {
         // Accept 0 size writes
@@ -83,14 +79,14 @@ private:
 
         // Convert sourceCount to byte count
         auto sourceByteCount = sourceCount * sizeof(typename SourceType::value_type);
-        return writeRawBytesToStorageVector(storageVector, storageOffset,
+        return writeRawBytesToStorageVector(storageVector, storageSize, storageOffset,
                                             reinterpret_cast<const uint8_t*>(&(*sourcePos)), sourceByteCount);
     }
 
     template <typename SourceType>
-    static size_t writeObjectToStorageVector(std::vector<uint8_t>& storageVector, size_t storageOffset,
+    static size_t writeObjectToStorageVector(uint8_t* storageVector, size_t storageSize, size_t storageOffset,
                                              const SourceType& sourceObject) {
-        return writeRawBytesToStorageVector(storageVector, storageOffset,
+        return writeRawBytesToStorageVector(storageVector, storageSize, storageOffset,
                                             reinterpret_cast<const uint8_t*>(&sourceObject), sizeof(SourceType));
     }
 
@@ -101,7 +97,6 @@ private:
     writer::StringSection* m_sectionHeaderNames;
     writer::StringSection* m_symbolNames;
     std::vector<std::unique_ptr<writer::Section>> m_sections;
-    std::vector<std::unique_ptr<writer::Segment>> m_segments;
     std::vector<elf::SectionHeader> m_sectionHeaders;
 };
 
