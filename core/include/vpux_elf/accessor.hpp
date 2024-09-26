@@ -26,8 +26,7 @@ Abstraction class to encapsulate access to ELF binary.
 class AccessManager {
 public:
     AccessManager() = default;
-    explicit AccessManager(size_t binarySize): mSize(binarySize) {
-    }
+    explicit AccessManager(size_t binarySize);
     AccessManager(const AccessManager& other) = default;
     AccessManager(AccessManager&& other) = default;
     AccessManager& operator=(const AccessManager& rhs) = default;
@@ -36,9 +35,7 @@ public:
 
     virtual std::unique_ptr<ManagedBuffer> readInternal(size_t offset, const BufferSpecs& specs) = 0;
     virtual void readExternal(size_t offset, ManagedBuffer& buffer) = 0;
-    size_t getSize() const {
-        return mSize;
-    };
+    size_t getSize() const;
 
 protected:
     size_t mSize = 0;
