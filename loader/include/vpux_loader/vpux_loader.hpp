@@ -82,12 +82,14 @@ private:
     void registerUserIO(std::vector<DeviceBuffer>& userIO, const elf::SymbolEntry* symbols, size_t symbolCount) const;
 
     void updateSharedBuffers(const std::vector<std::size_t>& relocationSectionIndexes);
+    void loadBuffers();
     void reloadNewBuffers();
     void applyRelocations(const std::vector<std::size_t>& relocationSectionIndexes);
 
     BufferManager* m_bufferManager;
     std::shared_ptr<Reader<ELF_Bitness::Elf64>> m_reader;
-    DeviceBufferContainer m_bufferContainer;
+    DeviceBufferContainer m_inferBufferContainer;
+    DeviceBufferContainer m_backupBufferContainer;
     std::vector<SymbolEntry> m_runtimeSymTabs;
 
     std::shared_ptr<std::vector<std::size_t>> m_relocationSectionIndexes;

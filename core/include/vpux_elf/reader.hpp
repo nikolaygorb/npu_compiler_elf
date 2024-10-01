@@ -51,27 +51,36 @@ public:
             return mName;
         }
 
+        // API to retrieve a pointer to the start of the data buffer owned by the Section object
+        // This API is particularly useful for user code which does not want the overhead to keep ownership of the data
+        // buffer
         template <typename T>
         const T* getData() const {
-            return reinterpret_cast<const T*>(getDataBuffer()->getBuffer().cpu_addr());
+            if (!mDataBuffer) {
+                mDataBuffer = getDataBuffer();
+            }
+            return reinterpret_cast<const T*>(mDataBuffer->getBuffer().cpu_addr());
         }
 
-        std::shared_ptr<ManagedBuffer> getDataBuffer() const {
-            if (!mDataBuffer) {
-                // E#73309
-                // SHT_NOBITS - sections can have a size greater than the file
-                // which will cause offset out of bounds.
-                // VPU_SHT_CMX_METADATA - does not contain data in the binary file, so avoid reading
-                // VPU_SHT_CMX_WORKSPACE - does not contain data in the binary file, so avoid reading
-                if (!((mHeader->sh_type == SHT_NOBITS) || (mHeader->sh_type == VPU_SHT_CMX_METADATA) ||
-                      mHeader->sh_type == VPU_SHT_CMX_WORKSPACE)) {
-                    mDataBuffer = mAccessManager->readInternal(
-                            mHeader->sh_offset,
-                            BufferSpecs(mHeader->sh_addralign, mHeader->sh_size, mHeader->sh_flags));
-                }
+        // API to retrieve a buffer with the data corresponding to the Section object
+        // This API is useful for higher level semantics, particularly for sharing large sections between
+        // different parts of user code
+        std::shared_ptr<ManagedBuffer> getDataBuffer(bool cpuOnlyAccess = false) const {
+            std::shared_ptr<ManagedBuffer> buffer = nullptr;
+
+            // E#73309
+            // SHT_NOBITS - sections can have a size greater than the file
+            // which will cause offset out of bounds.
+            // VPU_SHT_CMX_METADATA - does not contain data in the binary file, so avoid reading
+            // VPU_SHT_CMX_WORKSPACE - does not contain data in the binary file, so avoid reading
+            if (!((mHeader->sh_type == SHT_NOBITS) || (mHeader->sh_type == VPU_SHT_CMX_METADATA) ||
+                  mHeader->sh_type == VPU_SHT_CMX_WORKSPACE)) {
+                buffer = mAccessManager->readInternal(
+                        mHeader->sh_offset,
+                        BufferSpecs(mHeader->sh_addralign, mHeader->sh_size, cpuOnlyAccess ? 0 : mHeader->sh_flags));
             }
 
-            return mDataBuffer;
+            return buffer;
         }
 
     private:
@@ -130,14 +139,14 @@ public:
     const Section& getSection(size_t index) const {
         VPUX_ELF_THROW_WHEN(index >= mElfHeader.e_shnum, RangeError, "Section index out of bounds");
 
-        if (mSectionsCache.find(index) != mSectionsCache.end()) {
-            return mSectionsCache[index];
+        if (auto it = mSectionsCache.find(index); it != mSectionsCache.end()) {
+            return it->second;
         }
 
         const auto& secHeader = mSectionHeaders[index];
         const auto name = &mSectionNames[secHeader.sh_name];
 
-        return mSectionsCache[index] = Section(mAccessManager, &secHeader, name);
+        return mSectionsCache.insert(std::make_pair(index, Section(mAccessManager, &secHeader, name))).first->second;
     }
 
 private:

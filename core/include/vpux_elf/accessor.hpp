@@ -13,7 +13,7 @@
 
 #include <vpux_headers/buffer_manager.hpp>
 #include <vpux_headers/managed_buffer.hpp>
-#include "vpux_elf/types/vpu_extensions.hpp"
+
 #include "vpux_elf/utils/error.hpp"
 #include "vpux_elf/utils/utils.hpp"
 
@@ -90,9 +90,9 @@ public:
     }
 };
 
-class NPUOnlyBufferFactory : public BufferFactoryBase {
+class AllocatedDeviceBufferFactory : public BufferFactoryBase {
 public:
-    NPUOnlyBufferFactory(BufferManager* bufferManager): mBufferManager(bufferManager) {
+    AllocatedDeviceBufferFactory(BufferManager* bufferManager): mBufferManager(bufferManager) {
         VPUX_ELF_THROW_UNLESS(mBufferManager, RuntimeError, "Received nullptr BufferManager");
     }
 
@@ -104,7 +104,7 @@ private:
     BufferManager* mBufferManager = nullptr;
 };
 
-class CPUOnlyBufferFactory : public BufferFactoryBase {
+class DynamicBufferFactory : public BufferFactoryBase {
 public:
     std::unique_ptr<ManagedBuffer> getAllocatedBuffer(BufferSpecs specs) {
         return std::make_unique<DynamicBuffer>(specs);
@@ -118,7 +118,7 @@ public:
     }
 
     std::unique_ptr<ManagedBuffer> getAllocatedBuffer(BufferSpecs specs) {
-        if (specs.procFlags & (SHF_EXECINSTR | VPU_SHF_PROC_DPU | VPU_SHF_PROC_DMA | VPU_SHF_PROC_SHAVE)) {
+        if (utils::hasNPUAccess(specs.procFlags)) {
             return std::make_unique<AllocatedDeviceBuffer>(mBufferManager, specs);
         } else {
             return std::make_unique<DynamicBuffer>(specs);
@@ -139,6 +139,7 @@ public:
         VPUX_ELF_THROW_WHEN((offset + buffer.getBufferSpecs().size) > mSize, AccessError, "Read request out of bounds");
 
         auto devBuffer = buffer.getBuffer();
+        auto lock = ElfBufferLockGuard(&buffer);
         std::memcpy(devBuffer.cpu_addr(), mBlob + offset, devBuffer.size());
     }
 
@@ -169,6 +170,7 @@ public:
             return mBufferFactory->getEmplacedBuffer(targetAddr, specs);
         } else {
             auto buffer = mBufferFactory->getAllocatedBuffer(specs);
+            auto lock = ElfBufferLockGuard(buffer.get());
             std::memcpy(buffer->getBuffer().cpu_addr(), targetAddr, buffer->getBuffer().size());
             return buffer;
         }
@@ -194,7 +196,7 @@ public:
     }
 };
 
-template <typename BufferFactory = CPUOnlyBufferFactory>
+template <typename BufferFactory = DynamicBufferFactory>
 class FSAccessManager final : public AccessManager {
 public:
     FSAccessManager(const std::string& elfFileName,
@@ -217,6 +219,7 @@ public:
         VPUX_ELF_THROW_WHEN((offset + specs.size) > mSize, AccessError, "Read request out of bounds");
         auto buffer = mBufferFactory->getAllocatedBuffer(specs);
         mFileStream.seekg(offset, mFileStream.beg);
+        auto lock = ElfBufferLockGuard(buffer.get());
         mFileStream.read(reinterpret_cast<char*>(buffer->getBuffer().cpu_addr()), buffer->getBuffer().size());
 
         return buffer;
@@ -224,6 +227,7 @@ public:
     void readExternal(size_t offset, ManagedBuffer& buffer) override {
         VPUX_ELF_THROW_WHEN((offset + buffer.getBufferSpecs().size) > mSize, AccessError, "Read request out of bounds");
         mFileStream.seekg(offset, mFileStream.beg);
+        auto lock = ElfBufferLockGuard(&buffer);
         mFileStream.read(reinterpret_cast<char*>(buffer.getBuffer().cpu_addr()), buffer.getBuffer().size());
     }
 
