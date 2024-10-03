@@ -17,6 +17,7 @@ bool checkELFMagic(const unsigned char* elfIdent);
 size_t alignUp(size_t size, size_t alignment);
 bool isPowerOfTwo(size_t value);
 bool hasNPUAccess(Elf_Xword sectionFlags);
+bool isNetworkIO(Elf_Xword sectionFlags);
 bool hasMemoryFootprint(elf::Elf_Word sectionType);
 
 }  // namespace utils

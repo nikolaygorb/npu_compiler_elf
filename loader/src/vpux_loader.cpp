@@ -666,7 +666,7 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
 
         case Action::Allocate: {
             bool isAllocateable = sectionFlags & SHF_ALLOC;
-            if (m_explicitAllocations && !isAllocateable) {
+            if ((m_explicitAllocations && !isAllocateable) || utils::isNetworkIO(sectionFlags)) {
                 break;
             }
 

@@ -45,6 +45,10 @@ bool hasNPUAccess(Elf_Xword sectionFlags) {
     return sectionFlags & (SHF_EXECINSTR | VPU_SHF_PROC_DPU | VPU_SHF_PROC_DMA | VPU_SHF_PROC_SHAVE);
 }
 
+bool isNetworkIO(Elf_Xword sectionFlags) {
+    return sectionFlags & (VPU_SHF_USERINPUT | VPU_SHF_USEROUTPUT | VPU_SHF_PROFOUTPUT);
+}
+
 bool hasMemoryFootprint(elf::Elf_Word sectionType) {
     switch (sectionType) {
     case elf::SHT_NOBITS:
