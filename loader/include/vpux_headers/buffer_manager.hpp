@@ -5,14 +5,14 @@
 
 #pragma once
 
-#include <memory>
+#include <api.hpp>
 #include <vpux_elf/utils/error.hpp>
 #include <vpux_headers/buffer_specs.hpp>
 #include <vpux_headers/device_buffer.hpp>
 
 namespace elf {
 
-class BufferManager {
+class ELF_API BufferManager {
 public:
     virtual DeviceBuffer allocate(const BufferSpecs& buffSpecs) = 0;
     virtual void deallocate(DeviceBuffer& devAddress) = 0;

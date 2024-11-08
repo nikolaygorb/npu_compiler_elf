@@ -17,19 +17,10 @@
 #include <hpi_3720.hpp>
 #endif
 
-#if defined(CONFIG_TARGET_SOC_4000) || defined(HOST_BUILD)
-#include <hpi_4000.hpp>
-#endif
-
-//to be removed with E#88139:
-//temporary fix to support NPU 5000 arch
-#if defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)
-#include <hpi_4000.hpp>
-#endif
-
 //to be removed with E#88139:
 //temporary fix to support NPU 6000 arch
-#if defined(CONFIG_TARGET_SOC_6000) || defined(HOST_BUILD)
+#if defined(CONFIG_TARGET_SOC_4000) || defined(CONFIG_TARGET_SOC_5000) || \
+    defined(CONFIG_TARGET_SOC_6000) || defined(HOST_BUILD)
 #include <hpi_4000.hpp>
 #endif
 
@@ -248,7 +239,6 @@ void HostParsedInference::load() {
     auto perfMetricsPtr = perfMetrics ? reinterpret_cast<uint64_t*>(perfMetrics->getBuffer().cpu_addr()) : nullptr;
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
                                             perfMetricsPtr);
-
 }
 
 HostParsedInference::HostParsedInference(const HostParsedInference& other)

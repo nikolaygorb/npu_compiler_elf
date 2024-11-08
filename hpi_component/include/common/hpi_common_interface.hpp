@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <array>
+#include <api.hpp>
 #include <vector>
 #include <vpux_elf/types/elf_structs.hpp>
 #include <vpux_elf/types/symbol_entry.hpp>
@@ -18,7 +18,7 @@ namespace elf {
 
 constexpr auto DEFAULT_ALIGN = 64;
 
-class HostParsedInferenceCommon {
+class ELF_API HostParsedInferenceCommon {
 public:
     virtual ~HostParsedInferenceCommon() = default;
     virtual std::vector<SymbolEntry> getSymbolTable(uint8_t index) const = 0;

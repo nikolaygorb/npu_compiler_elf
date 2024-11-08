@@ -5,12 +5,13 @@
 
 #pragma once
 
+#include <api.hpp>
 #include <hpi_common_interface.hpp>
 #include <vpux_headers/buffer_manager.hpp>
 #include <vpux_headers/device_buffer.hpp>
 
 namespace elf {
-class HostParsedInference_3720 : public HostParsedInferenceCommon {
+class ELF_API HostParsedInference_3720 : public HostParsedInferenceCommon {
 public:
     std::vector<SymbolEntry> getSymbolTable(uint8_t index) const override;
     BufferSpecs getParsedInferenceBufferSpecs() override;

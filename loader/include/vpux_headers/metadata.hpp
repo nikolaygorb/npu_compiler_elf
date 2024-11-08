@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <api.hpp>
 #include <cstring>
 #include <functional>
 #include <memory>
@@ -15,7 +16,7 @@
 
 namespace elf {
 
-struct NetworkMetadata {
+struct ELF_API NetworkMetadata {
     Identification mIdentification;
     ResourceRequirements mResourceRequirements;
     std::vector<TensorRef> mNetInputs;

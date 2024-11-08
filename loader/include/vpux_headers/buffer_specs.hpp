@@ -5,11 +5,12 @@
 
 #pragma once
 
+#include <api.hpp>
 #include <vpux_elf/types/data_types.hpp>
 
 namespace elf {
 
-struct BufferSpecs {
+struct ELF_API BufferSpecs {
 public:
     uint64_t alignment;
     uint64_t size;

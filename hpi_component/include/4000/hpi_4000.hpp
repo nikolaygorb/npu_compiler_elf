@@ -5,13 +5,14 @@
 
 #pragma once
 
+#include <api.hpp>
 #include <hpi_common_interface.hpp>
 #include <vpux_headers/buffer_manager.hpp>
 #include <vpux_headers/device_buffer.hpp>
 #include <vpux_headers/platform.hpp>
 
 namespace elf {
-class HostParsedInference_4000 : public HostParsedInferenceCommon {
+class ELF_API HostParsedInference_4000 : public HostParsedInferenceCommon {
 public:
     HostParsedInference_4000() = delete;
     explicit HostParsedInference_4000(elf::platform::ArchKind archKind);
