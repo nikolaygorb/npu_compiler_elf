@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <api.hpp>
+
 #include <cstddef>
 
 namespace elf {
@@ -19,7 +19,7 @@ in memory, but from 2 different view-points
         Any access to the contents that the "vpu" does, will use this address
 */
 
-class ELF_API DeviceBuffer {
+class DeviceBuffer {
 public:
     DeviceBuffer()
         : m_cpuAddr(nullptr)

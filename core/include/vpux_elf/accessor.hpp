@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <api.hpp>
 #include <cstring>
 #include <fstream>
 #include <memory>
@@ -24,7 +23,7 @@ namespace elf {
 Abstraction class to encapsulate access to ELF binary.
 */
 
-class ELF_API AccessManager {
+class AccessManager {
 public:
     AccessManager() = default;
     explicit AccessManager(size_t binarySize);

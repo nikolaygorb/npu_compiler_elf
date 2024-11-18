@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include <api.hpp>
 #include <memory>
 #include <vector>
 
@@ -15,7 +14,7 @@
 
 namespace elf {
 
-class ELF_API ManagedBuffer {
+class ManagedBuffer {
 public:
     explicit ManagedBuffer(BufferSpecs bSpecs);
     ManagedBuffer(const ManagedBuffer& other) = delete;

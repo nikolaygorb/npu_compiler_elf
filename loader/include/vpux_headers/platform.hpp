@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include <api.hpp>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -17,7 +16,7 @@ namespace elf {
 
 namespace platform {
 
-enum class ELF_API ArchKind : uint64_t {
+enum class ArchKind : uint64_t {
     UNKNOWN = 0,
     VPUX30XX = 1,
     VPUX37XX = 3,
@@ -31,7 +30,7 @@ elf::platform::ArchKind mapArchStringToArchKind(const std::string& archName);
 std::string stringifyArchKind(const elf::platform::ArchKind& arch);
 uint8_t getHardwareTileCount(const elf::platform::ArchKind& arch);
 
-struct ELF_API PlatformInfo {
+struct PlatformInfo {
     ArchKind mArchKind;
 };
 

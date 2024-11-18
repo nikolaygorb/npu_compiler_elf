@@ -6,7 +6,6 @@
 //
 
 #pragma once
-#include <api.hpp>
 #include <stddef.h>
 
 #include <vpux_elf/types/data_types.hpp>
@@ -14,7 +13,7 @@
 namespace elf {
 namespace utils {
 
-bool ELF_API checkELFMagic(const unsigned char* elfIdent);
+bool checkELFMagic(const unsigned char* elfIdent);
 size_t alignUp(size_t size, size_t alignment);
 bool isPowerOfTwo(size_t value);
 bool hasNPUAccess(Elf_Xword sectionFlags);

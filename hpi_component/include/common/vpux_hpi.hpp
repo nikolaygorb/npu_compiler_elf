@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include <api.hpp>
 #include <memory>
 #include <vector>
 #include <vpux_elf/accessor.hpp>
@@ -39,7 +38,7 @@ private:
     std::unique_ptr<HostParsedInferenceCommon> impl;
 };
 
-class ELF_API HostParsedInference final {
+class HostParsedInference final {
 public:
     HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs);
     HostParsedInference(const HostParsedInference& other);
