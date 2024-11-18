@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <api.hpp>
 #include <cstdint>
 #include <sstream>
 #include <tuple>
@@ -20,13 +19,13 @@ namespace elf {
 // ELF Library version control struct
 //
 
-enum class ELF_API VersionType {
+enum class VersionType {
     UNKNOWN_VERSION = 0,
     ELF_ABI_VERSION = 1,
     MAPPED_INFERENCE_VERSION = 2
 };
 
-class ELF_API Version final {
+class Version final {
 public:
     constexpr Version(uint32_t v_major, uint32_t v_minor, uint32_t v_patch) : major{v_major}, minor{v_minor}, patch{v_patch}, isValid{true} {};
     explicit Version(const elf::elf_note::VersionNote& versionNote) : major{versionNote.n_desc[1]}, minor{versionNote.n_desc[2]}, patch{versionNote.n_desc[3]}, isValid{true} {};
@@ -83,7 +82,7 @@ private:
 // VersioningError extension
 //
 
-class ELF_API VersioningError : public elf::RuntimeError {
+class VersioningError : public elf::RuntimeError {
 public:
     explicit VersioningError(const char* what, elf::Version providedVersion, elf::Version requiredVersion)
             : RuntimeError(what), m_providedVersion(providedVersion), m_requiredVersion(requiredVersion)  {

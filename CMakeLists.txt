@@ -3,32 +3,21 @@
 # SPDX-License-Identifier: Apache 2.0
 #
 
-cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
-set(version_major 0)
-set(version_minor 0)
-set(version_patch 1)
-set(version "${version_major}.${version_minor}.${version_patch}")
-
-project(elf
-    VERSION ${version}
-    DESCRIPTION "NPU implementation of ELF Loader"
-    # HOMEPAGE_URL is ommited intentionally, as setting innersource version
-    # would be a potential issue with open-sourcing
-    LANGUAGES CXX
-)
-
-if (NOT "${CMAKE_CXX_BYTE_ORDER}" STREQUAL "LITTLE_ENDIAN")
-    message(FATAL_ERROR "${PROJECT_NAME} supports LITTLE_ENDIAN only, detected ${CMAKE_CXX_BYTE_ORDER}")
-endif()
-
-include(GNUInstallDirs)
-
-# consider encapsulate this into dependant targets
 include( ./cmake/compiler_linker_options.cmake )
 
 set(LIB_NAME npu_elf)
+
+project(${LIB_NAME})
+
 include(cmake/FindFirmwareHeaders.cmake)
+
+include(TestBigEndian)
+TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
+if(IS_BIG_ENDIAN)
+    message(FATAL "ELF Parsing Library supports only little-endian architectures")
+endif()
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "*.hpp" "*.cpp")
 list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/example/.*")
@@ -45,26 +34,28 @@ if(MSVC AND BUILD_COMPILER_FOR_DRIVER)
     set_target_properties(${LIB_NAME} vpux_elf PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
-add_compile_definitions(HOST_BUILD)
+target_compile_definitions(${LIB_NAME} PUBLIC HOST_BUILD)
+target_compile_definitions(vpux_elf PUBLIC HOST_BUILD)
 
 target_include_directories(${LIB_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/loader/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/3720>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/4000>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/common>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/include>)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/common>)
 
 target_include_directories(vpux_elf PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/loader/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/3720>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/4000>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/common>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/include>)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/common>)
 
-target_include_directories(${LIB_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/include>)
-target_include_directories(vpux_elf PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/include>)
+if (DEFINED IE_MAIN_VPUX_PLUGIN_SOURCE_DIR)
+    target_include_directories(vpux_elf PUBLIC
+        "${IE_MAIN_VPUX_PLUGIN_SOURCE_DIR}/src/vpux_compiler/include/vpux/compiler/NPU37XX/dialect/NPUReg37XX"
+        "${IE_MAIN_VPUX_PLUGIN_SOURCE_DIR}/src/vpux_compiler/include/vpux/compiler/NPU40XX/dialect/NPUReg40XX")
+endif()
 
 # Set compiler options
 target_compile_options(${LIB_NAME} PRIVATE
@@ -87,12 +78,6 @@ target_link_options(${LIB_NAME} PRIVATE
     $<$<CONFIG:Debug>:${UMD_LINKER_OPTIONS_DEBUG}>
     $<$<CONFIG:RelWithDebInfo>:${UMD_LINKER_OPTIONS_RELEASE}>)
 
-target_link_options(vpux_elf PRIVATE
-    $<$<CONFIG:Release>:${UMD_LINKER_OPTIONS_RELEASE}>
-    $<$<CONFIG:Debug>:${UMD_LINKER_OPTIONS_DEBUG}>
-    $<$<CONFIG:RelWithDebInfo>:${UMD_LINKER_OPTIONS_RELEASE}>)
-
-# seems to be mono-repo thing
 # Add external deps
 if(EXTERNAL_DEPS)
     target_link_libraries(${LIB_NAME} PUBLIC ${EXTERNAL_DEPS})
@@ -106,6 +91,11 @@ if(EXTERNAL_DEPS)
         set_property(TARGET vpux_elf PROPERTY POSITION_INDEPENDENT_CODE ON)
     endif()
 endif(EXTERNAL_DEPS)
+
+target_link_options(vpux_elf PRIVATE
+    $<$<CONFIG:Release>:${UMD_LINKER_OPTIONS_RELEASE}>
+    $<$<CONFIG:Debug>:${UMD_LINKER_OPTIONS_DEBUG}>
+    $<$<CONFIG:RelWithDebInfo>:${UMD_LINKER_OPTIONS_RELEASE}>)
 
 if(NOT BUILD_SHARED_LIBS)
     install(TARGETS ${LIB_NAME} vpux_elf
@@ -130,111 +120,3 @@ if(MSVC AND BUILD_COMPILER_FOR_DRIVER)
         endif()
     endif()
 endif()
-
-
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
-add_library(${PROJECT_NAME} SHARED)
-target_compile_definitions(${PROJECT_NAME} PUBLIC ELF_EXPORTS)
-
-
-target_include_directories(${PROJECT_NAME} PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/loader/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/common>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/3720>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/4000>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/include>
-)
-
-target_include_directories(${PROJECT_NAME} SYSTEM INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/4000>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/3720>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/include/common>
-
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/loader/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/include>
-)
-
-target_sources(${PROJECT_NAME}
-    PRIVATE
-        core/src/types/relocation_entry.cpp
-        core/src/types/symbol_entry.cpp
-        core/src/utils/log.cpp
-        core/src/utils/utils.cpp
-        core/src/utils/version.cpp
-        core/src/writer.cpp
-        core/src/accessor.cpp
-        core/src/writer/empty_section.cpp
-        core/src/writer/relocation.cpp
-        core/src/writer/relocation_section.cpp
-        core/src/writer/section.cpp
-        core/src/writer/string_section.cpp
-        core/src/writer/symbol.cpp
-        core/src/writer/symbol_section.cpp
-        hpi_component/src/3720/hpi_3720.cpp
-        hpi_component/src/4000/hpi_4000.cpp
-        hpi_component/src/common/hpi_common_interface.cpp
-        hpi_component/src/common/vpux_hpi.cpp
-        loader/src/device_buffer_container.cpp
-        loader/src/managed_buffer.cpp
-        loader/src/platform.cpp
-        loader/src/vpux_loader.cpp
-)
-
-install(DIRECTORY "core/include" DESTINATION ".")
-install(FILES "hpi_component/include/3720/hpi_3720.hpp" DESTINATION "include")
-install(FILES "hpi_component/include/4000/hpi_4000.hpp" DESTINATION "include")
-install(FILES "hpi_component/include/common/vpux_hpi.hpp" DESTINATION "include")
-install(FILES "hpi_component/include/common/hpi_common_interface.hpp" DESTINATION "include")
-install(DIRECTORY "loader/include" DESTINATION ".")
-
-install(TARGETS ${PROJECT_NAME} EXPORT "${PROJECT_NAME}Targets")
-install(
-    EXPORT "${PROJECT_NAME}Targets"
-    FILE "${PROJECT_NAME}Targets.cmake"
-    NAMESPACE npu::
-    DESTINATION
-        ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
-)
-
-include(CMakePackageConfigHelpers)
-configure_package_config_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/ELFConfig.cmake.in
-    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-    INSTALL_DESTINATION
-        ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
-)
-install(
-    FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
-    DESTINATION
-        ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
-)
-
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    VERSION ${version}
-    SOVERSION ${version_major}
-    INTERFACE_${PROJECT_NAME}_MAJOR_VERSION ${version_major}
-)
-# ?
-set_property(
-    TARGET ${PROJECT_NAME}
-    APPEND
-    PROPERTY COMPATIBLE_INTERFACE_STRING
-    ${PROJECT_NAME}_MAJOR_VERSION
-)
-
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
-    VERSION "${version}"
-    COMPATIBILITY SameMajorVersion
-)
-
-export(
-    EXPORT ${PROJECT_NAME}Targets
-    FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake"
-    NAMESPACE npu::
-)
