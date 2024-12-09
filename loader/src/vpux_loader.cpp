@@ -392,7 +392,6 @@ const auto VPU_32_BIT_OR_B21_B26_UNSET_LOW_16_Relocation = [](void* targetAddr, 
     *addr |= patchAddr & 0xFFFF;
 };
 
-// NPU5 only
 const auto VPU_HIGH_27_BIT_OR_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
                                               const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint64_t*>(targetAddr);
@@ -566,7 +565,9 @@ VPUXLoader::~VPUXLoader() {
 }
 
 elf::DeviceBufferContainer::BufferPtr VPUXLoader::getEntry() {
+#ifdef INTEL_EMBARGO_COMMON
     // this is very very temporary version E#73309
+#endif  // INTEL_EMBARGO_COMMON
     auto numSections = m_reader->getSectionsNum();
 
     for (size_t sectionCtr = 0; sectionCtr < numSections; ++sectionCtr) {
@@ -876,10 +877,13 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSect
             targetSectionIdx = relocSecHdr->sh_info;
         } else {
             VPUX_ELF_THROW(RelocError,
-                           "Rela section with no target section");  // TODO(E#30067): Review if there is a case where we
+                           "Rela section with no target section");  
+#ifdef INTEL_EMBARGO_COMMON
+                                                                    // TODO(E#30067): Review if there is a case where we
                                                                     // should accept rela sections w/o a target section?
                                                                     // This is generally used for executable files, but
                                                                     // we would only generate relocatable files
+#endif  // INTEL_EMBARGO_COMMON
             return;
         }
 
@@ -902,8 +906,10 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSect
 
             auto relOffset = relocation.r_offset;
 
+#ifdef INTEL_EMBARGO_COMMON
             // TODO(E#30069): shared logic with. Also required a long term solution
             // for relocation checks E#91649
+#endif  // INTEL_EMBARGO_COMMON
             VPUX_ELF_THROW_UNLESS(relOffset < targetSectionBuf->getBuffer().size(), RelocError,
                                   "RelocOffset outside of the section size");
 
@@ -968,8 +974,10 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSect
     return;
 };
 
+#ifdef INTEL_EMBARGO_COMMON
 // TODO(E#30069) : a lot of shared logic with applyRelocations.... refactor to share code.... duplicate for WIP
 // purposes
+#endif // INTEL_EMBARGO_COMMON
 void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,
                                      std::vector<DeviceBuffer>& profiling) {
     VPUX_ELF_LOG(LogLevel::LOG_TRACE, "apply JITrelocations");
@@ -1028,10 +1036,13 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
         } else {
             VPUX_ELF_THROW(
                     RelocError,
-                    "Rela section with no target section");  // TODO(E#30067) : Review if there is a case where we
+                    "Rela section with no target section");  
+#ifdef INTEL_EMBARGO_COMMON
+                                                             // TODO(E#30067) : Review if there is a case where we
                                                              // should accept rela sections w/o a target section?
                                                              // This is generally used for executable files, but
                                                              // we would only generate relocatable files
+#endif  // INTEL_EMBARGO_COMMON
             return;
         }
 
@@ -1051,8 +1062,10 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
 
             auto relOffset = relocation.r_offset;
 
+#ifdef INTEL_EMBARGO_COMMON
             // TODO(E#30069): shared logic with. Also required a long term solution
             // for relocation check E#91649
+#endif  // INTEL_EMBARGO_COMMON
             VPUX_ELF_THROW_UNLESS(relOffset < targetSectionBuf->getBuffer().size(), RelocError,
                                   "RelocOffset outside of the section size");
 

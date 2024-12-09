@@ -22,7 +22,9 @@
 // clang-format on
 
 namespace elf {
+#ifdef INTEL_EMBARGO_COMMON
 // TODO: E#79509
+#endif  // INTEL_EMBARGO_COMMON
 
 namespace {
 // Base of frequency values used in tables (in MHz).
@@ -47,9 +49,11 @@ constexpr uint32_t VPUX40XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX40XX_VERSION_MINOR = 2;
 constexpr uint32_t VPUX40XX_VERSION_PATCH = 4;
 
+#ifdef INTEL_EMBARGO_NPU5
 constexpr uint32_t VPUX50XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX50XX_VERSION_MINOR = 2;
 constexpr uint32_t VPUX50XX_VERSION_PATCH = 4;
+#endif  // INTEL_EMBARGO_NPU5
 
 } // namespace
 
@@ -77,8 +81,10 @@ HostParsedInference_4000::HostParsedInference_4000(elf::platform::ArchKind archK
         metadata.st_other = STV_DEFAULT;
         metadata.st_shndx = 0;
         metadata.st_value = static_cast<uint64_t>(metadataStart);
+#ifdef INTEL_EMBARGO_COMMON
         // TODO: What to write as size if amount of task in metadata buffer is defined by compiler?
         // Supposed to be unused? Applies to other symbols below as well
+#endif  // INTEL_EMBARGO_COMMON
         metadata.st_size = 0;
         metadata.st_name = 0;
 
@@ -143,9 +149,14 @@ elf::Version HostParsedInference_4000::getELFLibABIVersion() const {
     switch (archKind_) {
         case elf::platform::ArchKind::VPUX40XX:
             return {VPUX40XX_VERSION_MAJOR, VPUX40XX_VERSION_MINOR, VPUX40XX_VERSION_PATCH};
+#ifdef INTEL_EMBARGO_NPU5
         case elf::platform::ArchKind::VPUX50XX:
+            return {VPUX50XX_VERSION_MAJOR, VPUX50XX_VERSION_MINOR, VPUX50XX_VERSION_PATCH};
+#endif  // INTEL_EMBARGO_NPU5
+#ifdef INTEL_EMBARGO_NPU6
         case elf::platform::ArchKind::VPUX60XX:
             return {VPUX50XX_VERSION_MAJOR, VPUX50XX_VERSION_MINOR, VPUX50XX_VERSION_PATCH};
+#endif  // INTEL_EMBARGO_NPU6
         default:
             break;
     }

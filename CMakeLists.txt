@@ -7,6 +7,10 @@ cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
 include( ./cmake/compiler_linker_options.cmake )
 
+add_compile_definitions(INTEL_EMBARGO_NPU5)     # INTEL_EMBARGO_NPU5_Content
+add_compile_definitions(INTEL_EMBARGO_NPU6)     # INTEL_EMBARGO_NPU6_Content
+add_compile_definitions(INTEL_EMBARGO_COMMON)   # INTEL_EMBARGO_COMMON_Content
+
 set(LIB_NAME npu_elf)
 
 project(${LIB_NAME})

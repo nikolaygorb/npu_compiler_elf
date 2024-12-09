@@ -21,17 +21,20 @@
 #include <hpi_4000.hpp>
 #endif
 
+#ifdef INTEL_EMBARGO_NPU5
 //to be removed with E#88139:
 //temporary fix to support NPU 5000 arch
 #if defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)
 #include <hpi_4000.hpp>
 #endif
-
+#endif  // INTEL_EMBARGO_NPU5
+#ifdef INTEL_EMBARGO_NPU6
 //to be removed with E#88139:
 //temporary fix to support NPU 6000 arch
 #if defined(CONFIG_TARGET_SOC_6000) || defined(HOST_BUILD)
 #include <hpi_4000.hpp>
 #endif
+#endif  // INTEL_EMBARGO_NPU6
 
 #include <string.h>
 // clang-format on
@@ -50,15 +53,23 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(elf::platfo
         break;
 #endif
 
-// to be updated with E#88139:
-// temporary fix to support NPU 5000 and NPU 6000 arch
-#if defined(CONFIG_TARGET_SOC_4000) || (CONFIG_TARGET_SOC_5000) || (CONFIG_TARGET_SOC_6000) || defined(HOST_BUILD)
+#if defined(CONFIG_TARGET_SOC_4000) || defined(HOST_BUILD)
     case elf::platform::ArchKind::VPUX40XX:
-    case elf::platform::ArchKind::VPUX50XX:
-    case elf::platform::ArchKind::VPUX60XX:
         archSpecificHPI = std::make_unique<HostParsedInference_4000>(archKind);
         break;
 #endif
+#if (defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)) && defined(INTEL_EMBARGO_NPU5)
+// to be updated with E#88139: temporary fix to support NPU 5000 arch
+    case elf::platform::ArchKind::VPUX50XX:
+        archSpecificHPI = std::make_unique<HostParsedInference_4000>(archKind);
+        break;
+#endif  // INTEL_EMBARGO_NPU5
+#if (defined(CONFIG_TARGET_SOC_6000) || defined(HOST_BUILD)) && defined(INTEL_EMBARGO_NPU6)
+// to be updated with E#88139: temporary fix to support NPU 6000 arch
+    case elf::platform::ArchKind::VPUX60XX:
+        archSpecificHPI = std::make_unique<HostParsedInference_4000>(archKind);
+        break;
+#endif  // INTEL_EMBARGO_NPU6
     default:
         VPUX_ELF_THROW(RangeError, (elf::platform::stringifyArchKind(archKind) + " arch is not supported").c_str());
         break;
@@ -257,7 +268,9 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
           metadata(other.metadata),
           platformInfo(other.platformInfo),
           perfMetrics(other.perfMetrics) {
+#ifdef INTEL_EMBARGO_COMMON
     // TODO: E#79344
+#endif  // INTEL_EMBARGO_COMMON
     auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
     // Use clone semantics here by copy-constructing the loader object
     loaders.reserve(other.loaders.size());
@@ -323,7 +336,9 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
     platformInfo = rhs.platformInfo;
     perfMetrics = rhs.perfMetrics;
 
+#ifdef INTEL_EMBARGO_COMMON
     // TODO: E#79344
+#endif  // INTEL_EMBARGO_COMMON
     auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
     // Use clone semantics here by copy-constructing the loader object
     loaders.reserve(rhs.loaders.size());

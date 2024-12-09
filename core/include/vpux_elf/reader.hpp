@@ -67,7 +67,9 @@ public:
         std::shared_ptr<ManagedBuffer> getDataBuffer(bool cpuOnlyAccess = false) const {
             std::shared_ptr<ManagedBuffer> buffer = nullptr;
 
+#ifdef INTEL_EMBARGO_COMMON
             // E#73309
+#endif  // INTEL_EMBARGO_COMMON
             // SHT_NOBITS - sections can have a size greater than the file
             // which will cause offset out of bounds.
             // VPU_SHT_CMX_METADATA - does not contain data in the binary file, so avoid reading
