@@ -10,6 +10,7 @@
 #include <vpux_elf/utils/error.hpp>
 #include <vpux_elf/utils/utils.hpp>
 #include <vpux_headers/managed_buffer.hpp>
+#include "vpux_headers/device_buffer.hpp"
 
 namespace elf {
 
@@ -20,6 +21,10 @@ ManagedBuffer::ManagedBuffer(BufferSpecs bSpecs): mDevBuffer(), mBufferSpecs(bSp
 
 DeviceBuffer ManagedBuffer::getBuffer() const {
     return mDevBuffer;
+}
+
+void ManagedBuffer::resetBuffer(const DeviceBuffer& newBuffer) {
+    mDevBuffer = newBuffer;
 }
 
 BufferSpecs ManagedBuffer::getBufferSpecs() const {
