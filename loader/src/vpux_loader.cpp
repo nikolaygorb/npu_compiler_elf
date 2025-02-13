@@ -686,12 +686,18 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
 
             if (!m_inferencesMayBeRunInParallel) {
                 sectionFlags |= elf::SHARABLE_BUFFER_ENABLED;
-                m_sharedScratchBuffers.push_back(sectionCtr);
             }
 
             auto& inferBufferInfo = m_inferBufferContainer.safeInitBufferInfoAtIndex(sectionCtr);
             inferBufferInfo.mBuffer = m_inferBufferContainer.buildAllocatedDeviceBuffer(
                     BufferSpecs(sectionAlignment, sectionSize, sectionFlags));
+
+            if (inferBufferInfo.mBuffer->getBuffer().cpu_addr() == nullptr) {
+                // driver did share scratch and returned empty allocation
+                // that is to be updated later
+                m_sharedScratchBuffers.push_back(sectionCtr);
+            }
+
             inferBufferInfo.mBufferDetails.mHasData = false;
             inferBufferInfo.mBufferDetails.mIsShared = false;
             inferBufferInfo.mBufferDetails.mIsProcessed = true;
@@ -745,7 +751,12 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
     // Load actual buffers for the first time
     loadBuffers();
 
-    applyRelocations(*m_relocationSectionIndexes);
+    if (m_sharedScratchBuffers.empty()) {
+        // execute relocations only if sharing did not happen
+        // otherwise we have empty allocations and cannot trigger relocations
+        // unless shared allocations become available (after updateSharedScratchBuffers)
+        applyRelocations(*m_relocationSectionIndexes);
+    }
 
     VPUX_ELF_LOG(LogLevel::LOG_INFO, "Allocated %zu sections", m_inferBufferContainer.getBufferInfoCount());
 
@@ -1214,6 +1225,7 @@ void VPUXLoader::updateSharedScratchBuffers(const std::vector<DeviceBuffer>& buf
     for (const auto& buffer : buffers) {
         m_inferBufferContainer.getBufferInfoFromIndex(m_sharedScratchBuffers[i++]).mBuffer->resetBuffer(buffer);
     }
+
     applyRelocations(*m_relocationSectionIndexes);
 }
 
