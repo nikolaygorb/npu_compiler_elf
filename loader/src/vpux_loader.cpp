@@ -512,7 +512,8 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
           m_explicitAllocations(other.m_explicitAllocations),
           m_loaded(other.m_loaded),
           m_symbolSectionTypes(other.m_symbolSectionTypes),
-          m_inferencesMayBeRunInParallel(other.m_inferencesMayBeRunInParallel) {
+          m_inferencesMayBeRunInParallel(other.m_inferencesMayBeRunInParallel),
+          m_sharedScratchBuffers(other.m_sharedScratchBuffers) {
     reloadNewBuffers();
     applyRelocations(*m_relocationSectionIndexes);
 }
@@ -534,7 +535,8 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other, const std::vector<SymbolEntry>& 
           m_explicitAllocations(other.m_explicitAllocations),
           m_loaded(other.m_loaded),
           m_symbolSectionTypes(other.m_symbolSectionTypes),
-          m_inferencesMayBeRunInParallel(other.m_inferencesMayBeRunInParallel) {
+          m_inferencesMayBeRunInParallel(other.m_inferencesMayBeRunInParallel),
+          m_sharedScratchBuffers(other.m_sharedScratchBuffers) {
     reloadNewBuffers();
     applyRelocations(*m_relocationSectionIndexes);
 }
@@ -547,6 +549,7 @@ VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other) {
     m_bufferManager = other.m_bufferManager;
     m_reader = other.m_reader;
     m_inferBufferContainer = other.m_inferBufferContainer;
+    m_backupBufferContainer = other.m_backupBufferContainer;
     m_runtimeSymTabs = other.m_runtimeSymTabs;
     m_relocationSectionIndexes = other.m_relocationSectionIndexes;
     m_jitRelocations = other.m_jitRelocations;
