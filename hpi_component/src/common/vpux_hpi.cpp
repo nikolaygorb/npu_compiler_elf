@@ -3,6 +3,9 @@
 // SPDX-License-Identifier: Apache 2.0
 //
 
+#include "vpux_elf/utils/error.hpp"
+#include "vpux_headers/managed_buffer.hpp"
+#include "vpux_headers/platform.hpp"
 #ifndef VPUX_ELF_LOG_UNIT_NAME
 #define VPUX_ELF_LOG_UNIT_NAME "VpuxHpi"
 #endif
@@ -204,6 +207,10 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
         tileCountLogBuffer << "Incorrect tile count. Requested tile count '" << static_cast<int>(tileCount)
                            << "' exceeds hardware tile count '" << static_cast<int>(hardwareTileCount) << "'";
         VPUX_ELF_THROW(ArgsError, tileCountLogBuffer.str().c_str());
+    }
+
+    if (tileCount > hardwareTileCount / 2) {
+        loaders.front()->setInferencesMayBeRunInParallel(false);
     }
 }
 
@@ -443,6 +450,18 @@ void HostParsedInference::applyInputOutput(std::vector<DeviceBuffer>& inputs, st
     for (auto& loader : loaders) {
         loader->applyJitRelocations(inputs, outputs, profiling);
     }
+}
+
+void HostParsedInference::updateSharedScratchBuffers(const std::vector<DeviceBuffer>& buffers) {
+    VPUX_ELF_THROW_WHEN(platformInfo->mArchKind != platform::ArchKind::VPUX40XX, RuntimeError, "scratch buffer sharing is supported on NPU4 only");
+
+    auto& loader = loaders.front();
+    loader->updateSharedScratchBuffers(buffers);
+}
+
+bool HostParsedInference::areInferencesMayBeRunInParallel() const {
+    VPUX_ELF_THROW_WHEN(platformInfo->mArchKind != platform::ArchKind::VPUX40XX, RuntimeError, "scratch buffer sharing is supported on NPU4 only");
+    return loaders.front()->getInferencesMayBeRunInParallel();
 }
 
 }  // namespace elf
