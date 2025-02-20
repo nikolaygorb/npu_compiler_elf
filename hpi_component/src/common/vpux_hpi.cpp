@@ -458,8 +458,4 @@ void HostParsedInference::updateSharedScratchBuffers(const std::vector<DeviceBuf
     loader->updateSharedScratchBuffers(buffers);
 }
 
-bool HostParsedInference::areInferencesMayBeRunInParallel() const {
-    return loaders.front()->getInferencesMayBeRunInParallel();
-}
-
 }  // namespace elf

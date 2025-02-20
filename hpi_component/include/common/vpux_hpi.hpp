@@ -66,7 +66,6 @@ public:
     void load();
 
     void updateSharedScratchBuffers(const std::vector<DeviceBuffer>& buffers);
-    bool areInferencesMayBeRunInParallel() const;
 
 private:
     BufferManager* bufferManager;
