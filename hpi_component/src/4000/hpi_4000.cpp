@@ -51,8 +51,8 @@ constexpr uint32_t VPUX40XX_VERSION_PATCH = 4;
 
 #ifdef INTEL_EMBARGO_NPU5
 constexpr uint32_t VPUX50XX_VERSION_MAJOR = 1;
-constexpr uint32_t VPUX50XX_VERSION_MINOR = 2;
-constexpr uint32_t VPUX50XX_VERSION_PATCH = 4;
+constexpr uint32_t VPUX50XX_VERSION_MINOR = 3;
+constexpr uint32_t VPUX50XX_VERSION_PATCH = 0;
 #endif  // INTEL_EMBARGO_NPU5
 
 } // namespace
