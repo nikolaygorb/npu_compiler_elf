@@ -51,9 +51,15 @@ constexpr uint32_t VPUX40XX_VERSION_PATCH = 4;
 
 #ifdef INTEL_EMBARGO_NPU5
 constexpr uint32_t VPUX50XX_VERSION_MAJOR = 1;
-constexpr uint32_t VPUX50XX_VERSION_MINOR = 3;
-constexpr uint32_t VPUX50XX_VERSION_PATCH = 0;
+constexpr uint32_t VPUX50XX_VERSION_MINOR = 2;
+constexpr uint32_t VPUX50XX_VERSION_PATCH = 4;
 #endif  // INTEL_EMBARGO_NPU5
+
+#ifdef INTEL_EMBARGO_NPU6
+constexpr uint32_t VPUX60XX_VERSION_MAJOR = 1;
+constexpr uint32_t VPUX60XX_VERSION_MINOR = 3;
+constexpr uint32_t VPUX60XX_VERSION_PATCH = 0;
+#endif  // INTEL_EMBARGO_NPU6
 
 } // namespace
 
@@ -155,7 +161,7 @@ elf::Version HostParsedInference_4000::getELFLibABIVersion() const {
 #endif  // INTEL_EMBARGO_NPU5
 #ifdef INTEL_EMBARGO_NPU6
         case elf::platform::ArchKind::VPUX60XX:
-            return {VPUX50XX_VERSION_MAJOR, VPUX50XX_VERSION_MINOR, VPUX50XX_VERSION_PATCH};
+            return {VPUX60XX_VERSION_MAJOR, VPUX60XX_VERSION_MINOR, VPUX60XX_VERSION_PATCH};
 #endif  // INTEL_EMBARGO_NPU6
         default:
             break;
