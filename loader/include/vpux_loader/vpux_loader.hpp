@@ -77,7 +77,7 @@ public:
     std::vector<std::shared_ptr<ManagedBuffer>> getSectionsOfType(elf::Elf_Word type);
     void setInferencesMayBeRunInParallel(bool inferencesMayBeRunInParallel);
     bool getInferencesMayBeRunInParallel() const;
-    void updateSharedScratchBuffers(const std::vector<DeviceBuffer>& buffers);
+    void updateSharedScratchBuffers(const std::vector<DeviceBuffer>& newBuffers);
 
 private:
     bool checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const;

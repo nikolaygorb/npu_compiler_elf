@@ -1256,20 +1256,27 @@ bool VPUXLoader::getInferencesMayBeRunInParallel() const {
     return m_inferencesMayBeRunInParallel;
 }
 
-void VPUXLoader::updateSharedScratchBuffers(const std::vector<DeviceBuffer>& buffers) {
-    VPUX_ELF_THROW_WHEN(m_sharedScratchBuffers.size() != buffers.size(), RuntimeError,
+void VPUXLoader::updateSharedScratchBuffers(const std::vector<DeviceBuffer>& newBuffers) {
+    VPUX_ELF_THROW_WHEN(m_sharedScratchBuffers.size() != newBuffers.size(), RuntimeError,
                         "Incorrect amount of buffers for updateSharedScratchBuffers");
     if (m_sharedScratchBuffers.empty()) {
         return;
     }
 
-    reloadNewBuffers();
     size_t i = 0;
-    for (const auto& buffer : buffers) {
-        m_inferBufferContainer.getBufferInfoFromIndex(m_sharedScratchBuffers[i++]).mBuffer->resetBuffer(buffer);
+    bool changed = false;
+    for (const auto& newBuffer : newBuffers) {
+        const auto idx = m_sharedScratchBuffers[i++];
+        auto& oldManagedBuffer = m_inferBufferContainer.getBufferInfoFromIndex(idx).mBuffer;
+        if (newBuffer.vpu_addr() != oldManagedBuffer->getBuffer().vpu_addr()) {
+            changed = true;
+            oldManagedBuffer->resetBuffer(newBuffer);
+        }
     }
 
-    applyRelocations(*m_relocationSectionIndexes);
+    if (changed) {
+        applyRelocations(*m_relocationSectionIndexes);
+    }
 }
 
 }  // namespace elf
