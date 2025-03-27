@@ -737,7 +737,7 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
             inferBufferInfo.mBuffer = m_inferBufferContainer.buildAllocatedDeviceBuffer(
                     BufferSpecs(sectionAlignment, sectionSize, sectionFlags));
 
-            if (inferBufferInfo.mBuffer->getBuffer().cpu_addr() == nullptr) {
+            if (inferBufferInfo.mBuffer->getBuffer().vpu_addr() == 0) {
                 // driver did share scratch and returned empty allocation
                 // that is to be updated later
                 m_sharedScratchBuffers.push_back(sectionCtr);
