@@ -529,7 +529,9 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
           m_inferencesMayBeRunInParallel(other.m_inferencesMayBeRunInParallel),
           m_sharedScratchBuffers(other.m_sharedScratchBuffers) {
     reloadNewBuffers();
-    applyRelocations(*m_relocationSectionIndexes);
+    if (m_sharedScratchBuffers.empty()) {
+        applyRelocations(*m_relocationSectionIndexes);
+    }
 }
 
 // override the symbol table for the newly created loader
@@ -552,7 +554,9 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other, const std::vector<SymbolEntry>& 
           m_inferencesMayBeRunInParallel(other.m_inferencesMayBeRunInParallel),
           m_sharedScratchBuffers(other.m_sharedScratchBuffers) {
     reloadNewBuffers();
-    applyRelocations(*m_relocationSectionIndexes);
+    if (m_sharedScratchBuffers.empty()) {
+        applyRelocations(*m_relocationSectionIndexes);
+    }
 }
 
 VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other) {
@@ -579,7 +583,9 @@ VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other) {
     m_sharedScratchBuffers = other.m_sharedScratchBuffers;
 
     reloadNewBuffers();
-    applyRelocations(*m_relocationSectionIndexes);
+    if (m_sharedScratchBuffers.empty()) {
+        applyRelocations(*m_relocationSectionIndexes);
+    }
 
     return *this;
 }
@@ -1014,6 +1020,8 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSect
                 symValue = m_inferBufferContainer.getBufferInfoFromIndex(symbolTargetSectionIdx)
                                    .mBuffer->getBuffer()
                                    .vpu_addr();
+                VPUX_ELF_THROW_WHEN(symValue == 0, RelocError,
+                                        "Relocation target section has no valid address");
             }
             if (symValue || symTabIdx == VPU_RT_SYMTAB) {
                 targetSymbol.st_value += symValue;
