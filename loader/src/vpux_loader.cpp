@@ -698,7 +698,10 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
             auto sectionSize = sectionHeader->sh_size;
             auto sectionAlignment = sectionHeader->sh_addralign;
 
-            VPUX_ELF_THROW_WHEN((sectionFlags & SHF_WRITE) == 0, SectionError, "Allocatable section is read-only");
+            if ((sectionFlags & SHF_WRITE) == 0) {
+                // some "old" (e.g. PV) blobs may contain NOBITS sections with no SHF_WRITE flag
+                VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Allocating \"%s\" with no SHF_WRITE", section.getName());
+            }
 
             if (!m_inferencesMayBeRunInParallel) {
                 sectionFlags |= elf::SHARABLE_BUFFER_ENABLED;
