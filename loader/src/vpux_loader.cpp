@@ -759,11 +759,13 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
         }
 
         case Action::Relocate: {
-            if (sectionFlags & VPU_SHF_JIT) {
-                // Trigger read of section data so that after load completes the AccessManager object can
-                // be safely deleted
-                section.getData<void>();
+            // Trigger read of section data so that after load completes the AccessManager object can
+            // be safely deleted
+            // note: do it for both JIT and non-JIT relocations as the latter maybe delayed to post-load
+            // in case of scratch sharing enabled
+            section.getData<void>();
 
+            if (sectionFlags & VPU_SHF_JIT) {
                 VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Registering JIT Relocation %zu", sectionCtr);
                 m_jitRelocations->push_back(static_cast<int>(sectionCtr));
             } else {
