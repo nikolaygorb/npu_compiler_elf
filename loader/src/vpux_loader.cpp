@@ -482,7 +482,8 @@ VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager)
           m_userOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_profOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_loaded(false),
-          m_inferencesMayBeRunInParallel(true) {
+          m_inferencesMayBeRunInParallel(true),
+          m_needToReloadBuffersBeforeRelocations(true) {
     VPUX_ELF_THROW_UNLESS(bufferManager, ArgsError, "Invalid BufferManager pointer");
     m_bufferManager = bufferManager;
     m_reader = std::make_shared<Reader<ELF_Bitness::Elf64>>(m_bufferManager, accessor);
@@ -527,7 +528,8 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
           m_loaded(other.m_loaded),
           m_symbolSectionTypes(other.m_symbolSectionTypes),
           m_inferencesMayBeRunInParallel(other.m_inferencesMayBeRunInParallel),
-          m_sharedScratchBuffers(other.m_sharedScratchBuffers) {
+          m_sharedScratchBuffers(other.m_sharedScratchBuffers),
+          m_needToReloadBuffersBeforeRelocations(true) {
     reloadNewBuffers();
     if (m_sharedScratchBuffers.empty()) {
         applyRelocations(*m_relocationSectionIndexes);
@@ -552,7 +554,8 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other, const std::vector<SymbolEntry>& 
           m_loaded(other.m_loaded),
           m_symbolSectionTypes(other.m_symbolSectionTypes),
           m_inferencesMayBeRunInParallel(other.m_inferencesMayBeRunInParallel),
-          m_sharedScratchBuffers(other.m_sharedScratchBuffers) {
+          m_sharedScratchBuffers(other.m_sharedScratchBuffers),
+          m_needToReloadBuffersBeforeRelocations(true) {
     reloadNewBuffers();
     if (m_sharedScratchBuffers.empty()) {
         applyRelocations(*m_relocationSectionIndexes);
@@ -581,6 +584,7 @@ VPUXLoader& VPUXLoader::operator=(const VPUXLoader& other) {
     m_loaded = other.m_loaded;
     m_inferencesMayBeRunInParallel = other.m_inferencesMayBeRunInParallel;
     m_sharedScratchBuffers = other.m_sharedScratchBuffers;
+    m_needToReloadBuffersBeforeRelocations = true;
 
     reloadNewBuffers();
     if (m_sharedScratchBuffers.empty()) {
@@ -851,6 +855,10 @@ void VPUXLoader::updateSharedBuffers(const std::vector<std::size_t>& relocationS
 }
 
 void VPUXLoader::loadBuffers() {
+    if (!m_needToReloadBuffersBeforeRelocations) {
+        return;
+    }
+
     // Now actually create and load buffers
     for (auto& elem : m_inferBufferContainer) {
         auto bufferIndex = elem.first;
@@ -885,9 +893,15 @@ void VPUXLoader::loadBuffers() {
             bufferInfo.mBufferDetails.mIsProcessed = true;
         }
     }
+
+    m_needToReloadBuffersBeforeRelocations = false;
 }
 
 void VPUXLoader::reloadNewBuffers() {
+    if (!m_needToReloadBuffersBeforeRelocations) {
+        return;
+    }
+
     for (const auto& buffer : m_inferBufferContainer) {
         auto& sectionIndex = buffer.first;
         auto& inferBufferInfo = buffer.second;
@@ -905,9 +919,13 @@ void VPUXLoader::reloadNewBuffers() {
                          inferBufferInfo.mBuffer->getBuffer().cpu_addr());
         }
     }
+
+    m_needToReloadBuffersBeforeRelocations = false;
 }
 
 void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSectionIndexes) {
+    VPUX_ELF_THROW_WHEN(m_needToReloadBuffersBeforeRelocations, RelocError, "Relocations applied with not loaded buffers");
+
     VPUX_ELF_LOG(LogLevel::LOG_TRACE, "apply relocations");
     for (const auto& relocationSectionIdx : relocationSectionIndexes) {
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "applying relocation section %u", relocationSectionIdx);
@@ -1049,8 +1067,8 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSect
         }
     }
 
-    return;
-};
+    m_needToReloadBuffersBeforeRelocations = true;
+}
 
 #ifdef INTEL_EMBARGO_COMMON
 // TODO(E#30069) : a lot of shared logic with applyRelocations.... refactor to share code.... duplicate for WIP
@@ -1285,6 +1303,7 @@ void VPUXLoader::updateSharedScratchBuffers(const std::vector<DeviceBuffer>& new
     }
 
     if (changed) {
+        reloadNewBuffers();
         applyRelocations(*m_relocationSectionIndexes);
     }
 }
