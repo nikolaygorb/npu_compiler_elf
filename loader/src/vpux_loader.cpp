@@ -881,6 +881,12 @@ void VPUXLoader::loadBuffers() {
                 bufferSpecs.procFlags = section.getHeader()->sh_flags;
                 bufferInfo.mBuffer = m_inferBufferContainer.buildAllocatedDeviceBuffer(bufferSpecs);
 
+                const auto backupSize = backupBufferInfo.mBuffer->getBuffer().size();
+                const auto inferSize = bufferInfo.mBuffer->getBuffer().size();
+
+                VPUX_ELF_THROW_UNLESS(backupSize <= inferSize, RuntimeError,
+                                      "Mismatch between section backup size and allocated device buffer size");
+
                 // Copy data from backup to infer buffer
                 bufferInfo.mBuffer->loadWithLock(backupBufferInfo.mBuffer->getBuffer().cpu_addr(),
                                                  backupBufferInfo.mBuffer->getBuffer().size());
@@ -909,8 +915,11 @@ void VPUXLoader::reloadNewBuffers() {
             auto& backupBufferInfo = m_backupBufferContainer.getBufferInfoFromIndex(sectionIndex);
             auto backupBufferLock = ElfBufferLockGuard(backupBufferInfo.mBuffer.get());
 
+            const auto backupSize = backupBufferInfo.mBuffer->getBuffer().size();
+            const auto inferSize = inferBufferInfo.mBuffer->getBuffer().size();
+
             VPUX_ELF_THROW_UNLESS(
-                    backupBufferInfo.mBuffer->getBuffer().size() == inferBufferInfo.mBuffer->getBuffer().size(),
+                backupSize <= inferSize,
                     RuntimeError, "Mismatch between section backup size and allocated device buffer size");
             inferBufferInfo.mBuffer->loadWithLock(backupBufferInfo.mBuffer->getBuffer().cpu_addr(),
                                                   inferBufferInfo.mBuffer->getBuffer().size());
