@@ -50,7 +50,7 @@ void Writer::prepareWriter() {
         curOffset = static_cast<Elf_Half>(m_elfHeader.e_shoff);
     }
 
-    curOffset += m_elfHeader.e_shnum * m_elfHeader.e_shentsize;
+    curOffset += static_cast<unsigned long>(m_elfHeader.e_shnum) * static_cast<unsigned long>(m_elfHeader.e_shentsize);
 
     m_dataOffset = static_cast<size_t>(curOffset);
     m_totalBinarySize = m_dataOffset;
