@@ -24,7 +24,9 @@ public:
 private:
     static constexpr uint32_t VERSION_MAJOR = 1;
     static constexpr uint32_t VERSION_MINOR = 3;
-    static constexpr uint32_t VERSION_PATCH = 4;
+    static constexpr uint32_t VERSION_PATCH = 5;
+
+    // Patch version 5: Added FP8 data types (see EISW-164027 for details)
 };
 
 }  // namespace elf

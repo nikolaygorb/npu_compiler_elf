@@ -34,12 +34,26 @@ using ArchName = BasicString;
 using BlobName = BasicString;
 using TensorName = BasicString;
 
+// The enums below are used by the compiler and by the L0 UMD. They are used to pass information from the compiler to
+// L0 UMD. The loader does not use them and acts as a simple carrier of opaque data.
+// All conversions from ELF types to L0 types are done by L0 UMD. This means changing them can break compatibility and
+// it must be done only with great care.
+//
+// Compatibility-breaking changes (require at least a minor version update):
+//  - modifying value of an enum label (e.g. chaning DType_FP32 value from 2 to 100)
+//
+// Build-breaking changes (require code changes in compiler and/or L0 UMD):
+//  - renaming an enum label (e.g. renaming DType_FP8 to DType_F8E5M2)
+//
+// To avoid unnecessarily breaking compatibility, new types must always be added at the end of the list.
+// Ideally, the loader should not define these types and simply treat them as opaque data.
+
 enum DType {
     DType_NOT_SET = 0,
     DType_FP64 = 1,
     DType_FP32 = 2,
     DType_FP16 = 3,
-    DType_FP8 = 4,
+    DType_F8E5M2 = 4,
     DType_U64 = 5,
     DType_U32 = 6,
     DType_U16 = 7,
@@ -56,9 +70,10 @@ enum DType {
     DType_I2X = 18,
     DType_BFP16 = 19,
     DType_U4 = 20,
-    DType_HF8 = 21,
+    DType_F8E4M3FN = 21,
+    DType_F8E8M0 = 22,
     DType_MIN = DType_NOT_SET,
-    DType_MAX = DType_HF8
+    DType_MAX = DType_F8E8M0
 };
 
 enum PreProcessColorSpace {
@@ -98,11 +113,12 @@ enum OVNodeType {
     OVNodeType_U16 = 15,
     OVNodeType_U32 = 16,
     OVNodeType_U64 = 17,
-    OVNodeType_F8E4M3 = 18,
+    OVNodeType_F8E4M3FN = 18,
     OVNodeType_F8E5M2 = 19,
     OVNodeType_NF4 = 20,
+    OVNodeType_F8E8M0 = 21,
     OVNodeType_MIN = OVNodeType_UNDEFINED,
-    OVNodeType_MAX = OVNodeType_NF4,
+    OVNodeType_MAX = OVNodeType_F8E8M0,
 };
 
 struct VPUX_ALIGNED_STRUCT(8) Identification {

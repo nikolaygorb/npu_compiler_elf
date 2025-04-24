@@ -47,21 +47,29 @@ namespace {
 
 constexpr uint32_t VPUX40XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX40XX_VERSION_MINOR = 2;
-constexpr uint32_t VPUX40XX_VERSION_PATCH = 5;
+constexpr uint32_t VPUX40XX_VERSION_PATCH = 6;
+
+// Patch version 6: Added FP8 data types (see EISW-164027 for details)
 
 #ifdef INTEL_EMBARGO_NPU5
 constexpr uint32_t VPUX50XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX50XX_VERSION_MINOR = 2;
-constexpr uint32_t VPUX50XX_VERSION_PATCH = 5;
+constexpr uint32_t VPUX50XX_VERSION_PATCH = 6;
+
+// Patch version 6: Added FP8 data types (see EISW-164027 for details)
+
 #endif  // INTEL_EMBARGO_NPU5
 
 #ifdef INTEL_EMBARGO_NPU6
 constexpr uint32_t VPUX60XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX60XX_VERSION_MINOR = 3;
-constexpr uint32_t VPUX60XX_VERSION_PATCH = 0;
+constexpr uint32_t VPUX60XX_VERSION_PATCH = 1;
+
+// Patch version 1: Added FP8 data types (see EISW-164027 for details)
+
 #endif  // INTEL_EMBARGO_NPU6
 
-} // namespace
+}  // namespace
 
 void setDefaultPerformanceMetrics(VpuPerformanceMetrics& metrics) {
     metrics.bw_base = BW_BASE;
@@ -75,7 +83,7 @@ void setDefaultPerformanceMetrics(VpuPerformanceMetrics& metrics) {
     }
 }
 
-HostParsedInference_4000::HostParsedInference_4000(elf::platform::ArchKind archKind) :  archKind_(archKind) {
+HostParsedInference_4000::HostParsedInference_4000(elf::platform::ArchKind archKind): archKind_(archKind) {
     symTab_.reserve(2);
     secTypeContainers_.reserve(2);
     {
@@ -153,18 +161,18 @@ void HostParsedInference_4000::setHostParsedInference(DeviceBuffer& devBuffer,
 
 elf::Version HostParsedInference_4000::getELFLibABIVersion() const {
     switch (archKind_) {
-        case elf::platform::ArchKind::VPUX40XX:
-            return {VPUX40XX_VERSION_MAJOR, VPUX40XX_VERSION_MINOR, VPUX40XX_VERSION_PATCH};
+    case elf::platform::ArchKind::VPUX40XX:
+        return {VPUX40XX_VERSION_MAJOR, VPUX40XX_VERSION_MINOR, VPUX40XX_VERSION_PATCH};
 #ifdef INTEL_EMBARGO_NPU5
-        case elf::platform::ArchKind::VPUX50XX:
-            return {VPUX50XX_VERSION_MAJOR, VPUX50XX_VERSION_MINOR, VPUX50XX_VERSION_PATCH};
+    case elf::platform::ArchKind::VPUX50XX:
+        return {VPUX50XX_VERSION_MAJOR, VPUX50XX_VERSION_MINOR, VPUX50XX_VERSION_PATCH};
 #endif  // INTEL_EMBARGO_NPU5
 #ifdef INTEL_EMBARGO_NPU6
-        case elf::platform::ArchKind::VPUX60XX:
-            return {VPUX60XX_VERSION_MAJOR, VPUX60XX_VERSION_MINOR, VPUX60XX_VERSION_PATCH};
+    case elf::platform::ArchKind::VPUX60XX:
+        return {VPUX60XX_VERSION_MAJOR, VPUX60XX_VERSION_MINOR, VPUX60XX_VERSION_PATCH};
 #endif  // INTEL_EMBARGO_NPU6
-        default:
-            break;
+    default:
+        break;
     }
     VPUX_ELF_THROW(RangeError, (elf::platform::stringifyArchKind(archKind_) + " arch is not supported").c_str());
     return {0, 0, 0};
