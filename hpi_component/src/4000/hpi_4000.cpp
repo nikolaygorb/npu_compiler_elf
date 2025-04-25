@@ -49,14 +49,14 @@ constexpr uint32_t VPUX40XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX40XX_VERSION_MINOR = 2;
 constexpr uint32_t VPUX40XX_VERSION_PATCH = 6;
 
-// Patch version 6: Added FP8 data types (see EISW-164027 for details)
+// Patch version 6: Adding FP8 data types
 
 #ifdef INTEL_EMBARGO_NPU5
 constexpr uint32_t VPUX50XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX50XX_VERSION_MINOR = 2;
 constexpr uint32_t VPUX50XX_VERSION_PATCH = 6;
 
-// Patch version 6: Added FP8 data types (see EISW-164027 for details)
+// Patch version 6: Adding FP8 data types
 
 #endif  // INTEL_EMBARGO_NPU5
 
@@ -65,7 +65,7 @@ constexpr uint32_t VPUX60XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX60XX_VERSION_MINOR = 3;
 constexpr uint32_t VPUX60XX_VERSION_PATCH = 1;
 
-// Patch version 1: Added FP8 data types (see EISW-164027 for details)
+// Patch version 1: Adding FP8 data types
 
 #endif  // INTEL_EMBARGO_NPU6
 
