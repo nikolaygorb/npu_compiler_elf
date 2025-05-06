@@ -481,7 +481,8 @@ VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager)
           m_userInputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_userOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
           m_profOutputsDescriptors(std::make_shared<std::vector<DeviceBuffer>>()),
-          m_loaded(false), m_inferencesMayBeRunInParallel(true) {
+          m_loaded(false),
+          m_inferencesMayBeRunInParallel(true) {
     VPUX_ELF_THROW_UNLESS(bufferManager, ArgsError, "Invalid BufferManager pointer");
     m_bufferManager = bufferManager;
     m_reader = std::make_shared<Reader<ELF_Bitness::Elf64>>(m_bufferManager, accessor);
@@ -679,6 +680,27 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
 
             auto& inferBufferInfo = m_inferBufferContainer.safeInitBufferInfoAtIndex(sectionCtr);
             inferBufferInfo.mBufferDetails.mHasData = true;
+
+            // The information about write access from an NPU core to a section buffer is crucial to correctly share
+            // section buffers between loader instances belonging to the same clone tree.
+            //
+            // Below are the possible states of a loader instance in a clone tree:
+            //  - L0 created from blob X (root) - Is an original instance and can have cloned instances created from it,
+            //  with which it will be able to share section buffers.
+            //  - L1 cloned from L0 (node) - Is a cloned instance created from an original instance and can have cloned
+            //  instances created from it. It may share section buffers with L0 and any future cloned instances created
+            //  from L0 or itself.
+            //  - L2 cloned from L1 (node) - Is a cloned instance created from another cloned instance and can have
+            //  cloned instances created from it. It may share section buffers with L0 and L1 and any future cloned
+            //  instances created from L0, L1 or itself.
+            //  - L3 created from blob X (root) - Is the same as L0, but it is unrelated to the instances above in terms
+            //  of buffers sharing, even though it was created from the same blob X.
+            //
+            // When we are executing this code, we are creating an original instance.
+            //
+            // The current implementation assumes all loader instances belonging to the same clone tree can run in
+            // parallel, thus any writable section (see SHF_WRITE definition in section_header.hpp for details about the
+            // meaning of writable) is considered not shareable with other loader instances.
             inferBufferInfo.mBufferDetails.mIsShared = sectionFlags & SHF_WRITE ? false : true;
             inferBufferInfo.mBufferDetails.mIsProcessed = false;
 
@@ -698,8 +720,12 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool symTa
             auto sectionSize = sectionHeader->sh_size;
             auto sectionAlignment = sectionHeader->sh_addralign;
 
+            // Based on the SHF_WRITE definition (see details in section_header.hpp) in the ELF format and since the
+            // format does not impose restrictions on using (i.e. setting) the flag together with different section
+            // types, we must allow NOBITS sections with SHF_WRITE not set. Additionally, some "old" (e.g. PV) blobs may
+            // contain NOBITS sections with no SHF_WRITE flag, so we are forced anyway to allow NOBITS sections with
+            // SHF_WRITE not set in order to maintain compatibility.
             if ((sectionFlags & SHF_WRITE) == 0) {
-                // some "old" (e.g. PV) blobs may contain NOBITS sections with no SHF_WRITE flag
                 VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Allocating \"%s\" with no SHF_WRITE", section.getName());
             }
 
@@ -919,13 +945,12 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSect
         if (relocSecFlags & SHF_INFO_LINK) {
             targetSectionIdx = relocSecHdr->sh_info;
         } else {
-            VPUX_ELF_THROW(RelocError,
-                           "Rela section with no target section");
+            VPUX_ELF_THROW(RelocError, "Rela section with no target section");
 #ifdef INTEL_EMBARGO_COMMON
-                                                                    // TODO(E#30067): Review if there is a case where we
-                                                                    // should accept rela sections w/o a target section?
-                                                                    // This is generally used for executable files, but
-                                                                    // we would only generate relocatable files
+            // TODO(E#30067): Review if there is a case where we
+            // should accept rela sections w/o a target section?
+            // This is generally used for executable files, but
+            // we would only generate relocatable files
 #endif  // INTEL_EMBARGO_COMMON
             return;
         }
@@ -1020,7 +1045,7 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSect
 #ifdef INTEL_EMBARGO_COMMON
 // TODO(E#30069) : a lot of shared logic with applyRelocations.... refactor to share code.... duplicate for WIP
 // purposes
-#endif // INTEL_EMBARGO_COMMON
+#endif  // INTEL_EMBARGO_COMMON
 void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,
                                      std::vector<DeviceBuffer>& profiling) {
     VPUX_ELF_LOG(LogLevel::LOG_TRACE, "apply JITrelocations");
@@ -1077,14 +1102,12 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
         if (relocSecFlags & SHF_INFO_LINK) {
             targetSectionIdx = relocSecHdr->sh_info;
         } else {
-            VPUX_ELF_THROW(
-                    RelocError,
-                    "Rela section with no target section");
+            VPUX_ELF_THROW(RelocError, "Rela section with no target section");
 #ifdef INTEL_EMBARGO_COMMON
-                                                             // TODO(E#30067) : Review if there is a case where we
-                                                             // should accept rela sections w/o a target section?
-                                                             // This is generally used for executable files, but
-                                                             // we would only generate relocatable files
+            // TODO(E#30067) : Review if there is a case where we
+            // should accept rela sections w/o a target section?
+            // This is generally used for executable files, but
+            // we would only generate relocatable files
 #endif  // INTEL_EMBARGO_COMMON
             return;
         }
@@ -1234,7 +1257,8 @@ bool VPUXLoader::getInferencesMayBeRunInParallel() const {
 }
 
 void VPUXLoader::updateSharedScratchBuffers(const std::vector<DeviceBuffer>& buffers) {
-    VPUX_ELF_THROW_WHEN(m_sharedScratchBuffers.size() != buffers.size(), RuntimeError, "Incorrect amount of buffers for updateSharedScratchBuffers");
+    VPUX_ELF_THROW_WHEN(m_sharedScratchBuffers.size() != buffers.size(), RuntimeError,
+                        "Incorrect amount of buffers for updateSharedScratchBuffers");
     if (m_sharedScratchBuffers.empty()) {
         return;
     }
