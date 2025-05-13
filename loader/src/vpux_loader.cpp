@@ -528,8 +528,8 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other)
           m_loaded(other.m_loaded),
           m_symbolSectionTypes(other.m_symbolSectionTypes),
           m_inferencesMayBeRunInParallel(other.m_inferencesMayBeRunInParallel),
-          m_sharedScratchBuffers(other.m_sharedScratchBuffers),
-          m_needToReloadBuffersBeforeRelocations(true) {
+          m_needToReloadBuffersBeforeRelocations(true),
+          m_sharedScratchBuffers(other.m_sharedScratchBuffers) {
     reloadNewBuffers();
     if (m_sharedScratchBuffers.empty()) {
         applyRelocations(*m_relocationSectionIndexes);
@@ -554,8 +554,8 @@ VPUXLoader::VPUXLoader(const VPUXLoader& other, const std::vector<SymbolEntry>& 
           m_loaded(other.m_loaded),
           m_symbolSectionTypes(other.m_symbolSectionTypes),
           m_inferencesMayBeRunInParallel(other.m_inferencesMayBeRunInParallel),
-          m_sharedScratchBuffers(other.m_sharedScratchBuffers),
-          m_needToReloadBuffersBeforeRelocations(true) {
+          m_needToReloadBuffersBeforeRelocations(true),
+          m_sharedScratchBuffers(other.m_sharedScratchBuffers) {
     reloadNewBuffers();
     if (m_sharedScratchBuffers.empty()) {
         applyRelocations(*m_relocationSectionIndexes);

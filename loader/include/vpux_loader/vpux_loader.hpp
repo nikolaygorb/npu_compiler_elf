@@ -108,10 +108,10 @@ private:
     bool m_symTabOverrideMode;
     bool m_explicitAllocations;
     bool m_loaded;
-    bool m_needToReloadBuffersBeforeRelocations;
     std::vector<elf::Elf_Word> m_symbolSectionTypes;
 
     bool m_inferencesMayBeRunInParallel;
+    bool m_needToReloadBuffersBeforeRelocations;
     std::vector<size_t> m_sharedScratchBuffers;
 };
 
