@@ -47,14 +47,14 @@ namespace {
 
 constexpr uint32_t VPUX40XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX40XX_VERSION_MINOR = 2;
-constexpr uint32_t VPUX40XX_VERSION_PATCH = 6;
+constexpr uint32_t VPUX40XX_VERSION_PATCH = 7;
 
 // Patch version 6: Adding FP8 data types
 
 #ifdef INTEL_EMBARGO_NPU5
 constexpr uint32_t VPUX50XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX50XX_VERSION_MINOR = 2;
-constexpr uint32_t VPUX50XX_VERSION_PATCH = 6;
+constexpr uint32_t VPUX50XX_VERSION_PATCH = 7;
 
 // Patch version 6: Adding FP8 data types
 
