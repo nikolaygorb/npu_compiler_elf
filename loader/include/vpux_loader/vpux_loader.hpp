@@ -15,6 +15,7 @@
 #include <map>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
 #include <vpux_elf/accessor.hpp>
 #include <vpux_elf/reader.hpp>
@@ -87,7 +88,9 @@ private:
     void updateSharedBuffers(const std::vector<std::size_t>& relocationSectionIndexes);
     void loadBuffers();
     void reloadNewBuffers();
-    void applyRelocations(const std::vector<std::size_t>& relocationSectionIndexes);
+    void applyRelocations(const std::vector<std::size_t>& relocationSectionIndexes, bool onScratchUpdate = false);
+    void cacheScratchRelocations();
+    void applyScratchRelocations();
 
     BufferManager* m_bufferManager;
     std::shared_ptr<Reader<ELF_Bitness::Elf64>> m_reader;
@@ -111,8 +114,9 @@ private:
     std::vector<elf::Elf_Word> m_symbolSectionTypes;
 
     bool m_inferencesMayBeRunInParallel;
-    bool m_needToReloadBuffersBeforeRelocations;
     std::vector<size_t> m_sharedScratchBuffers;
+
+    std::shared_ptr<std::unordered_map<size_t, std::vector<size_t>>> m_scratchRelocations;
 };
 
 }  // namespace elf
