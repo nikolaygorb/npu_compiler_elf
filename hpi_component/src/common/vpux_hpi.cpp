@@ -183,7 +183,7 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
         std::stringstream logBuffer;
         logBuffer << "Incorrect arch. Expected: " << elf::platform::stringifyArchKind(expectedArch)
                   << " vs Received: " << elf::platform::stringifyArchKind(archKind);
-        VPUX_ELF_THROW(ArgsError, logBuffer.str().c_str());
+        VPUX_ELF_THROW(CompatibilityError, logBuffer.str().c_str());
     }
 
     // Check Mapped Inference Compatibility
@@ -206,7 +206,7 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
         std::stringstream tileCountLogBuffer;
         tileCountLogBuffer << "Incorrect tile count. Requested tile count '" << static_cast<int>(tileCount)
                            << "' exceeds hardware tile count '" << static_cast<int>(hardwareTileCount) << "'";
-        VPUX_ELF_THROW(ArgsError, tileCountLogBuffer.str().c_str());
+        VPUX_ELF_THROW(CompatibilityError, tileCountLogBuffer.str().c_str());
     }
 
     if (tileCount > hardwareTileCount / 2
