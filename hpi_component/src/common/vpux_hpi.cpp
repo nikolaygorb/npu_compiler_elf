@@ -162,7 +162,7 @@ size_t HostParsedInference::getHPISize() const {
     return getArchSpecificHPI(hpiCfg.archKind)->getParsedInferenceBufferSpecs().size;
 }
 
-HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs)
+HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs, DeviceDescriptor* deviceDescriptor)
         : bufferManager(bufferMgr), accessManager(accessMgr), hpiCfg(hpiConfigs) {
     // create the loader object to cache sections
     loaders.emplace_back(std::make_unique<VPUXLoader>(accessMgr, bufferMgr));
@@ -201,6 +201,21 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     auto tileCount = metadata->mResourceRequirements.nn_slice_count_;
     // get hardware tile count, archKind has already been checked above
     uint8_t hardwareTileCount = elf::platform::getHardwareTileCount(archKind);
+
+    if (deviceDescriptor != nullptr) {
+        // IMD case is allowed to omit device descriptor for now
+
+        VPUX_ELF_THROW_WHEN(deviceDescriptor->size < sizeof(DeviceDescriptor), ArgsError, "DeviceDescriptor is passed, but its size is too small");
+
+        // tileCount from DeviceDescriptor is always present and "SKU-aware"
+        // e.g. if we are running on 5T NPU4 SKU it will report 5 instead of 6
+        // in contrast to getHardwareTileCount above
+
+        // cast to uint8_t even though DeviceDescriptor contains uint32_t because
+        // tileCount from the blob is uint8_t anyway, so no point in upcasting here
+        hardwareTileCount = static_cast<uint8_t>(deviceDescriptor->tileCount);
+    }
+
     // throw exception if tile count is greater than hardware tile count
     if (tileCount > hardwareTileCount) {
         std::stringstream tileCountLogBuffer;
