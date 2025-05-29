@@ -407,15 +407,15 @@ const auto VPU_HIGH_27_BIT_OR_Relocation = [](void* targetAddr, const elf::Symbo
     *addr |= (static_cast<uint64_t>(patchAddr) << 37);                // set [64:37]
 };
 
-const auto VPU_LO_21_BIT_RSHIFT_2_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
-                                                  const Elf_Sxword addend) -> void {
+const auto VPU_32_OR_LO_19_LSB_21_RSHIFT_2_Relocation = [](void* targetAddr, const elf::SymbolEntry& targetSym,
+                                                           const Elf_Sxword addend) -> void {
     auto addr = reinterpret_cast<uint32_t*>(targetAddr);
     auto symVal = targetSym.st_value;
     VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tLow 21 bits, rshift 2 reloc, addr %p symVal 0x%llx addend %llu", addr,
                  symVal, addend);
 
     auto patchAddr = (static_cast<uint32_t>(symVal + addend) & LO_21_BIT_MASK) >> 2;
-    *addr &= ~LO_21_BIT_MASK;
+    *addr &= ~(LO_21_BIT_MASK >> 2);
     *addr |= patchAddr;
 };
 
@@ -470,7 +470,7 @@ const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoade
         {R_VPU_32_BIT_OR_B21_B26_UNSET_HIGH_16, VPU_32_BIT_OR_B21_B26_UNSET_HIGH_16_Relocation},
         {R_VPU_32_BIT_OR_B21_B26_UNSET_LOW_16, VPU_32_BIT_OR_B21_B26_UNSET_LOW_16_Relocation},
         {R_VPU_HIGH_27_BIT_OR, VPU_HIGH_27_BIT_OR_Relocation},
-        {R_VPU_LO_21_RSHIFT_2, VPU_LO_21_BIT_RSHIFT_2_Relocation},
+        {R_VPU_32_OR_LO_19_LSB_21_RSHIFT_2, VPU_32_OR_LO_19_LSB_21_RSHIFT_2_Relocation},
 };
 
 VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager)

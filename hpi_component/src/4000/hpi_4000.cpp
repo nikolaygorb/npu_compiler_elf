@@ -63,7 +63,7 @@ constexpr uint32_t VPUX50XX_VERSION_PATCH = 6;
 #ifdef INTEL_EMBARGO_NPU6
 constexpr uint32_t VPUX60XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX60XX_VERSION_MINOR = 3;
-constexpr uint32_t VPUX60XX_VERSION_PATCH = 1;
+constexpr uint32_t VPUX60XX_VERSION_PATCH = 2;
 
 // Patch version 1: Adding FP8 data types
 
