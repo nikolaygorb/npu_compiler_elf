@@ -15,6 +15,8 @@
 #include <vpux_elf/utils/log.hpp>
 #include <vpux_hpi.hpp>
 #include <sstream>
+#include <cstdlib>
+#include <cstring>
 
 #if defined(CONFIG_TARGET_SOC_3720) || defined(HOST_BUILD)
 #include <hpi_3720.hpp>
@@ -164,6 +166,16 @@ size_t HostParsedInference::getHPISize() const {
 
 HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs, DeviceDescriptor* deviceDescriptor)
         : bufferManager(bufferMgr), accessManager(accessMgr), hpiCfg(hpiConfigs) {
+
+#ifdef NRELEASE
+    static constexpr auto ELF_THROW_COMPATIBILITY_ERROR_NAME = "ELF_THROW_COMPATIBILITY_ERROR";
+    const auto elfThrowCompatibilityErrorValue = std::getenv(ELF_THROW_COMPATIBILITY_ERROR_NAME);
+    VPUX_ELF_THROW_WHEN(
+        elfThrowCompatibilityErrorValue != nullptr &&
+        (std::strncmp(elfThrowCompatibilityErrorValue, "1", sizeof("1")) == 0),
+        CompatibilityError, "Compatibility error is forced by \"ELF_THROW_COMPATIBILITY_ERROR=1\"");
+#endif
+
     // create the loader object to cache sections
     loaders.emplace_back(std::make_unique<VPUXLoader>(accessMgr, bufferMgr));
 
