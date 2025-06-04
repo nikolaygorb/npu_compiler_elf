@@ -15,6 +15,7 @@
 #include <map>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
 #include <vpux_elf/accessor.hpp>
 #include <vpux_elf/reader.hpp>
@@ -77,7 +78,7 @@ public:
     std::vector<std::shared_ptr<ManagedBuffer>> getSectionsOfType(elf::Elf_Word type);
     void setInferencesMayBeRunInParallel(bool inferencesMayBeRunInParallel);
     bool getInferencesMayBeRunInParallel() const;
-    void updateSharedScratchBuffers(const std::vector<DeviceBuffer>& buffers);
+    void updateSharedScratchBuffers(const std::vector<DeviceBuffer>& newBuffers);
 
 private:
     bool checkSectionType(const elf::SectionHeader* section, Elf_Word secType) const;
@@ -87,7 +88,9 @@ private:
     void updateSharedBuffers(const std::vector<std::size_t>& relocationSectionIndexes);
     void loadBuffers();
     void reloadNewBuffers();
-    void applyRelocations(const std::vector<std::size_t>& relocationSectionIndexes);
+    void applyRelocations(const std::vector<std::size_t>& relocationSectionIndexes, bool onScratchUpdate = false);
+    void cacheScratchRelocations();
+    void applyScratchRelocations();
 
     BufferManager* m_bufferManager;
     std::shared_ptr<Reader<ELF_Bitness::Elf64>> m_reader;
@@ -112,6 +115,8 @@ private:
 
     bool m_inferencesMayBeRunInParallel;
     std::vector<size_t> m_sharedScratchBuffers;
+
+    std::shared_ptr<std::unordered_map<size_t, std::vector<size_t>>> m_scratchRelocations;
 };
 
 }  // namespace elf
