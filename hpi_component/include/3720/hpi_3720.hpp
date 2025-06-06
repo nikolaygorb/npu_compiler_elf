@@ -24,7 +24,7 @@ public:
 private:
     static constexpr uint32_t VERSION_MAJOR = 1;
     static constexpr uint32_t VERSION_MINOR = 3;
-    static constexpr uint32_t VERSION_PATCH = 5;
+    static constexpr uint32_t VERSION_PATCH = 6;
 
     // Patch version 5: Adding FP8 data types
 };
