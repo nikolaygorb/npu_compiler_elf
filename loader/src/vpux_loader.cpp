@@ -9,6 +9,7 @@
 #include <cstring>
 
 #include <memory>
+#include <unordered_map>
 #include <vpux_loader/vpux_loader.hpp>
 #include "vpux_elf/types/section_header.hpp"
 #include "vpux_elf/utils/error.hpp"
@@ -422,7 +423,7 @@ const auto VPU_32_OR_LO_19_LSB_21_RSHIFT_2_Relocation = [](void* targetAddr, con
 
 }  // namespace
 
-const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
+const std::unordered_map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
         {SHT_NULL, Action::None},
         {SHT_PROGBITS, Action::AllocateAndLoad},
         {SHT_SYMTAB, Action::RegisterUserIO},
@@ -443,7 +444,7 @@ const std::map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
         {VPU_SHT_PERF_METRICS, Action::None},
 };
 
-const std::map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoader::relocationMap = {
+const std::unordered_map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoader::relocationMap = {
         {R_VPU_64, VPU_64_BIT_Relocation},
         {R_VPU_16_SUM, VPU_16_BIT_SUM_Relocation},
         {R_VPU_64_MULT, VPU_64_BIT_MULT_Relocation},
@@ -500,7 +501,13 @@ VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager)
 
         // Early fetch of IO buffer specs
         const auto action = actionMap.find(sectionType);
-        if (action->second == Action::RegisterUserIO) {
+        if (action == actionMap.end()) {
+            if (sectionType >= elf::SHT_LOUSER && sectionType <= elf::SHT_HIUSER) {
+                VPUX_ELF_LOG(LogLevel::LOG_WARN, "Unrecognized Section Type in User range %x", sectionType);
+            } else {
+                VPUX_ELF_THROW(ImplausibleState, "Unrecognized Section Type outside of User range");
+            }
+        } else if (action->second == Action::RegisterUserIO) {
             earlyFetchIO(section);
         }
     }
@@ -836,7 +843,7 @@ void VPUXLoader::cacheScratchRelocations() {
             symTabEntries = symTabSection.getEntriesNum();
 
             VPUX_ELF_THROW_UNLESS(checkSectionType(symTabSectionHdr, elf::SHT_SYMTAB), RelocError,
-                                    "Reloc section pointing to snon-symtab");
+                                  "Reloc section pointing to snon-symtab");
 
             return symTabSection.getData<elf::SymbolEntry>();
         };
@@ -850,8 +857,8 @@ void VPUXLoader::cacheScratchRelocations() {
             elf::SymbolEntry targetSymbol = symTabs[relSymIdx];
             auto symbolTargetSectionIdx = targetSymbol.st_shndx;
 
-            const auto isSymbolSharedScratch = std::find(
-                m_sharedScratchBuffers.begin(), m_sharedScratchBuffers.end(), symbolTargetSectionIdx) != m_sharedScratchBuffers.end();
+            const auto isSymbolSharedScratch = std::find(m_sharedScratchBuffers.begin(), m_sharedScratchBuffers.end(),
+                                                         symbolTargetSectionIdx) != m_sharedScratchBuffers.end();
 
             auto relType = elf64RType(relocation.r_info);
             if (isSymbolSharedScratch) {
@@ -860,7 +867,8 @@ void VPUXLoader::cacheScratchRelocations() {
                 // because it does not depend on content of target before execution
                 // we rely on that in updateSharedScratchBuffers by not reloading buffers
                 // before triggering relocations
-                VPUX_ELF_THROW_WHEN(static_cast<elf::VPUXLoader::RelocationType>(relType) != R_VPU_64, RelocError, "Encountered relocation type that is not R_VPU_64 based on scratch");
+                VPUX_ELF_THROW_WHEN(static_cast<elf::VPUXLoader::RelocationType>(relType) != R_VPU_64, RelocError,
+                                    "Encountered relocation type that is not R_VPU_64 based on scratch");
                 (*m_scratchRelocations)[relocationSectionIdx].push_back(relocIdx);
             }
         }
@@ -952,9 +960,8 @@ void VPUXLoader::reloadNewBuffers() {
             const auto backupSize = backupBufferInfo.mBuffer->getBuffer().size();
             const auto inferSize = inferBufferInfo.mBuffer->getBuffer().size();
 
-            VPUX_ELF_THROW_UNLESS(
-                backupSize <= inferSize,
-                    RuntimeError, "Mismatch between section backup size and allocated device buffer size");
+            VPUX_ELF_THROW_UNLESS(backupSize <= inferSize, RuntimeError,
+                                  "Mismatch between section backup size and allocated device buffer size");
             inferBufferInfo.mBuffer->loadWithLock(backupBufferInfo.mBuffer->getBuffer().cpu_addr(),
                                                   inferBufferInfo.mBuffer->getBuffer().size());
             VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Loading with lock %llu bytes from %p to %p",
@@ -981,7 +988,7 @@ void VPUXLoader::applyScratchRelocations() {
 
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRelA section with %zu elements at addr %p", numRelocs, relocations);
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRelA section info, link flags 0x%x %u 0x%llx", relocSecHdr->sh_info,
-                        relocSecHdr->sh_link, relocSecHdr->sh_flags);
+                     relocSecHdr->sh_link, relocSecHdr->sh_flags);
 
         // At this point we assume that all the section indexes passed to this method
         // are containing a section of sh_type == SHT_RELA. So, the sh_link
@@ -989,7 +996,7 @@ void VPUXLoader::applyScratchRelocations() {
         // symbol range of sections.
         auto symTabIdx = relocSecHdr->sh_link;
         VPUX_ELF_THROW_UNLESS((symTabIdx < m_reader->getSectionsNum() || (symTabIdx == VPU_RT_SYMTAB)), RangeError,
-                                "sh_link exceeds the number of entries.")
+                              "sh_link exceeds the number of entries.")
 
         // by convention, we will assume symTabIdx==VPU_RT_SYMTAB to be the "built-in" symtab
         auto getSymTab = [&](size_t& symTabEntries) -> const SymbolEntry* {
@@ -1002,7 +1009,7 @@ void VPUXLoader::applyScratchRelocations() {
             symTabEntries = symTabSection.getEntriesNum();
 
             VPUX_ELF_THROW_UNLESS(checkSectionType(symTabSectionHdr, elf::SHT_SYMTAB), RelocError,
-                                    "Reloc section pointing to snon-symtab");
+                                  "Reloc section pointing to snon-symtab");
 
             return symTabSection.getData<elf::SymbolEntry>();
         };
@@ -1036,7 +1043,7 @@ void VPUXLoader::applyScratchRelocations() {
 
         auto targetSectionAddr = targetSectionBuf->getBuffer().cpu_addr();
         VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Relocations are targeting section at addr %p named %s", targetSectionAddr,
-                        targetSection.getName());
+                     targetSection.getName());
 
         // apply the actual relocations
 
@@ -1050,7 +1057,7 @@ void VPUXLoader::applyScratchRelocations() {
             // for relocation checks E#91649
 #endif  // INTEL_EMBARGO_COMMON
             VPUX_ELF_THROW_UNLESS(relOffset < targetSectionBuf->getBuffer().size(), RelocError,
-                                    "RelocOffset outside of the section size");
+                                  "RelocOffset outside of the section size");
 
             auto relSymIdx = elf64RSym(relocation.r_info);
 
@@ -1082,14 +1089,13 @@ void VPUXLoader::applyScratchRelocations() {
 
             uint64_t symValue = 0;
             symValue = m_inferBufferContainer.getBufferInfoFromIndex(symbolTargetSectionIdx)
-                                .mBuffer->getBuffer()
-                                .vpu_addr();
-            VPUX_ELF_THROW_WHEN(symValue == 0, RelocError,
-                                    "Relocation target section has no valid address");
+                               .mBuffer->getBuffer()
+                               .vpu_addr();
+            VPUX_ELF_THROW_WHEN(symValue == 0, RelocError, "Relocation target section has no valid address");
             targetSymbol.st_value += symValue;
 
             VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\t\tApplying Relocation at offset %llu symidx %u reltype %u addend %llu",
-                            relOffset, relSymIdx, relType, addend);
+                         relOffset, relSymIdx, relType, addend);
 
             relocFunc((void*)relocationTargetAddr, targetSymbol, addend);
         }
@@ -1212,8 +1218,9 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSect
             auto symbolTargetSectionIdx = targetSymbol.st_shndx;
 
             if (!m_sharedScratchBuffers.empty()) {
-                const auto isSymbolSharedScratch = std::find(
-                    m_sharedScratchBuffers.begin(), m_sharedScratchBuffers.end(), symbolTargetSectionIdx) != m_sharedScratchBuffers.end();
+                const auto isSymbolSharedScratch =
+                        std::find(m_sharedScratchBuffers.begin(), m_sharedScratchBuffers.end(),
+                                  symbolTargetSectionIdx) != m_sharedScratchBuffers.end();
 
                 if (isSymbolSharedScratch) {
                     // it is shared scratch enabled and we are not triggered from updateScratchSharedBuffers
@@ -1227,8 +1234,7 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSect
                 symValue = m_inferBufferContainer.getBufferInfoFromIndex(symbolTargetSectionIdx)
                                    .mBuffer->getBuffer()
                                    .vpu_addr();
-                VPUX_ELF_THROW_WHEN(symValue == 0, RelocError,
-                                        "Relocation target section has no valid address");
+                VPUX_ELF_THROW_WHEN(symValue == 0, RelocError, "Relocation target section has no valid address");
             }
             if (symValue || symTabIdx == VPU_RT_SYMTAB) {
                 targetSymbol.st_value += symValue;

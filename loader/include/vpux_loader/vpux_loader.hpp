@@ -52,8 +52,8 @@ private:
         Error
     };
 
-    static const std::map<Elf_Word, Action> actionMap;
-    static const std::map<RelocationType, RelocationFunc> relocationMap;
+    static const std::unordered_map<Elf_Word, Action> actionMap;
+    static const std::unordered_map<RelocationType, RelocationFunc> relocationMap;
 
 public:
     VPUXLoader(AccessManager* accessor, BufferManager* bufferManager);
