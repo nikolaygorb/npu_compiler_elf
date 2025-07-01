@@ -877,13 +877,15 @@ void VPUXLoader::cacheScratchRelocations() {
 
             auto relType = elf64RType(relocation.r_info);
             if (isSymbolSharedScratch || isTargetSharedScratch) {
-                // check if all scratch based relocations are R_VPU_64
-                // R_VPU_64 is "pure" relocation and does not require target buffer reloading
-                // because it does not depend on content of target before execution
+                // check if all scratch based relocations are R_VPU_64 or R_VPU_32
+                // R_VPU_64/32 are "pure" relocations and don't require target buffer reloading
+                // because they don't depend on content of target before execution
                 // we rely on that in updateSharedScratchBuffers by not reloading buffers
                 // before triggering relocations
-                VPUX_ELF_THROW_WHEN(static_cast<elf::VPUXLoader::RelocationType>(relType) != R_VPU_64, RelocError,
-                                    "Encountered relocation type that is not R_VPU_64 based on scratch");
+                VPUX_ELF_THROW_WHEN(static_cast<elf::VPUXLoader::RelocationType>(relType) != R_VPU_64 &&
+                                    static_cast<elf::VPUXLoader::RelocationType>(relType) != R_VPU_32,
+                                    RelocError,
+                                    "Encountered relocation type that is neither R_VPU_64, nor R_VPU_32 based on scratch");
                 (*m_scratchRelocations)[relocationSectionIdx].push_back(relocIdx);
             }
         }
