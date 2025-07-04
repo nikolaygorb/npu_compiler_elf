@@ -69,6 +69,15 @@ constexpr uint32_t VPUX60XX_VERSION_PATCH = 2;
 
 #endif  // INTEL_EMBARGO_NPU6
 
+#ifdef INTEL_EMBARGO_NPU7
+constexpr uint32_t VPUX70XX_VERSION_MAJOR = 1;
+constexpr uint32_t VPUX70XX_VERSION_MINOR = 0;
+constexpr uint32_t VPUX70XX_VERSION_PATCH = 0;
+
+// Patch version 0: Initial support
+
+#endif  // INTEL_EMBARGO_NPU7
+
 }  // namespace
 
 void setDefaultPerformanceMetrics(VpuPerformanceMetrics& metrics) {
@@ -171,6 +180,10 @@ elf::Version HostParsedInference_4000::getELFLibABIVersion() const {
     case elf::platform::ArchKind::VPUX60XX:
         return {VPUX60XX_VERSION_MAJOR, VPUX60XX_VERSION_MINOR, VPUX60XX_VERSION_PATCH};
 #endif  // INTEL_EMBARGO_NPU6
+#ifdef INTEL_EMBARGO_NPU7
+    case elf::platform::ArchKind::VPUX70XX:
+        return {VPUX70XX_VERSION_MAJOR, VPUX70XX_VERSION_MINOR, VPUX70XX_VERSION_PATCH};
+#endif  // INTEL_EMBARGO_NPU7
     default:
         break;
     }

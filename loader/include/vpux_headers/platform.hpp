@@ -27,6 +27,9 @@ enum class ArchKind : uint64_t {
 #ifdef INTEL_EMBARGO_NPU6
     VPUX60XX = 6,
 #endif  // INTEL_EMBARGO_NPU6
+#ifdef INTEL_EMBARGO_NPU7
+    VPUX70XX = 7,
+#endif  // INTEL_EMBARGO_NPU7
 };
 
 const std::unordered_map<std::string, elf::platform::ArchKind>& getKnownArchitectures();

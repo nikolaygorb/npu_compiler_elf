@@ -40,6 +40,13 @@
 #include <hpi_4000.hpp>
 #endif
 #endif  // INTEL_EMBARGO_NPU6
+#ifdef INTEL_EMBARGO_NPU7
+//to be removed with E#88139:
+//temporary fix to support NPU 6000 arch
+#if defined(CONFIG_TARGET_SOC_7000) || defined(HOST_BUILD)
+#include <hpi_4000.hpp>
+#endif
+#endif  // INTEL_EMBARGO_NPU7
 
 #include <string.h>
 // clang-format on
@@ -64,17 +71,23 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(elf::platfo
         break;
 #endif
 #if (defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)) && defined(INTEL_EMBARGO_NPU5)
-// to be updated with E#88139: temporary fix to support NPU 5000 arch
+        // to be updated with E#88139: temporary fix to support NPU 5000 arch
     case elf::platform::ArchKind::VPUX50XX:
         archSpecificHPI = std::make_unique<HostParsedInference_4000>(archKind);
         break;
 #endif  // INTEL_EMBARGO_NPU5
 #if (defined(CONFIG_TARGET_SOC_6000) || defined(HOST_BUILD)) && defined(INTEL_EMBARGO_NPU6)
-// to be updated with E#88139: temporary fix to support NPU 6000 arch
+        // to be updated with E#88139: temporary fix to support NPU 6000 arch
     case elf::platform::ArchKind::VPUX60XX:
         archSpecificHPI = std::make_unique<HostParsedInference_4000>(archKind);
         break;
 #endif  // INTEL_EMBARGO_NPU6
+#if (defined(CONFIG_TARGET_SOC_7000) || defined(HOST_BUILD)) && defined(INTEL_EMBARGO_NPU7)
+        // to be updated with E#88139: temporary fix to support NPU 7000 arch
+    case elf::platform::ArchKind::VPUX70XX:
+        archSpecificHPI = std::make_unique<HostParsedInference_4000>(archKind);
+        break;
+#endif  // INTEL_EMBARGO_NPU7
     default:
         VPUX_ELF_THROW(RangeError, (elf::platform::stringifyArchKind(archKind) + " arch is not supported").c_str());
         break;
@@ -164,16 +177,15 @@ size_t HostParsedInference::getHPISize() const {
     return getArchSpecificHPI(hpiCfg.archKind)->getParsedInferenceBufferSpecs().size;
 }
 
-HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs, DeviceDescriptor* deviceDescriptor)
+HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs,
+                                         DeviceDescriptor* deviceDescriptor)
         : bufferManager(bufferMgr), accessManager(accessMgr), hpiCfg(hpiConfigs) {
-
 #ifdef NRELEASE
     static constexpr auto ELF_THROW_COMPATIBILITY_ERROR_NAME = "ELF_THROW_COMPATIBILITY_ERROR";
     const auto elfThrowCompatibilityErrorValue = std::getenv(ELF_THROW_COMPATIBILITY_ERROR_NAME);
-    VPUX_ELF_THROW_WHEN(
-        elfThrowCompatibilityErrorValue != nullptr &&
-        (std::strncmp(elfThrowCompatibilityErrorValue, "1", sizeof("1")) == 0),
-        CompatibilityError, "Compatibility error is forced by \"ELF_THROW_COMPATIBILITY_ERROR=1\"");
+    VPUX_ELF_THROW_WHEN(elfThrowCompatibilityErrorValue != nullptr &&
+                                (std::strncmp(elfThrowCompatibilityErrorValue, "1", sizeof("1")) == 0),
+                        CompatibilityError, "Compatibility error is forced by \"ELF_THROW_COMPATIBILITY_ERROR=1\"");
 #endif
 
     // create the loader object to cache sections
@@ -217,7 +229,8 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     if (deviceDescriptor != nullptr) {
         // IMD case is allowed to omit device descriptor for now
 
-        VPUX_ELF_THROW_WHEN(deviceDescriptor->size < sizeof(DeviceDescriptor), ArgsError, "DeviceDescriptor is passed, but its size is too small");
+        VPUX_ELF_THROW_WHEN(deviceDescriptor->size < sizeof(DeviceDescriptor), ArgsError,
+                            "DeviceDescriptor is passed, but its size is too small");
 
         // tileCount from DeviceDescriptor is always present and "SKU-aware"
         // e.g. if we are running on 5T NPU4 SKU it will report 5 instead of 6
@@ -236,8 +249,8 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
         VPUX_ELF_THROW(CompatibilityError, tileCountLogBuffer.str().c_str());
     }
 
-    if (tileCount > hardwareTileCount / 2
-        && archKind != elf::platform::ArchKind::VPUX30XX && archKind != elf::platform::ArchKind::VPUX37XX) {
+    if (tileCount > hardwareTileCount / 2 && archKind != elf::platform::ArchKind::VPUX30XX &&
+        archKind != elf::platform::ArchKind::VPUX37XX) {
         loaders.front()->setInferencesMayBeRunInParallel(false);
     }
 }
@@ -294,7 +307,6 @@ void HostParsedInference::load() {
     auto perfMetricsPtr = perfMetrics ? reinterpret_cast<uint64_t*>(perfMetrics->getBuffer().cpu_addr()) : nullptr;
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
                                             perfMetricsPtr);
-
 }
 
 HostParsedInference::HostParsedInference(const HostParsedInference& other)
