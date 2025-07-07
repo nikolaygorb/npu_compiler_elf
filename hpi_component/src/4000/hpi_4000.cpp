@@ -71,10 +71,10 @@ constexpr uint32_t VPUX60XX_VERSION_PATCH = 2;
 
 #ifdef INTEL_EMBARGO_NPU7
 constexpr uint32_t VPUX70XX_VERSION_MAJOR = 1;
-constexpr uint32_t VPUX70XX_VERSION_MINOR = 0;
-constexpr uint32_t VPUX70XX_VERSION_PATCH = 0;
+constexpr uint32_t VPUX70XX_VERSION_MINOR = 3;
+constexpr uint32_t VPUX70XX_VERSION_PATCH = 2;
 
-// Patch version 0: Initial support
+// Patch version 2: Initial support for NPU7
 
 #endif  // INTEL_EMBARGO_NPU7
 
