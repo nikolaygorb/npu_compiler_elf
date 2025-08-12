@@ -140,6 +140,11 @@ void HostParsedInference::readPlatformInfo() {
     platformInfo = elf::platform::PlatformInfoSerialization::deserialize(platformInfoBufferPtr, platformInfoBufferSize);
 }
 
+void HostParsedInference::readCompilerHash() {
+    const auto& section = loaders.front()->getSectionsOfType(elf::VPU_SHT_COMPILER_HASH);
+    VPUX_ELF_THROW_UNLESS(section.size() == 1, RangeError, "Expected only one Compiler Hash section.");
+}
+
 elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType) const {
     const auto& noteSections = loaders.front()->getSectionsOfType(elf::SHT_NOTE);
     for (auto section : noteSections) {

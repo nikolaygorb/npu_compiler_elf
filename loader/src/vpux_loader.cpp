@@ -442,6 +442,7 @@ const std::unordered_map<Elf_Word, VPUXLoader::Action> VPUXLoader::actionMap = {
         {VPU_SHT_CMX_WORKSPACE, Action::None},
         {VPU_SHT_PLATFORM_INFO, Action::None},
         {VPU_SHT_PERF_METRICS, Action::None},
+        {VPU_SHT_COMPILER_HASH, Action::None},
 };
 
 const std::unordered_map<VPUXLoader::RelocationType, VPUXLoader::RelocationFunc> VPUXLoader::relocationMap = {

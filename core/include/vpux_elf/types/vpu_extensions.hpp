@@ -190,6 +190,7 @@ constexpr Elf_Word VPU_SHT_CMX_METADATA   = 0x8aaaaaac;
 constexpr Elf_Word VPU_SHT_CMX_WORKSPACE  = 0x8aaaaaad;
 constexpr Elf_Word VPU_SHT_PERF_METRICS   = 0x8aaaaaae;
 constexpr Elf_Word VPU_SHT_PLATFORM_INFO  = 0x8aaaaaaf;
+constexpr Elf_Word VPU_SHT_COMPILER_HASH  = 0x8aaaaab0;
 
 //
 // Section flags
@@ -232,5 +233,15 @@ const Elf_Word VPU_SH_ADDR_ALIGN_FOR_VPU = 64;
 namespace elf_note {
 // Custom values for n_type field of SHT_NOTE section
 constexpr uint32_t NT_NPU_MPI_VERSION = 0xA000;
+
+// Custom data structure for storing compiler git hash
+struct CompilerHashInfo {
+    uint32_t n_namesz;      // size of n_name field
+    uint32_t n_descz;       // size of n_desc field
+    uint32_t n_type;
+    char* n_name;
+    char* n_desc;
+};
+
 }
 }
