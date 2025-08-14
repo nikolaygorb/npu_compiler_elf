@@ -6,6 +6,7 @@
 #include "vpux_elf/utils/error.hpp"
 #include "vpux_headers/managed_buffer.hpp"
 #include "vpux_headers/platform.hpp"
+#include "vpux_headers/compiler_hash.hpp"
 #ifndef VPUX_ELF_LOG_UNIT_NAME
 #define VPUX_ELF_LOG_UNIT_NAME "VpuxHpi"
 #endif
@@ -140,9 +141,16 @@ void HostParsedInference::readPlatformInfo() {
     platformInfo = elf::platform::PlatformInfoSerialization::deserialize(platformInfoBufferPtr, platformInfoBufferSize);
 }
 
-void HostParsedInference::readCompilerHash() {
-    const auto& section = loaders.front()->getSectionsOfType(elf::VPU_SHT_COMPILER_HASH);
-    VPUX_ELF_THROW_UNLESS(section.size() == 1, RangeError, "Expected only one Compiler Hash section.");
+void HostParsedInference::checkCompilerHash() {
+    const auto& sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_COMPILER_HASH);
+    VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one Compiler Hash section.");
+
+    auto compilerHashInfoLock = ElfBufferLockGuard(sections[0].get());
+    auto compilerHashBufferPtr = sections[0]->getBuffer().cpu_addr();
+    auto compilerHashBufferSize = sections[0]->getBuffer().size();
+    auto compilerHashInfo = CompilerHashInfoSerialization::deserialize(compilerHashBufferPtr, compilerHashBufferSize);
+    auto compilerHashString = compilerHashInfo->mCompilerHash;
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Found compiler hash info %s", compilerHashString);
 }
 
 elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType) const {

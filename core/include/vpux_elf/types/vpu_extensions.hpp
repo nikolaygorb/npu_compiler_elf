@@ -234,10 +234,5 @@ namespace elf_note {
 // Custom values for n_type field of SHT_NOTE section
 constexpr uint32_t NT_NPU_MPI_VERSION = 0xA000;
 
-// Custom data structure for storing compiler git hash
-struct CompilerHashInfo {
-    char compiler_hash[40];
-};
-
 }
 }

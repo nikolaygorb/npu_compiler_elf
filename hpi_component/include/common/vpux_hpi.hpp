@@ -91,7 +91,7 @@ private:
     void readPlatformInfo();
     std::shared_ptr<ManagedBuffer> readPerfMetrics();
     elf::Version readVersioningInfo(uint32_t versionType) const;
-    void readCompilerHash();
+    void checkCompilerHash();
 };
 
 }  // namespace elf
