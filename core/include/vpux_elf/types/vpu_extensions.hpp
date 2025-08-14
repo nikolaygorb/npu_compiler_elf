@@ -236,11 +236,7 @@ constexpr uint32_t NT_NPU_MPI_VERSION = 0xA000;
 
 // Custom data structure for storing compiler git hash
 struct CompilerHashInfo {
-    uint32_t n_namesz;      // size of n_name field
-    uint32_t n_descz;       // size of n_desc field
-    uint32_t n_type;
-    char* n_name;
-    char* n_desc;
+    char compiler_hash[40];
 };
 
 }
