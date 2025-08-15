@@ -9,17 +9,14 @@
 
 namespace elf {
 
-// Store compiler git hash string in a fixed-size array
 struct CompilerHashInfo {
-    char mCompilerHash[40];
+    std::vector<char> mCompilerHash;
 };
-
-static_assert(sizeof(CompilerHashInfo) == 40, "CompilerHashInfo size != 40");
 
 class SerialCompilerHashInfo : public elf::SerialStructBase {
 public:
     SerialCompilerHashInfo(CompilerHashInfo& compilerHashInfo) {
-        addElement(compilerHashInfo.mCompilerHash);
+        addElementVector(compilerHashInfo.mCompilerHash);
     }
 };
 
