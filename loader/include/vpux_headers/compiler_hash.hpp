@@ -6,10 +6,11 @@
 #pragma once
 
 #include <vpux_headers/serial_struct_base.hpp>
+#include <vpux_headers/metadata_primitives.hpp>
 
 namespace elf {
 
-struct CompilerHashInfo {
+struct VPUX_ALIGNED_STRUCT(8) CompilerHashInfo {
     std::vector<char> mCompilerHash;
 };
 
