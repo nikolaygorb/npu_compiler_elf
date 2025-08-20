@@ -213,6 +213,9 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     readMetadata();
     readPlatformInfo();
 
+    // Check compiler hash compatibility
+    checkCompilerHash();
+
     auto archKind = platformInfo->mArchKind;
 
     // Check if compiled ELF arch and HPI arch match
