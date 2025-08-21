@@ -11,7 +11,7 @@
 namespace elf {
 
 struct VPUX_ALIGNED_STRUCT(8) CompilerHashInfo {
-    std::vector<char> mCompilerHash;
+    std::vector<uint8_t> mCompilerHash;
 };
 
 class SerialCompilerHashInfo : public elf::SerialStructBase {
