@@ -5,22 +5,32 @@
 
 #pragma once
 
-#include <vpux_headers/serial_struct_base.hpp>
 #include <vpux_headers/metadata_primitives.hpp>
 
 namespace elf {
 
+// Current just store 40 bytes hash string
+constexpr uint8_t compilerHashStringLen = 40;
+
 struct VPUX_ALIGNED_STRUCT(8) CompilerHashInfo {
-    std::vector<uint8_t> mCompilerHash;
+    uint8_t mCompilerHash[compilerHashStringLen];
 };
 
-class SerialCompilerHashInfo : public elf::SerialStructBase {
+class CompilerHash final {
 public:
-    SerialCompilerHashInfo(CompilerHashInfo& compilerHashInfo) {
-        addElementVector(compilerHashInfo.mCompilerHash);
+    CompilerHash() = delete;
+    explicit CompilerHash(const elf::CompilerHashInfo& compilerHashInfo) : isValid(true) {
+        std::memcpy(mCompilerHash, compilerHashInfo.mCompilerHash, compilerHashStringLen);
     }
+
+    const std::string getCompilerHash() const {
+        return std::string(reinterpret_cast<const char*>(mCompilerHash), compilerHashStringLen);
+    }
+
+private:
+    bool isValid = false;
+    uint8_t mCompilerHash[compilerHashStringLen];
 };
 
-using CompilerHashInfoSerialization = SerialAccess<CompilerHashInfo, SerialCompilerHashInfo>;
 
 }  // namespace elf

@@ -146,10 +146,12 @@ void HostParsedInference::checkCompilerHash() {
     VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one Compiler Hash section.");
 
     auto compilerHashInfoLock = ElfBufferLockGuard(sections[0].get());
-    auto compilerHashBufferPtr = sections[0]->getBuffer().cpu_addr();
-    auto compilerHashBufferSize = sections[0]->getBuffer().size();
-    auto compilerHashInfo = CompilerHashInfoSerialization::deserialize(compilerHashBufferPtr, compilerHashBufferSize);
-    auto compilerHashString = compilerHashInfo->mCompilerHash;
+    elf::CompilerHashInfo compilerHashInfo{};
+    VPUX_ELF_THROW_UNLESS(sections[0]->getBuffer().size() == compilerHashStringLen, SectionError,
+                          "Wrong Versioning Note size");
+    std::memcpy(&compilerHashInfo, sections[0]->getBuffer().cpu_addr(), compilerHashStringLen);
+    auto compilerHashInfoStruct = elf::CompilerHash(compilerHashInfo);
+    auto compilerHashString = compilerHashInfoStruct.getCompilerHash();
     VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Found compiler hash info %s", compilerHashString);
 }
 
