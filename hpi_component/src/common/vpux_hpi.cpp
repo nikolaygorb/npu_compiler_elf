@@ -146,13 +146,15 @@ void HostParsedInference::checkCompilerHash() {
     VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one Compiler Hash section.");
 
     auto compilerHashInfoLock = ElfBufferLockGuard(sections[0].get());
-    elf::CompilerHashInfo compilerHashInfo{};
-    VPUX_ELF_THROW_UNLESS(sections[0]->getBuffer().size() == compilerHashStringLen, SectionError,
-                          "Wrong Versioning Note size");
-    std::memcpy(&compilerHashInfo, sections[0]->getBuffer().cpu_addr(), compilerHashStringLen);
-    auto compilerHashInfoStruct = elf::CompilerHash(compilerHashInfo);
-    auto compilerHashString = compilerHashInfoStruct.getCompilerHash();
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Found compiler hash info %s", compilerHashString);
+    auto CompilerHashInfoBufferPtr = sections[0]->getBuffer().cpu_addr();
+    auto CompilerHashInfoBufferSize = sections[0]->getBuffer().size();
+    auto compilerHashInfo = elf::CompilerHashSerialization::deserialize(CompilerHashInfoBufferPtr, CompilerHashInfoBufferSize);
+    auto compilerHashString = compilerHashInfo->mCompilerHash;
+
+    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Found compiler hash info %s",
+                 std::string(compilerHashString.begin(), compilerHashString.end()).c_str());
+    VPUX_ELF_THROW_WHEN(compilerHashString.size() == 0, CompatibilityError,
+                        "Expected the length of compiler git hash string is larger than 0.");
 }
 
 elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType) const {
