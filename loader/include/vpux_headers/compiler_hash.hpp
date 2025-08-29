@@ -12,13 +12,13 @@ struct CompilerHashInfo {
     std::vector<uint8_t> mCompilerHash;
 };
 
-class SerialCompielrInfo : public SerialStructBase {
+class SerialCompilerInfo : public SerialStructBase {
 public:
-    SerialCompielrInfo(elf::CompilerHashInfo& compilerHashInfo) {
+    SerialCompilerInfo(elf::CompilerHashInfo& compilerHashInfo) {
         addElementVector(compilerHashInfo.mCompilerHash);
     }
 };
 
-using CompilerHashSerialization = SerialAccess<CompilerHashInfo, SerialCompielrInfo>;
+using CompilerHashSerialization = SerialAccess<CompilerHashInfo, SerialCompilerInfo>;
 
 }  // namespace elf
