@@ -315,7 +315,7 @@ public:
         return SerialDataType(data).serialize();
     }
 
-    static const std::shared_ptr<DataType> deserialize(const uint8_t* buffer, uint64_t size) {
+    static std::shared_ptr<DataType> deserialize(const uint8_t* buffer, uint64_t size) {
         const auto data = std::make_shared<DataType>();
         SerialDataType(*data).deserialize(buffer, size);
 

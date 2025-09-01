@@ -143,18 +143,7 @@ void HostParsedInference::readPlatformInfo() {
 
 void HostParsedInference::checkCompilerHash() {
     const auto& sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_COMPILER_HASH);
-    VPUX_ELF_THROW_UNLESS(sections.size() == 1, RangeError, "Expected only one Compiler Hash section.");
-
-    auto compilerHashInfoLock = ElfBufferLockGuard(sections[0].get());
-    auto CompilerHashInfoBufferPtr = sections[0]->getBuffer().cpu_addr();
-    auto CompilerHashInfoBufferSize = sections[0]->getBuffer().size();
-    auto compilerHashInfo = elf::CompilerHashSerialization::deserialize(CompilerHashInfoBufferPtr, CompilerHashInfoBufferSize);
-    auto compilerHashString = compilerHashInfo->mCompilerHash;
-
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Found compiler hash info %s",
-                 std::string(compilerHashString.begin(), compilerHashString.end()).c_str());
-    VPUX_ELF_THROW_WHEN(compilerHashString.size() == 0, CompatibilityError,
-                        "Expected the length of compiler git hash string is larger than 0.");
+    VPUX_ELF_THROW_WHEN(sections.size() > 1, RangeError, "Expected only one Compiler Hash section.");
 }
 
 elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType) const {
