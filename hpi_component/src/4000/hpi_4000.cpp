@@ -52,11 +52,21 @@ constexpr uint32_t VPUX40XX_VERSION_PATCH = 7;
 // Patch version 6: Adding FP8 data types
 
 #ifdef INTEL_EMBARGO_NPU5
-constexpr uint32_t VPUX50XX_VERSION_MAJOR = 1;
-constexpr uint32_t VPUX50XX_VERSION_MINOR = 2;
-constexpr uint32_t VPUX50XX_VERSION_PATCH = 7;
+constexpr uint32_t VPUX50XX_VERSION_MAJOR = 2;
+constexpr uint32_t VPUX50XX_VERSION_MINOR = 0;
+constexpr uint32_t VPUX50XX_VERSION_PATCH = 0;
 
-// Patch version 6: Adding FP8 data types
+// 2.0.0:
+// - Bump ELF major version to reject all pre-PV NPU5 blobs
+//
+// 1.2.7:
+// - Add support for elf::OVNodeType::I2
+// - Add support for elf::OVNodeType::U2
+//
+// 1.2.6:
+// - Add support for elf::DType::F8E8M0
+// - Rename elf::DType::FP8 -> elf::DType::F8EM5M2
+// - Rename elf::DType::HF8 -> elf::DType::F8E4M3FN
 
 #endif  // INTEL_EMBARGO_NPU5
 
