@@ -10,6 +10,10 @@
 namespace elf {
 struct CompilerHashInfo {
     std::vector<uint8_t> mCompilerHash;
+
+    CompilerHashInfo(const std::string& compilerHashString) {
+        mCompilerHash.assign(compilerHashString.begin(), compilerHashString.end());
+    }
 };
 
 class SerialCompilerInfo : public SerialStructBase {
