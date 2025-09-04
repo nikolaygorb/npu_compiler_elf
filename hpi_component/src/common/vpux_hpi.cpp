@@ -27,24 +27,22 @@
 #endif
 
 #ifdef INTEL_EMBARGO_NPU5
-//to be removed with E#88139:
-//temporary fix to support NPU 5000 arch
 #if defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)
-#include <hpi_4000.hpp>
+#include <hpi_5000.hpp>
 #endif
 #endif  // INTEL_EMBARGO_NPU5
 #ifdef INTEL_EMBARGO_NPU6
 //to be removed with E#88139:
 //temporary fix to support NPU 6000 arch
 #if defined(CONFIG_TARGET_SOC_6000) || defined(HOST_BUILD)
-#include <hpi_4000.hpp>
+#include <hpi_5000.hpp>
 #endif
 #endif  // INTEL_EMBARGO_NPU6
 #ifdef INTEL_EMBARGO_NPU7
 //to be removed with E#88139:
 //temporary fix to support NPU 6000 arch
 #if defined(CONFIG_TARGET_SOC_7000) || defined(HOST_BUILD)
-#include <hpi_4000.hpp>
+#include <hpi_5000.hpp>
 #endif
 #endif  // INTEL_EMBARGO_NPU7
 
@@ -71,21 +69,20 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(elf::platfo
         break;
 #endif
 #if (defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)) && defined(INTEL_EMBARGO_NPU5)
-        // to be updated with E#88139: temporary fix to support NPU 5000 arch
     case elf::platform::ArchKind::VPUX50XX:
-        archSpecificHPI = std::make_unique<HostParsedInference_4000>(archKind);
+        archSpecificHPI = std::make_unique<HostParsedInference_5000>(archKind);
         break;
 #endif  // INTEL_EMBARGO_NPU5
 #if (defined(CONFIG_TARGET_SOC_6000) || defined(HOST_BUILD)) && defined(INTEL_EMBARGO_NPU6)
         // to be updated with E#88139: temporary fix to support NPU 6000 arch
     case elf::platform::ArchKind::VPUX60XX:
-        archSpecificHPI = std::make_unique<HostParsedInference_4000>(archKind);
+        archSpecificHPI = std::make_unique<HostParsedInference_5000>(archKind);
         break;
 #endif  // INTEL_EMBARGO_NPU6
 #if (defined(CONFIG_TARGET_SOC_7000) || defined(HOST_BUILD)) && defined(INTEL_EMBARGO_NPU7)
         // to be updated with E#88139: temporary fix to support NPU 7000 arch
     case elf::platform::ArchKind::VPUX70XX:
-        archSpecificHPI = std::make_unique<HostParsedInference_4000>(archKind);
+        archSpecificHPI = std::make_unique<HostParsedInference_5000>(archKind);
         break;
 #endif  // INTEL_EMBARGO_NPU7
     default:
@@ -260,6 +257,7 @@ void HostParsedInference::load() {
 
     const auto symbolSectionTypes = archSpecificHpi->getSymbolSectionTypes();
     auto symTabOverrideMode = archSpecificHpi->getSymbolSectionTypes().size() == 0 ? false : true;
+    auto explicitAllocationsEnabled = archSpecificHpi->getExplicitAllocationsEnabled();
 
     std::vector<uint64_t> entriesVct;
     if (platformInfo->mArchKind == elf::platform::ArchKind::VPUX37XX &&
@@ -277,7 +275,7 @@ void HostParsedInference::load() {
             const auto symbolTable = archSpecificHpi->getSymbolTable(idx);
             if (idx == 0) {
                 // first loader is created.
-                loaders[idx]->load(symbolTable, symTabOverrideMode, symbolSectionTypes);
+                loaders[idx]->load(symbolTable, symTabOverrideMode, symbolSectionTypes, explicitAllocationsEnabled);
             } else {
                 // create other loaders using the first one that has
                 // been initialized.
@@ -293,7 +291,7 @@ void HostParsedInference::load() {
         }
     } else {
         auto symbolTable = archSpecificHpi->getSymbolTable(metadata->mResourceRequirements.nn_slice_count_);
-        loaders.front()->load(symbolTable, symTabOverrideMode, symbolSectionTypes);
+        loaders.front()->load(symbolTable, symTabOverrideMode, symbolSectionTypes, explicitAllocationsEnabled);
         entriesVct.push_back(loaders.front()->getEntry()->getBuffer().vpu_addr());
     }
 

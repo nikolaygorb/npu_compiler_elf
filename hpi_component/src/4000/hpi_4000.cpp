@@ -51,25 +51,6 @@ constexpr uint32_t VPUX40XX_VERSION_PATCH = 7;
 
 // Patch version 6: Adding FP8 data types
 
-#ifdef INTEL_EMBARGO_NPU5
-constexpr uint32_t VPUX50XX_VERSION_MAJOR = 2;
-constexpr uint32_t VPUX50XX_VERSION_MINOR = 0;
-constexpr uint32_t VPUX50XX_VERSION_PATCH = 0;
-
-// 2.0.0:
-// - Bump ELF major version to reject all pre-PV NPU5 blobs
-//
-// 1.2.7:
-// - Add support for elf::OVNodeType::I2
-// - Add support for elf::OVNodeType::U2
-//
-// 1.2.6:
-// - Add support for elf::DType::F8E8M0
-// - Rename elf::DType::FP8 -> elf::DType::F8EM5M2
-// - Rename elf::DType::HF8 -> elf::DType::F8E4M3FN
-
-#endif  // INTEL_EMBARGO_NPU5
-
 #ifdef INTEL_EMBARGO_NPU6
 constexpr uint32_t VPUX60XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX60XX_VERSION_MINOR = 3;
@@ -102,7 +83,62 @@ void setDefaultPerformanceMetrics(VpuPerformanceMetrics& metrics) {
     }
 }
 
-HostParsedInference_4000::HostParsedInference_4000(elf::platform::ArchKind archKind): archKind_(archKind) {
+HostParsedInference_4000_Base::HostParsedInference_4000_Base(elf::platform::ArchKind archKind): archKind_(archKind) {
+}
+
+std::vector<SymbolEntry> HostParsedInference_4000_Base::getSymbolTable(uint8_t) const {
+    // For NPU 4000 we only have one symtab
+    return symTab_;
+}
+
+std::vector<elf::Elf_Word> HostParsedInference_4000_Base::getSymbolSectionTypes() const {
+    return secTypeContainers_;
+}
+
+bool HostParsedInference_4000_Base::getExplicitAllocationsEnabled() const {
+    return true;
+}
+
+BufferSpecs HostParsedInference_4000_Base::getParsedInferenceBufferSpecs() {
+    return BufferSpecs(DEFAULT_ALIGN, utils::alignUp(sizeof(nn_public::VpuHostParsedInference), DEFAULT_ALIGN),
+                       SHF_EXECINSTR);
+}
+
+void HostParsedInference_4000_Base::setHostParsedInference(DeviceBuffer& devBuffer,
+                                                           const std::vector<uint64_t>& mapped_entry,
+                                                           ResourceRequirements resReq, const uint64_t* perf_metrics) {
+    auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference*>(devBuffer.cpu_addr());
+    *hpi = {};
+
+    hpi->resource_requirements_.nn_slice_count_ = resReq.nn_slice_count_;
+    hpi->resource_requirements_.nn_barriers_ = resReq.nn_barriers_;
+    hpi->resource_requirements_.nn_slice_length_ = resReq.nn_slice_length_;
+
+    if (perf_metrics) {
+        memcpy(static_cast<void*>(&hpi->performance_metrics_), static_cast<const void*>(perf_metrics),
+               sizeof(VpuPerformanceMetrics));
+    } else {
+        setDefaultPerformanceMetrics(hpi->performance_metrics_);
+    }
+
+    hpi->mapped_.address = mapped_entry[0];
+    hpi->mapped_.count = mapped_entry.size();
+}
+
+elf::Version HostParsedInference_4000_Base::getELFLibABIVersion() const {
+    return {VPUX40XX_VERSION_MAJOR, VPUX40XX_VERSION_MINOR, VPUX40XX_VERSION_PATCH};
+}
+
+elf::Version HostParsedInference_4000_Base::getStaticMIVersion() const {
+    return {VPU_NNRT_40XX_API_VER_MAJOR, VPU_NNRT_40XX_API_VER_MINOR, VPU_NNRT_40XX_API_VER_PATCH};
+}
+
+uint32_t HostParsedInference_4000_Base::getArchTilesCount() const {
+    return nn_public::VPU_MAX_TILES;
+}
+
+HostParsedInference_4000::HostParsedInference_4000(elf::platform::ArchKind archKind)
+        : HostParsedInference_4000_Base(archKind) {
     symTab_.reserve(2);
     secTypeContainers_.reserve(2);
     {
@@ -137,72 +173,6 @@ HostParsedInference_4000::HostParsedInference_4000(elf::platform::ArchKind archK
         symTab_.push_back(cmxWorkspace);
         secTypeContainers_.push_back(elf::VPU_SHT_CMX_WORKSPACE);
     }
-}
-
-std::vector<SymbolEntry> HostParsedInference_4000::getSymbolTable(uint8_t) const {
-    // For NPU 4000 we only have one symtab
-    return symTab_;
-}
-
-std::vector<elf::Elf_Word> HostParsedInference_4000::getSymbolSectionTypes() const {
-    return secTypeContainers_;
-}
-
-BufferSpecs HostParsedInference_4000::getParsedInferenceBufferSpecs() {
-    return BufferSpecs(DEFAULT_ALIGN, utils::alignUp(sizeof(nn_public::VpuHostParsedInference), DEFAULT_ALIGN),
-                       SHF_EXECINSTR);
-}
-
-uint32_t HostParsedInference_4000::getArchTilesCount() const {
-    return nn_public::VPU_MAX_TILES;
-}
-
-void HostParsedInference_4000::setHostParsedInference(DeviceBuffer& devBuffer,
-                                                      const std::vector<uint64_t>& mapped_entry,
-                                                      ResourceRequirements resReq, const uint64_t* perf_metrics) {
-    auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference*>(devBuffer.cpu_addr());
-    *hpi = {};
-
-    hpi->resource_requirements_.nn_slice_count_ = resReq.nn_slice_count_;
-    hpi->resource_requirements_.nn_barriers_ = resReq.nn_barriers_;
-    hpi->resource_requirements_.nn_slice_length_ = resReq.nn_slice_length_;
-
-    if (perf_metrics) {
-        memcpy(static_cast<void*>(&hpi->performance_metrics_), static_cast<const void*>(perf_metrics),
-               sizeof(VpuPerformanceMetrics));
-    } else {
-        setDefaultPerformanceMetrics(hpi->performance_metrics_);
-    }
-
-    hpi->mapped_.address = mapped_entry[0];
-    hpi->mapped_.count = mapped_entry.size();
-}
-
-elf::Version HostParsedInference_4000::getELFLibABIVersion() const {
-    switch (archKind_) {
-    case elf::platform::ArchKind::VPUX40XX:
-        return {VPUX40XX_VERSION_MAJOR, VPUX40XX_VERSION_MINOR, VPUX40XX_VERSION_PATCH};
-#ifdef INTEL_EMBARGO_NPU5
-    case elf::platform::ArchKind::VPUX50XX:
-        return {VPUX50XX_VERSION_MAJOR, VPUX50XX_VERSION_MINOR, VPUX50XX_VERSION_PATCH};
-#endif  // INTEL_EMBARGO_NPU5
-#ifdef INTEL_EMBARGO_NPU6
-    case elf::platform::ArchKind::VPUX60XX:
-        return {VPUX60XX_VERSION_MAJOR, VPUX60XX_VERSION_MINOR, VPUX60XX_VERSION_PATCH};
-#endif  // INTEL_EMBARGO_NPU6
-#ifdef INTEL_EMBARGO_NPU7
-    case elf::platform::ArchKind::VPUX70XX:
-        return {VPUX70XX_VERSION_MAJOR, VPUX70XX_VERSION_MINOR, VPUX70XX_VERSION_PATCH};
-#endif  // INTEL_EMBARGO_NPU7
-    default:
-        break;
-    }
-    VPUX_ELF_THROW(RangeError, (elf::platform::stringifyArchKind(archKind_) + " arch is not supported").c_str());
-    return {0, 0, 0};
-}
-
-elf::Version HostParsedInference_4000::getStaticMIVersion() const {
-    return {VPU_NNRT_40XX_API_VER_MAJOR, VPU_NNRT_40XX_API_VER_MINOR, VPU_NNRT_40XX_API_VER_PATCH};
 }
 
 }  // namespace elf
