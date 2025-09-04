@@ -6,6 +6,7 @@
 #include "vpux_elf/utils/error.hpp"
 #include "vpux_headers/managed_buffer.hpp"
 #include "vpux_headers/platform.hpp"
+#include "vpux_headers/compiler_hash.hpp"
 #ifndef VPUX_ELF_LOG_UNIT_NAME
 #define VPUX_ELF_LOG_UNIT_NAME "VpuxHpi"
 #endif
@@ -137,6 +138,11 @@ void HostParsedInference::readPlatformInfo() {
     platformInfo = elf::platform::PlatformInfoSerialization::deserialize(platformInfoBufferPtr, platformInfoBufferSize);
 }
 
+void HostParsedInference::checkCompilerHash() {
+    const auto& sections = loaders.front()->getSectionsOfType(elf::VPU_SHT_COMPILER_HASH);
+    VPUX_ELF_THROW_WHEN(sections.size() > 1, RangeError, "Expected only one Compiler Hash section.");
+}
+
 elf::Version HostParsedInference::readVersioningInfo(uint32_t versionType) const {
     const auto& noteSections = loaders.front()->getSectionsOfType(elf::SHT_NOTE);
     for (auto section : noteSections) {
@@ -196,6 +202,9 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
 
     readMetadata();
     readPlatformInfo();
+
+    // Check compiler hash compatibility
+    checkCompilerHash();
 
     auto archKind = platformInfo->mArchKind;
 
