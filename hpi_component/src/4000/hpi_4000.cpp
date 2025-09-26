@@ -106,7 +106,8 @@ BufferSpecs HostParsedInference_4000_Base::getParsedInferenceBufferSpecs() {
 
 void HostParsedInference_4000_Base::setHostParsedInference(DeviceBuffer& devBuffer,
                                                            const std::vector<uint64_t>& mapped_entry,
-                                                           ResourceRequirements resReq, const uint64_t* perf_metrics) {
+                                                           ResourceRequirements resReq, const uint64_t* perf_metrics,
+                                                           elf::Version version) {
     auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference*>(devBuffer.cpu_addr());
     *hpi = {};
 
@@ -121,8 +122,15 @@ void HostParsedInference_4000_Base::setHostParsedInference(DeviceBuffer& devBuff
         setDefaultPerformanceMetrics(hpi->performance_metrics_);
     }
 
-    hpi->mapped_.address = mapped_entry[0];
-    hpi->mapped_.count = mapped_entry.size();
+    if (version.getMIFormat() >= elf::elf_note::MIFormat::ManagedMappedInference) {
+        hpi->mmi_access_ = nn_public::VpuHostParsedInference::VpuMmiAccessMode::DIRECT;
+        hpi->managed_inference_.address = mapped_entry[0];
+        hpi->managed_inference_.count = mapped_entry.size();
+    } else {
+        hpi->mmi_access_ = nn_public::VpuHostParsedInference::VpuMmiAccessMode::INDIRECT;
+        hpi->mapped_.address = mapped_entry[0];
+        hpi->mapped_.count = mapped_entry.size();
+    }
 }
 
 elf::Version HostParsedInference_4000_Base::getELFLibABIVersion() const {

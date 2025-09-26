@@ -313,7 +313,7 @@ void HostParsedInference::load() {
     auto perfMetricsLock = ElfBufferLockGuard(perfMetrics.get());
     auto perfMetricsPtr = perfMetrics ? reinterpret_cast<uint64_t*>(perfMetrics->getBuffer().cpu_addr()) : nullptr;
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
-                                            perfMetricsPtr);
+                                            perfMetricsPtr, getMIVersion());
 }
 
 HostParsedInference::HostParsedInference(const HostParsedInference& other)
@@ -362,7 +362,7 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
     auto perfMetricsLock = ElfBufferLockGuard(perfMetrics.get());
     auto perfMetricsPtr = perfMetrics ? reinterpret_cast<uint64_t*>(perfMetrics->getBuffer().cpu_addr()) : nullptr;
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
-                                            perfMetricsPtr);
+                                            perfMetricsPtr, getMIVersion());
 };
 
 HostParsedInference::HostParsedInference(HostParsedInference&& other)
@@ -429,7 +429,7 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
     auto perfMetricsLock = ElfBufferLockGuard(perfMetrics.get());
     auto perfMetricsPtr = perfMetrics ? reinterpret_cast<uint64_t*>(perfMetrics->getBuffer().cpu_addr()) : nullptr;
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
-                                            perfMetricsPtr);
+                                            perfMetricsPtr, getMIVersion());
 
     return *this;
 }

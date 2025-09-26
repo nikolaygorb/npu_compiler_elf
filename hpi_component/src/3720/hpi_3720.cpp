@@ -139,7 +139,8 @@ uint32_t HostParsedInference_3720::getArchTilesCount() const {
 
 void HostParsedInference_3720::setHostParsedInference(DeviceBuffer& devBuffer,
                                                       const std::vector<uint64_t>& mapped_entry,
-                                                      ResourceRequirements resReq, const uint64_t* perf_metrics) {
+                                                      ResourceRequirements resReq, const uint64_t* perf_metrics,
+                                                      elf::Version) {
     auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference*>(devBuffer.cpu_addr());
     *hpi = {};
 
