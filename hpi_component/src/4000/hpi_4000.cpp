@@ -122,15 +122,9 @@ void HostParsedInference_4000_Base::setHostParsedInference(DeviceBuffer& devBuff
         setDefaultPerformanceMetrics(hpi->performance_metrics_);
     }
 
-    if (version.getMIFormat() >= elf::elf_note::MIFormat::ManagedMappedInference) {
-        hpi->mmi_access_ = nn_public::VpuHostParsedInference::VpuMmiAccessMode::DIRECT;
-        hpi->managed_inference_.address = mapped_entry[0];
-        hpi->managed_inference_.count = mapped_entry.size();
-    } else {
-        hpi->mmi_access_ = nn_public::VpuHostParsedInference::VpuMmiAccessMode::INDIRECT;
-        hpi->mapped_.address = mapped_entry[0];
-        hpi->mapped_.count = mapped_entry.size();
-    }
+    hpi->mmi_access_ = static_cast<nn_public::VpuHostParsedInference::VpuMmiAccessMode>(version.getMIFormat());
+    hpi->mapped_.address = mapped_entry[0];
+    hpi->mapped_.count = mapped_entry.size();
 }
 
 elf::Version HostParsedInference_4000_Base::getELFLibABIVersion() const {
