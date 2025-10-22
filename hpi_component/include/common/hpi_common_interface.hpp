@@ -48,9 +48,12 @@ public:
      * getEntry method
      *
      * @param resReq resource requirements to be added to the host parsed inference
+     *
+     * @param version Serialized elf::Version
      */
     virtual void setHostParsedInference(DeviceBuffer& devBuffer, const std::vector<uint64_t>& mapped_entry,
-                                        ResourceRequirements resReq, const uint64_t* perf_metrics) = 0;
+                                        ResourceRequirements resReq, const uint64_t* perf_metrics,
+                                        elf::Version version) = 0;
     /**
      * Get ABI Version of current HPI/Loader
      */

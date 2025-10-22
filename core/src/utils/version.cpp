@@ -23,6 +23,10 @@ namespace {
 }
 };
 
+uint32_t Version::getMIFormat() const {
+    return mi_format;
+}
+
 uint32_t Version::getMajor() const {
     return major;
 }

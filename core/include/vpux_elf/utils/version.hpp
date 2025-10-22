@@ -27,10 +27,11 @@ enum class VersionType {
 
 class Version final {
 public:
-    constexpr Version(uint32_t v_major, uint32_t v_minor, uint32_t v_patch) : major{v_major}, minor{v_minor}, patch{v_patch}, isValid{true} {};
-    explicit Version(const elf::elf_note::VersionNote& versionNote) : major{versionNote.n_desc[1]}, minor{versionNote.n_desc[2]}, patch{versionNote.n_desc[3]}, isValid{true} {};
+    constexpr Version(uint32_t v_major, uint32_t v_minor, uint32_t v_patch) : mi_format{0}, major{v_major}, minor{v_minor}, patch{v_patch}, isValid{true} {};
+    explicit Version(const elf::elf_note::VersionNote& versionNote) : mi_format{versionNote.n_desc[0]}, major{versionNote.n_desc[1]}, minor{versionNote.n_desc[2]}, patch{versionNote.n_desc[3]}, isValid{true} {};
     Version() = default;
 
+    uint32_t getMIFormat() const;
     uint32_t getMajor() const;
     uint32_t getMinor() const;
     uint32_t getPatch() const;
@@ -70,6 +71,7 @@ public:
     bool checkValidity() const;
 
 private:
+    uint32_t mi_format = 0;
     uint32_t major = 0;
     uint32_t minor = 0;
     uint32_t patch = 0;

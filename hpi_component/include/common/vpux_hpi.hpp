@@ -48,7 +48,8 @@ private:
 
 class HostParsedInference final {
 public:
-    HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs, DeviceDescriptor* deviceDescriptor = nullptr);
+    HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs,
+                        DeviceDescriptor* deviceDescriptor = nullptr);
     HostParsedInference(const HostParsedInference& other);
     HostParsedInference(HostParsedInference&& other);
     ~HostParsedInference();
