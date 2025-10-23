@@ -106,12 +106,5 @@ constexpr uint32_t NT_GNU_BUILD_ID = 3;
 constexpr uint32_t NT_GNU_GOLD_VERSION = 4;
 constexpr uint32_t NT_GNU_PROPERTY_TYPE_0 = 5;
 
-// Standard values for n_desc[0] field of ABI Version NOTE section
-enum MIFormat : uint8_t {
-    MappedInference = 0,
-    ManagedMappedInference = 1,
-    Unknown = 255
-};
-
 } // namespace elf_note
 } // namespace elf
