@@ -107,7 +107,7 @@ BufferSpecs HostParsedInference_4000_Base::getParsedInferenceBufferSpecs() {
 void HostParsedInference_4000_Base::setHostParsedInference(DeviceBuffer& devBuffer,
                                                            const std::vector<uint64_t>& mapped_entry,
                                                            ResourceRequirements resReq, const uint64_t* perf_metrics,
-                                                           elf::Version version) {
+                                                           const elf::Version& version) {
     auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference*>(devBuffer.cpu_addr());
     *hpi = {};
 

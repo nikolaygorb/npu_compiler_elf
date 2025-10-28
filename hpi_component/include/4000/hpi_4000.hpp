@@ -20,7 +20,7 @@ public:
     BufferSpecs getParsedInferenceBufferSpecs() override;
     void setHostParsedInference(DeviceBuffer& devBuffer, const std::vector<uint64_t>& mapped_entry,
                                 ResourceRequirements resReq, const uint64_t* perf_metrics,
-                                elf::Version version) override;
+                                const elf::Version& version) override;
     elf::Version getELFLibABIVersion() const override;
     elf::Version getStaticMIVersion() const override;
     uint32_t getArchTilesCount() const override;

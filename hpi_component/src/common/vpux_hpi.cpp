@@ -4,9 +4,9 @@
 //
 
 #include "vpux_elf/utils/error.hpp"
+#include "vpux_headers/compiler_hash.hpp"
 #include "vpux_headers/managed_buffer.hpp"
 #include "vpux_headers/platform.hpp"
-#include "vpux_headers/compiler_hash.hpp"
 #ifndef VPUX_ELF_LOG_UNIT_NAME
 #define VPUX_ELF_LOG_UNIT_NAME "VpuxHpi"
 #endif
@@ -165,7 +165,7 @@ elf::Version HostParsedInference::getElfABIVersion() const {
 }
 
 elf::Version HostParsedInference::getMIVersion() const {
-    return readVersioningInfo(elf::elf_note::NT_NPU_MPI_VERSION);
+    return miVersion;
 }
 
 elf::Version HostParsedInference::getLibraryELFVersion() const {
@@ -224,8 +224,9 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
         nnExpectedVersion = getLibraryMIVersion();
     }
 
-    elf::Version::checkVersionCompatibility(nnExpectedVersion, getMIVersion(),
-                                            elf::VersionType::MAPPED_INFERENCE_VERSION);
+    miVersion = readVersioningInfo(elf::elf_note::NT_NPU_MPI_VERSION);
+
+    elf::Version::checkVersionCompatibility(nnExpectedVersion, miVersion, elf::VersionType::MAPPED_INFERENCE_VERSION);
 
     // Check ELF Library tile count Compatibility
     auto tileCount = metadata->mResourceRequirements.nn_slice_count_;
@@ -313,7 +314,7 @@ void HostParsedInference::load() {
     auto perfMetricsLock = ElfBufferLockGuard(perfMetrics.get());
     auto perfMetricsPtr = perfMetrics ? reinterpret_cast<uint64_t*>(perfMetrics->getBuffer().cpu_addr()) : nullptr;
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
-                                            perfMetricsPtr, getMIVersion());
+                                            perfMetricsPtr, miVersion);
 }
 
 HostParsedInference::HostParsedInference(const HostParsedInference& other)
@@ -362,7 +363,7 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
     auto perfMetricsLock = ElfBufferLockGuard(perfMetrics.get());
     auto perfMetricsPtr = perfMetrics ? reinterpret_cast<uint64_t*>(perfMetrics->getBuffer().cpu_addr()) : nullptr;
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
-                                            perfMetricsPtr, getMIVersion());
+                                            perfMetricsPtr, miVersion);
 };
 
 HostParsedInference::HostParsedInference(HostParsedInference&& other)
@@ -429,7 +430,7 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
     auto perfMetricsLock = ElfBufferLockGuard(perfMetrics.get());
     auto perfMetricsPtr = perfMetrics ? reinterpret_cast<uint64_t*>(perfMetrics->getBuffer().cpu_addr()) : nullptr;
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
-                                            perfMetricsPtr, getMIVersion());
+                                            perfMetricsPtr, miVersion);
 
     return *this;
 }
