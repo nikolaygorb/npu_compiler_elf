@@ -19,7 +19,7 @@ public:
     bool getExplicitAllocationsEnabled() const override;
     BufferSpecs getParsedInferenceBufferSpecs() override;
     void setHostParsedInference(DeviceBuffer& devBuffer, const std::vector<uint64_t>& mapped_entry,
-                                ResourceRequirements resReq, const uint64_t* perf_metrics,
+                                const ResourceRequirements& resReq, const uint64_t* perf_metrics,
                                 const elf::Version& version) override;
     elf::Version getELFLibABIVersion() const override;
     elf::Version getStaticMIVersion() const override;
