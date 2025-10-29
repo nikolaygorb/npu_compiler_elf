@@ -79,6 +79,7 @@ public:
 private:
     BufferManager* bufferManager;
     AccessManager* accessManager;
+    elf::Version miVersion;
     std::shared_ptr<NetworkMetadata> metadata;
     std::shared_ptr<elf::platform::PlatformInfo> platformInfo;
     std::shared_ptr<ManagedBuffer> perfMetrics;

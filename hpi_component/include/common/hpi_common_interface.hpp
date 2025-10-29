@@ -52,8 +52,8 @@ public:
      * @param version Serialized elf::Version
      */
     virtual void setHostParsedInference(DeviceBuffer& devBuffer, const std::vector<uint64_t>& mapped_entry,
-                                        ResourceRequirements resReq, const uint64_t* perf_metrics,
-                                        elf::Version version) = 0;
+                                        const ResourceRequirements& resReq, const uint64_t* perf_metrics,
+                                        const elf::Version& version) = 0;
     /**
      * Get ABI Version of current HPI/Loader
      */
