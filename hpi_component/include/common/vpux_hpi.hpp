@@ -79,13 +79,13 @@ public:
 private:
     BufferManager* bufferManager;
     AccessManager* accessManager;
+    elf::platform::ArchKind archKind;  // current platform
     elf::Version miVersion;
     std::shared_ptr<NetworkMetadata> metadata;
     std::shared_ptr<elf::platform::PlatformInfo> platformInfo;
     std::shared_ptr<ManagedBuffer> perfMetrics;
     std::vector<std::unique_ptr<VPUXLoader>> loaders;
     std::shared_ptr<AllocatedDeviceBuffer> parsedInference;
-    elf::HPIConfigs hpiCfg;
     std::shared_ptr<AllocatedDeviceBuffer> entries;
 
     // helpers
@@ -94,6 +94,7 @@ private:
     std::shared_ptr<ManagedBuffer> readPerfMetrics();
     elf::Version readVersioningInfo(uint32_t versionType) const;
     void checkCompilerHash();
+    void checkPlatformCompatibility();
 };
 
 }  // namespace elf

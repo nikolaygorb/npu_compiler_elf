@@ -15,7 +15,7 @@ namespace platform {
 const std::unordered_map<std::string, elf::platform::ArchKind>& getKnownArchitectures() {
     static const std::unordered_map<std::string, elf::platform::ArchKind> knownArch = {
 #ifdef INTEL_EMBARGO_NPU5
-            {"VPUX50XX", elf::platform::ArchKind::VPUX50XX},
+            {"VPUX501X", elf::platform::ArchKind::VPUX501X}, {"VPUX502X", elf::platform::ArchKind::VPUX502X},
 #endif  // INTEL_EMBARGO_NPU5
 #ifdef INTEL_EMBARGO_NPU6
             {"VPUX60XX", elf::platform::ArchKind::VPUX60XX},
@@ -53,7 +53,8 @@ uint8_t getHardwareTileCount(const elf::platform::ArchKind& arch) {
     // map between archKind and maximum hardware tile count
     static const std::unordered_map<elf::platform::ArchKind, uint8_t> hardwareTileCountsMap = {
 #ifdef INTEL_EMBARGO_NPU5
-            {elf::platform::ArchKind::VPUX50XX, 4},
+            {elf::platform::ArchKind::VPUX501X, 3},
+            {elf::platform::ArchKind::VPUX502X, 1},
 #endif  // INTEL_EMBARGO_NPU5
 #ifdef INTEL_EMBARGO_NPU6
             {elf::platform::ArchKind::VPUX60XX, 4},

@@ -1014,7 +1014,7 @@ void VPUXLoader::applyScratchRelocations() {
         // symbol range of sections.
         auto symTabIdx = relocSecHdr->sh_link;
         VPUX_ELF_THROW_UNLESS((symTabIdx < m_reader->getSectionsNum() || (symTabIdx == VPU_RT_SYMTAB)), RangeError,
-                              "sh_link exceeds the number of entries.")
+                              "sh_link exceeds the number of entries.");
 
         // by convention, we will assume symTabIdx==VPU_RT_SYMTAB to be the "built-in" symtab
         auto getSymTab = [&](size_t& symTabEntries) -> const SymbolEntry* {
@@ -1150,7 +1150,7 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSect
         // symbol range of sections.
         auto symTabIdx = relocSecHdr->sh_link;
         VPUX_ELF_THROW_UNLESS((symTabIdx < m_reader->getSectionsNum() || (symTabIdx == VPU_RT_SYMTAB)), RangeError,
-                              "sh_link exceeds the number of entries.")
+                              "sh_link exceeds the number of entries.");
 
         // By contract, we treat symTabIdx==VPU_RT_SYMTAB to be the "built-in" symtab
         auto getSymTab = [&](size_t& symTabEntries) -> const SymbolEntry* {
@@ -1324,9 +1324,8 @@ void VPUXLoader::applyRelocations(const std::vector<std::size_t>& relocationSect
 
 template <typename SymbolType, typename SectionType, typename ResolveSymbolFunc, typename RelocateFunc>
 void VPUXLoader::applyRelocations(SectionType& relocSection, SectionType& symbolSection,
-                                            std::vector<DeviceBuffer>& ioBuffers, uint8_t* targetSectionPtr,
-                                            size_t targetSectionSize, ResolveSymbolFunc resolveSymbol,
-                                            RelocateFunc relocate) {
+                                  std::vector<DeviceBuffer>& ioBuffers, uint8_t* targetSectionPtr,
+                                  size_t targetSectionSize, ResolveSymbolFunc resolveSymbol, RelocateFunc relocate) {
     auto relocations = relocSection.template getData<elf::RelocationAEntry>();
     auto numRelocs = relocSection.getEntriesNum();
     auto symbols = symbolSection.template getData<SymbolType>();
@@ -1456,8 +1455,8 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
             };
 
             applyRelocations<elf::SymbolEntry>(relocSection, symTabSection, userAddrs, targetSectionAddr,
-                                                         targetSectionSize, std::move(resolveRuntimeSymbol),
-                                                         std::move(applyRelocation));
+                                               targetSectionSize, std::move(resolveRuntimeSymbol),
+                                               std::move(applyRelocation));
         } else if (checkSectionType(symTabSection.getHeader(), elf::VPU_SHT_DMA_SYMBOLS)) {
             auto resolveDmaSymbol = [](elf::DmaSymbolEntry& symbol, uint32_t, std::vector<DeviceBuffer>& ioBuffers) {
                 auto bufferIdx = symbol.ioIndex;
@@ -1465,9 +1464,9 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
                 auto ioBufferUserStrides = ioBuffers[bufferIdx].get_user_stride();
                 if (ioBufferUserStrides.has_value()) {
                     VPUX_ELF_THROW_UNLESS(sizeof(ioBufferUserStrides.value()) <= sizeof(symbol.dmaStrides), RelocError,
-                                        "Mismatch between symbol DMA strides and user strides");
+                                          "Mismatch between symbol DMA strides and user strides");
                     VPUX_ELF_THROW_UNLESS(sizeof(ioBufferUserStrides.value()) <= sizeof(symbol.strides), RelocError,
-                                        "Mismatch between symbol strides and user strides");
+                                          "Mismatch between symbol strides and user strides");
                     std::memcpy(symbol.dmaStrides, ioBufferUserStrides.value().data(), sizeof(symbol.dmaStrides));
                     std::memcpy(symbol.strides, ioBufferUserStrides.value().data(), sizeof(symbol.strides));
                 }
@@ -1484,8 +1483,8 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
             };
 
             applyRelocations<elf::DmaSymbolEntry>(relocSection, symTabSection, userAddrs, targetSectionAddr,
-                                                            targetSectionSize, std::move(resolveDmaSymbol),
-                                                            std::move(applyDmaRelocation));
+                                                  targetSectionSize, std::move(resolveDmaSymbol),
+                                                  std::move(applyDmaRelocation));
         } else {
             VPUX_ELF_THROW(RelocError, "Relocation section references unknown symtab section format");
         }

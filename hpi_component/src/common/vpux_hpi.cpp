@@ -53,7 +53,30 @@
 namespace elf {
 namespace {
 
-static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(elf::platform::ArchKind archKind) {
+elf::platform::ArchKind archFromDeviceId(uint32_t deviceId) {
+    switch (deviceId) {
+    case 0x7D1D:  /// MeteorLake (MTL-P, MTL-H)
+    case 0xAD1D:  /// ArrowLake (ARL)
+        return elf::platform::ArchKind::VPUX37XX;
+    case 0x643E:  /// LunarLake (LNL)
+        return elf::platform::ArchKind::VPUX40XX;
+#ifdef INTEL_EMBARGO_NPU5
+    case 0xB03E:  /// PantherLake Mobile (PTL-P)
+        return elf::platform::ArchKind::VPUX501X;
+    case 0xFD3E:  /// Wildcatlake (WCL)
+        return elf::platform::ArchKind::VPUX502X;
+#endif
+#ifdef INTEL_EMBARGO_NPU6
+    case 0xD71D:  /// Novalake (NVL) device
+        return elf::platform::ArchKind::VPUX60XX;
+#endif
+    default:
+        VPUX_ELF_LOG(LogLevel::LOG_ERROR, "Unrecognized device ID");
+        return elf::platform::ArchKind::UNKNOWN;
+    }
+}
+
+std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(elf::platform::ArchKind archKind) {
     VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Creating specialized HPI for arch %u", archKind);
 
     std::unique_ptr<HostParsedInferenceCommon> archSpecificHPI;
@@ -70,7 +93,8 @@ static std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(elf::platfo
         break;
 #endif
 #if (defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)) && defined(INTEL_EMBARGO_NPU5)
-    case elf::platform::ArchKind::VPUX50XX:
+    case elf::platform::ArchKind::VPUX501X:
+    case elf::platform::ArchKind::VPUX502X:
         archSpecificHPI = std::make_unique<HostParsedInference_5000>(archKind);
         break;
 #endif  // INTEL_EMBARGO_NPU5
@@ -169,20 +193,35 @@ elf::Version HostParsedInference::getMIVersion() const {
 }
 
 elf::Version HostParsedInference::getLibraryELFVersion() const {
-    return getArchSpecificHPI(hpiCfg.archKind)->getELFLibABIVersion();
+    return getArchSpecificHPI(archKind)->getELFLibABIVersion();
 }
 
 elf::Version HostParsedInference::getLibraryMIVersion() const {
-    return getArchSpecificHPI(hpiCfg.archKind)->getStaticMIVersion();
+    return getArchSpecificHPI(archKind)->getStaticMIVersion();
 }
 
 size_t HostParsedInference::getHPISize() const {
-    return getArchSpecificHPI(hpiCfg.archKind)->getParsedInferenceBufferSpecs().size;
+    return getArchSpecificHPI(archKind)->getParsedInferenceBufferSpecs().size;
+}
+
+void HostParsedInference::checkPlatformCompatibility() {
+    auto blobArchKind = platformInfo->mArchKind;
+    // Check if compiled ELF arch and HPI arch match
+    if (blobArchKind != archKind) {
+        std::stringstream logBuffer;
+        logBuffer << "Incorrect arch. Expected: " << elf::platform::stringifyArchKind(archKind)
+                  << " vs received: " << elf::platform::stringifyArchKind(blobArchKind);
+        // Temporarily allow VPUX50XX blobs on VPUX502X until compiler and pre-build blobs are updated
+        if (archKind == platform::ArchKind::VPUX502X && blobArchKind == platform::ArchKind::VPUX50XX) {
+            return;
+        }
+        VPUX_ELF_THROW(CompatibilityError, logBuffer.str().c_str());
+    }
 }
 
 HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs,
                                          DeviceDescriptor* deviceDescriptor)
-        : bufferManager(bufferMgr), accessManager(accessMgr), hpiCfg(hpiConfigs) {
+        : bufferManager(bufferMgr), accessManager(accessMgr) {
 #ifdef NRELEASE
     static constexpr auto ELF_THROW_COMPATIBILITY_ERROR_NAME = "ELF_THROW_COMPATIBILITY_ERROR";
     const auto elfThrowCompatibilityErrorValue = std::getenv(ELF_THROW_COMPATIBILITY_ERROR_NAME);
@@ -190,12 +229,18 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
                                 (std::strncmp(elfThrowCompatibilityErrorValue, "1", sizeof("1")) == 0),
                         CompatibilityError, "Compatibility error is forced by \"ELF_THROW_COMPATIBILITY_ERROR=1\"");
 #endif
+    // IMD is allowed to omit device descriptor for now
+    if (deviceDescriptor) {
+        VPUX_ELF_THROW_WHEN(deviceDescriptor->size < sizeof(DeviceDescriptor), ArgsError,
+                            "DeviceDescriptor is too small");
+        archKind = archFromDeviceId(deviceDescriptor->deviceID);
+    } else {
+        archKind = hpiConfigs.archKind;
+    }
 
     // create the loader object to cache sections
     loaders.emplace_back(std::make_unique<VPUXLoader>(accessMgr, bufferMgr));
 
-    auto& expectedArch = hpiConfigs.archKind;
-    auto archSpecificHpi = getArchSpecificHPI(expectedArch);
     // Check ELF Library ABI Compatibility
     elf::Version::checkVersionCompatibility(getLibraryELFVersion(), getElfABIVersion(),
                                             elf::VersionType::ELF_ABI_VERSION);
@@ -206,15 +251,7 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     // Check compiler hash compatibility
     checkCompilerHash();
 
-    auto archKind = platformInfo->mArchKind;
-
-    // Check if compiled ELF arch and HPI arch match
-    if (archKind != expectedArch) {
-        std::stringstream logBuffer;
-        logBuffer << "Incorrect arch. Expected: " << elf::platform::stringifyArchKind(expectedArch)
-                  << " vs Received: " << elf::platform::stringifyArchKind(archKind);
-        VPUX_ELF_THROW(CompatibilityError, logBuffer.str().c_str());
-    }
+    checkPlatformCompatibility();
 
     // Check Mapped Inference Compatibility
     auto& nnExpectedVersion = hpiConfigs.nnVersion;
@@ -231,22 +268,14 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     // Check ELF Library tile count Compatibility
     auto tileCount = metadata->mResourceRequirements.nn_slice_count_;
     // get hardware tile count, archKind has already been checked above
-    uint8_t hardwareTileCount = elf::platform::getHardwareTileCount(archKind);
 
-    if (deviceDescriptor != nullptr) {
-        // IMD case is allowed to omit device descriptor for now
-
-        VPUX_ELF_THROW_WHEN(deviceDescriptor->size < sizeof(DeviceDescriptor), ArgsError,
-                            "DeviceDescriptor is passed, but its size is too small");
-
-        // tileCount from DeviceDescriptor is always present and "SKU-aware"
-        // e.g. if we are running on 5T NPU4 SKU it will report 5 instead of 6
-        // in contrast to getHardwareTileCount above
-
-        // cast to uint8_t even though DeviceDescriptor contains uint32_t because
-        // tileCount from the blob is uint8_t anyway, so no point in upcasting here
-        hardwareTileCount = static_cast<uint8_t>(deviceDescriptor->tileCount);
-    }
+    // tileCount from DeviceDescriptor is always present and "SKU-aware"
+    // e.g. if we are running on 5T NPU4 SKU it will report 5 instead of 6
+    // in contrast to getHardwareTileCount above
+    // cast to uint8_t even though DeviceDescriptor contains uint32_t because
+    // tileCount from the blob is uint8_t anyway, so no point in upcasting here
+    uint8_t hardwareTileCount = deviceDescriptor ? static_cast<uint8_t>(deviceDescriptor->tileCount)
+                                                 : elf::platform::getHardwareTileCount(archKind);
 
     // throw exception if tile count is greater than hardware tile count
     if (tileCount > hardwareTileCount) {

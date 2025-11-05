@@ -51,18 +51,18 @@ VPUX_ELF_DEFINE_EXCEPTION(LogicError, ImplausibleState);
 #define VPUX_ELF_THROW(exception, msg, ...) throw(exception(msg, ##__VA_ARGS__))
 #endif
 
-#define VPUX_ELF_THROW_UNLESS(condition, exception, msg, ...)  \
-    do {                                                       \
-        if (!(condition)) {                                    \
-            VPUX_ELF_THROW(exception, (msg), ##__VA_ARGS__); \
-        }                                                      \
-    } while (0);
+#define VPUX_ELF_THROW_UNLESS(condition, exception, msg, ...) \
+    do {                                                      \
+        if (!(condition)) {                                   \
+            VPUX_ELF_THROW(exception, (msg), ##__VA_ARGS__);  \
+        }                                                     \
+    } while (0)
 
-#define VPUX_ELF_THROW_WHEN(condition, exception, msg, ...)    \
-    do {                                                       \
-        if ((condition)) {                                     \
+#define VPUX_ELF_THROW_WHEN(condition, exception, msg, ...)  \
+    do {                                                     \
+        if ((condition)) {                                   \
             VPUX_ELF_THROW(exception, (msg), ##__VA_ARGS__); \
-        }                                                      \
-    } while (0);
+        }                                                    \
+    } while (0)
 
 }  // namespace elf
