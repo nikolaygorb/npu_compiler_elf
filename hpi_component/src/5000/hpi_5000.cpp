@@ -15,9 +15,12 @@ namespace {
 
 #ifdef INTEL_EMBARGO_NPU5
 constexpr uint32_t VPUX50XX_VERSION_MAJOR = 2;
-constexpr uint32_t VPUX50XX_VERSION_MINOR = 0;
+constexpr uint32_t VPUX50XX_VERSION_MINOR = 1;
 constexpr uint32_t VPUX50XX_VERSION_PATCH = 0;
 
+// 2.1.0
+// - Add support for DMA symbol section for dynamic strides
+//
 // 2.0.0:
 // - Bump ELF major version to reject all pre-PV NPU5 blobs
 //
