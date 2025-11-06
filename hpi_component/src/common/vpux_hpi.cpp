@@ -211,10 +211,12 @@ void HostParsedInference::checkPlatformCompatibility() {
         std::stringstream logBuffer;
         logBuffer << "Incorrect arch. Expected: " << elf::platform::stringifyArchKind(archKind)
                   << " vs received: " << elf::platform::stringifyArchKind(blobArchKind);
+#ifdef INTEL_EMBARGO_NPU5
         // Temporarily allow VPUX50XX blobs on VPUX502X until compiler and pre-build blobs are updated
         if (archKind == platform::ArchKind::VPUX502X && blobArchKind == platform::ArchKind::VPUX50XX) {
             return;
         }
+#endif
         VPUX_ELF_THROW(CompatibilityError, logBuffer.str().c_str());
     }
 }
