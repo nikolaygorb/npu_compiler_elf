@@ -55,22 +55,26 @@ namespace {
 
 elf::platform::ArchKind archFromDeviceId(uint32_t deviceId) {
     switch (deviceId) {
-    case 0x7D1D:  /// MeteorLake (MTL-P, MTL-H)
-    case 0xAD1D:  /// ArrowLake (ARL)
+    case 0x7D1D:  // MeteorLake (MTL-P, MTL-H)
+    case 0xAD1D:  // ArrowLake (ARL)
         return elf::platform::ArchKind::VPUX37XX;
-    case 0x643E:  /// LunarLake (LNL)
+    case 0x643E:  // LunarLake (LNL)
         return elf::platform::ArchKind::VPUX40XX;
 #ifdef INTEL_EMBARGO_NPU5
-    case 0xB03E:  /// PantherLake Mobile (PTL-P)
+    case 0xB03E:  // PantherLake Mobile (PTL-P)
         return elf::platform::ArchKind::VPUX501X;
 #ifdef INTEL_EMBARGO_NPU5020
-    case 0xFD3E:  /// Wildcatlake (WCL)
+    case 0xFD3E:  // Wildcatlake (WCL)
         return elf::platform::ArchKind::VPUX502X;
 #endif
 #endif  // INTEL_EMBARGO_NPU5
 #ifdef INTEL_EMBARGO_NPU6
-    case 0xD71D:  /// Novalake (NVL) device
+    case 0xD71D:  // Novalake (NVL) device
         return elf::platform::ArchKind::VPUX60XX;
+#endif
+#ifdef INTEL_EMBARGO_NPU7
+    case 0xD79D:  // Novalake AX (NVL-AX)
+        return elf::platform::ArchKind::VPUX70XX;
 #endif
     default:
         VPUX_ELF_LOG(LogLevel::LOG_ERROR, "Unrecognized device ID");
