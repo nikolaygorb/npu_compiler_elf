@@ -94,3 +94,9 @@ if(MSVC AND BUILD_COMPILER_FOR_DRIVER)
 endif()
 
 target_compile_definitions(${LIB_NAME} PRIVATE $<$<NOT:$<CONFIG:Release>>:NRELEASE>)
+
+# Local copy of nnrt headers should only be used by testing infrastructure
+# Not to be used in production environment!
+if(ENABLE_LOCAL_NNRT_API)
+    target_include_directories(${LIB_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/3rdparty/nnrt_api/")
+endif()

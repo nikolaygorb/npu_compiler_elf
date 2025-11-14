@@ -10,15 +10,18 @@
 #include <vpux_elf/utils/error.hpp>
 #include <vpux_elf/types/section_header.hpp>
 #include <vpux_elf/types/vpu_extensions.hpp>
-#include <vector>
 #include <hpi_4000.hpp>
-#include <api/vpu_nnrt_api_40xx.h>
-#include <api/vpu_cmx_info_40xx.h>
-#include <api/vpu_pwrmgr_api.h>
+
+#include <vector>
 #include <string>
 #include <vector>
 #include <array>
 #include <cstring>
+
+#include <api/vpu_nnrt_api_40xx.h>
+#include <api/vpu_cmx_info_40xx.h>
+#include <api/vpu_pwrmgr_api.h>
+
 // clang-format on
 
 namespace elf {

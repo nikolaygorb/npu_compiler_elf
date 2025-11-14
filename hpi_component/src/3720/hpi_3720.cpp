@@ -11,11 +11,13 @@
 #include <vpux_elf/types/vpu_extensions.hpp>
 #include <vector>
 #include <hpi_3720.hpp>
+#include <array>
+#include <cstring>
+
 #include <api/vpu_nnrt_api_37xx.h>
 #include <api/vpu_cmx_info_37xx.h>
 #include <api/vpu_pwrmgr_api.h>
-#include <array>
-#include <cstring>
+
 // clang-format on
 
 namespace elf {
