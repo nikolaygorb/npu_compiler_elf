@@ -351,6 +351,8 @@ void HostParsedInference::load() {
 HostParsedInference::HostParsedInference(const HostParsedInference& other)
         : bufferManager(other.bufferManager),
           accessManager(other.accessManager),
+          archKind(other.archKind),
+          miVersion(other.miVersion),
           metadata(other.metadata),
           platformInfo(other.platformInfo),
           perfMetrics(other.perfMetrics) {
@@ -400,6 +402,8 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
 HostParsedInference::HostParsedInference(HostParsedInference&& other)
         : bufferManager(other.bufferManager),
           accessManager(other.accessManager),
+          archKind(other.archKind),
+          miVersion(other.miVersion),
           metadata(other.metadata),
           platformInfo(other.platformInfo),
           perfMetrics(other.perfMetrics),

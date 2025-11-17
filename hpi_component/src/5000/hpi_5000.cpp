@@ -15,9 +15,12 @@ namespace {
 
 #ifdef INTEL_EMBARGO_NPU5
 constexpr uint32_t VPUX50XX_VERSION_MAJOR = 2;
-constexpr uint32_t VPUX50XX_VERSION_MINOR = 1;
+constexpr uint32_t VPUX50XX_VERSION_MINOR = 2;
 constexpr uint32_t VPUX50XX_VERSION_PATCH = 0;
 
+// 2.2.0
+// - Enable direct MMI support
+//
 // 2.1.0
 // - Add support for DMA symbol section for dynamic strides
 //
