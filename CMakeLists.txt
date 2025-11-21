@@ -25,6 +25,13 @@ endif()
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "*.hpp" "*.cpp")
 list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/example/.*")
+list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/tests/.*")
+
+if(ENABLE_ELF_TESTS)
+    # Exclude HPI component from building library when tests are enabled.
+    # E#156226
+    list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/*.*")
+endif()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS} ${SOURCES})
 
@@ -97,6 +104,11 @@ target_compile_definitions(${LIB_NAME} PRIVATE $<$<NOT:$<CONFIG:Release>>:NRELEA
 
 # Local copy of nnrt headers should only be used by testing infrastructure
 # Not to be used in production environment!
-if(ENABLE_LOCAL_NNRT_API)
+if(ENABLE_LOCAL_NNRT_API OR ENABLE_ELF_TESTS)
     target_include_directories(${LIB_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/3rdparty/nnrt_api/")
+endif()
+
+if(ENABLE_ELF_TESTS)
+    include( ./cmake/gtest.cmake)
+    add_subdirectory(./tests)
 endif()
