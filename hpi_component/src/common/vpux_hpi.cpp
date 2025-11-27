@@ -344,8 +344,9 @@ void HostParsedInference::load() {
     perfMetrics = readPerfMetrics();
     auto perfMetricsLock = ElfBufferLockGuard(perfMetrics.get());
     auto perfMetricsPtr = perfMetrics ? reinterpret_cast<uint64_t*>(perfMetrics->getBuffer().cpu_addr()) : nullptr;
+    auto perfMetricsSize = perfMetrics ? reinterpret_cast<uint64_t>(perfMetrics->getBuffer().size()) : 0;
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
-                                            perfMetricsPtr, miVersion);
+                                            perfMetricsPtr, miVersion, perfMetricsSize);
 }
 
 HostParsedInference::HostParsedInference(const HostParsedInference& other)
@@ -395,8 +396,9 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
     auto parsedInferenceBuffer = parsedInference->getBuffer();
     auto perfMetricsLock = ElfBufferLockGuard(perfMetrics.get());
     auto perfMetricsPtr = perfMetrics ? reinterpret_cast<uint64_t*>(perfMetrics->getBuffer().cpu_addr()) : nullptr;
+    auto perfMetricsSize = perfMetrics ? reinterpret_cast<uint64_t>(perfMetrics->getBuffer().size()) : 0;
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
-                                            perfMetricsPtr, miVersion);
+                                            perfMetricsPtr, miVersion, perfMetricsSize);
 };
 
 HostParsedInference::HostParsedInference(HostParsedInference&& other)
@@ -464,8 +466,9 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
     auto parsedInferenceBuffer = parsedInference->getBuffer();
     auto perfMetricsLock = ElfBufferLockGuard(perfMetrics.get());
     auto perfMetricsPtr = perfMetrics ? reinterpret_cast<uint64_t*>(perfMetrics->getBuffer().cpu_addr()) : nullptr;
+    auto perfMetricsSize = perfMetrics ? reinterpret_cast<uint64_t>(perfMetrics->getBuffer().size()) : 0;
     archSpecificHpi->setHostParsedInference(parsedInferenceBuffer, entriesVct, metadata->mResourceRequirements,
-                                            perfMetricsPtr, miVersion);
+                                            perfMetricsPtr, miVersion, perfMetricsSize);
 
     return *this;
 }

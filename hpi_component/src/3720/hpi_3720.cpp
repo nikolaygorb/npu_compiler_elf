@@ -142,13 +142,15 @@ uint32_t HostParsedInference_3720::getArchTilesCount() const {
 void HostParsedInference_3720::setHostParsedInference(DeviceBuffer& devBuffer,
                                                       const std::vector<uint64_t>& mapped_entry,
                                                       const ResourceRequirements& resReq, const uint64_t* perf_metrics,
-                                                      const elf::Version&) {
+                                                      const elf::Version&, uint64_t perfSectionSize) {
     auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference*>(devBuffer.cpu_addr());
     *hpi = {};
 
     hpi->resource_requirements_.nn_slice_count_ = resReq.nn_slice_count_;
     hpi->resource_requirements_.nn_barriers_ = resReq.nn_barriers_;
     if (perf_metrics) {
+        VPUX_ELF_THROW_UNLESS((perfSectionSize >= sizeof(VpuPerformanceMetrics)), ArgsError,
+                             "Performance metrics section size is smaller than expected!");
         memcpy(static_cast<void*>(&hpi->performance_metrics_), static_cast<const void*>(perf_metrics),
                sizeof(VpuPerformanceMetrics));
     } else {

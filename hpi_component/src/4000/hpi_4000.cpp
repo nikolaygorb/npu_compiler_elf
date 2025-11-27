@@ -114,7 +114,8 @@ BufferSpecs HostParsedInference_4000_Base::getParsedInferenceBufferSpecs() {
 void HostParsedInference_4000_Base::setHostParsedInference(DeviceBuffer& devBuffer,
                                                            const std::vector<uint64_t>& mapped_entry,
                                                            const ResourceRequirements& resReq,
-                                                           const uint64_t* perf_metrics, const elf::Version& version) {
+                                                           const uint64_t* perf_metrics, const elf::Version& version,
+                                                           uint64_t perfSectionSize) {
     auto hpi = reinterpret_cast<nn_public::VpuHostParsedInference*>(devBuffer.cpu_addr());
     *hpi = {};
 
@@ -123,6 +124,8 @@ void HostParsedInference_4000_Base::setHostParsedInference(DeviceBuffer& devBuff
     hpi->resource_requirements_.nn_slice_length_ = resReq.nn_slice_length_;
 
     if (perf_metrics) {
+        VPUX_ELF_THROW_UNLESS((perfSectionSize >= sizeof(VpuPerformanceMetrics)), ArgsError,
+                             "Performance metrics section size is smaller than expected!");
         memcpy(static_cast<void*>(&hpi->performance_metrics_), static_cast<const void*>(perf_metrics),
                sizeof(VpuPerformanceMetrics));
     } else {
