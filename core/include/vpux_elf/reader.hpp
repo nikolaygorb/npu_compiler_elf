@@ -157,6 +157,10 @@ public:
         return mSectionsCache[index];
     }
 
+    size_t getBlobSize() const {
+        return mAccessManager->getSize();
+    }
+
 private:
     BufferManager* mBufferManager;
     AccessManager* mAccessManager;
