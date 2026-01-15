@@ -217,12 +217,24 @@ std::vector<uint8_t> generateBadSectionTypeElf() {
 std::vector<uint8_t> generateUnrecognizedUserSectionTypeElf() {
     Writer writer;
 
-    auto binDataSection = generateDataSection<DummyBinObject>(writer, ".binData", SHT_HIUSER - 1);
+    auto binDataSection = generateDataSection<DummyBinObject>(writer, ".binData");
+    auto symSection = generateSymbolSection(writer, ".symbols");
+    auto relocSection = generateRelocationSection(writer, ".reloc", binDataSection, symSection);
+    auto reloc = relocSection->addRelocationEntry();
+    auto relocSymbol =
+            symSection->getSymbols()[generateRandom(0, static_cast<uint32_t>(symSection->getSymbols().size()) - 1)]
+                    .get();
+    relocSymbol->setRelatedSection(binDataSection);
+    reloc->setSymbol(relocSymbol);
+    reloc->setOffset(sizeof(DummyBinObject::a));
+    reloc->setAddend(0);
+    auto unrecognizedTypeSection = generateDataSection<DummyBinObject>(writer, ".unrecognizedTypeData", SHT_HIUSER - 1);
+
     writer.prepareWriter();
     std::vector<uint8_t> elf(writer.getTotalSize());
     writer.generateELF(elf.data());
     writer.setSectionsStartAddr(elf.data());
-    populateDataSection(binDataSection);
+    populateDataSection(unrecognizedTypeSection);
     return elf;
 }
 
@@ -250,6 +262,18 @@ std::vector<uint8_t> generateValidTestElf() {
 
 std::vector<uint8_t> generateValidElfWithDmaRelocations(DmaSymbolEntry& symbolEntry) {
     Writer writer;
+
+    auto binDataSection = generateDataSection<DummyBinObject>(writer, ".binData");
+    auto symSection = generateSymbolSection(writer, ".symbols");
+    auto symRelocSection = generateRelocationSection(writer, ".reloc", binDataSection, symSection);
+    auto reloc = symRelocSection->addRelocationEntry();
+    auto relocSymbol =
+            symSection->getSymbols()[generateRandom(0, static_cast<uint32_t>(symSection->getSymbols().size()) - 1)]
+                    .get();
+    relocSymbol->setRelatedSection(binDataSection);
+    reloc->setSymbol(relocSymbol);
+    reloc->setOffset(sizeof(DummyBinObject::a));
+    reloc->setAddend(0);
 
     auto dmaProgBitsSection = generateDataSection<DmaDescriptor>(writer, ".dmaTask");
     auto dmaSymSection = writer.addDmaSymbolSection(".dmaSymbols");
