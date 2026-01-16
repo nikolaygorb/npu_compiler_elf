@@ -133,6 +133,7 @@ void HostParsedInference_4000_Base::setHostParsedInference(DeviceBuffer& devBuff
     }
 
     hpi->mmi_access_ = static_cast<nn_public::VpuHostParsedInference::VpuMmiAccessMode>(version.getMIFormat());
+    VPUX_ELF_THROW_WHEN(mapped_entry.empty(), ArgsError, "mapped_entry vector is empty");
     hpi->mapped_.address = mapped_entry[0];
     hpi->mapped_.count = mapped_entry.size();
 }

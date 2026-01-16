@@ -1450,6 +1450,10 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
         if (checkSectionType(symTabSection.getHeader(), elf::SHT_SYMTAB)) {
             auto resolveRuntimeSymbol = [](elf::SymbolEntry& symbol, uint32_t symIdx,
                                            std::vector<DeviceBuffer>& ioBuffers) {
+                // Check symbol index validity: index 0 is reserved as STN_UNDEF (undefined symbol) in ELF standard,
+                // valid indices are 1-based since we use symIdx-1 to access ioBuffers array (0-based)
+                VPUX_ELF_THROW_WHEN(symIdx == 0 || symIdx > ioBuffers.size(), RelocError,
+                                        "Invalid symbol index for ioBuffers");
                 symbol.st_value = ioBuffers[symIdx - 1].vpu_addr();
             };
 
