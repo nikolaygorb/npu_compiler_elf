@@ -638,7 +638,6 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool,
 
     VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Starting LOAD process");
     auto numSections = m_reader->getSectionsNum();
-    const auto blobSize = m_reader->getBlobSize();
 
     m_relocationSectionIndexes->reserve(numSections);
     m_jitRelocations->reserve(2);
@@ -652,14 +651,6 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool,
         const auto sectionHeader = section.getHeader();
         auto sectionType = sectionHeader->sh_type;
         auto searchAction = actionMap.find(sectionType);
-        const auto sectionOffset = sectionHeader->sh_offset;
-        const auto sectionSize = sectionHeader->sh_size;
-        const auto nextSectionOffset = (sectionCtr + 1 == numSections)
-                                      ? blobSize
-                                      : m_reader->getSection(sectionCtr + 1).getHeader()->sh_offset;
-        VPUX_ELF_THROW_UNLESS(sectionOffset + sectionSize <= nextSectionOffset, RangeError,
-                              "Section exceeds its allocated range");
-
         auto action = Action::None;
 
         if (searchAction == actionMap.end()) {
@@ -1358,7 +1349,7 @@ void VPUXLoader::applyRelocations(SectionType& relocSection, SectionType& symbol
 
         auto symIdx = elf64RSym(relocation.r_info);
 
-        VPUX_ELF_THROW_UNLESS(symIdx < numSymbols, RelocError, "SymTab index out of bounds!");
+        VPUX_ELF_THROW_UNLESS(symIdx > 0 && symIdx < numSymbols, RelocError, "SymTab index out of bounds!");
 
         resolvedSymbol = symbols[symIdx];
         resolveSymbol(resolvedSymbol, symIdx, ioBuffers);
