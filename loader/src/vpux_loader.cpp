@@ -1349,7 +1349,14 @@ void VPUXLoader::applyRelocations(SectionType& relocSection, SectionType& symbol
 
         auto symIdx = elf64RSym(relocation.r_info);
 
-        VPUX_ELF_THROW_UNLESS(symIdx > 0 && symIdx < numSymbols, RelocError, "SymTab index out of bounds!");
+        // ELF standard symbol index range starts from 1 (0 means SHN_UNDEF). For DmaSymbol we allow index 0.
+        uint64_t symIdxLowerLimit = 0;
+        if constexpr (std::is_same_v<SymbolType, elf::SymbolEntry>) {
+            symIdxLowerLimit = 1;
+        }
+
+        VPUX_ELF_THROW_UNLESS(symIdx >= symIdxLowerLimit && symIdx < numSymbols, RelocError,
+                              "Symbol index out of bounds!");
 
         resolvedSymbol = symbols[symIdx];
         resolveSymbol(resolvedSymbol, symIdx, ioBuffers);
@@ -1444,7 +1451,7 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
                 // Check symbol index validity: index 0 is reserved as STN_UNDEF (undefined symbol) in ELF standard,
                 // valid indices are 1-based since we use symIdx-1 to access ioBuffers array (0-based)
                 VPUX_ELF_THROW_WHEN(symIdx == 0 || symIdx > ioBuffers.size(), RelocError,
-                                        "Invalid symbol index for ioBuffers");
+                                    "Invalid symbol index for ioBuffers");
                 symbol.st_value = ioBuffers[symIdx - 1].vpu_addr();
             };
 
