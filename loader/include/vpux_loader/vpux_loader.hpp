@@ -56,7 +56,9 @@ private:
 
     static const std::unordered_map<Elf_Word, Action> actionMap;
     static const std::unordered_map<RelocationType, RelocationFunc> relocationMap;
+    static const std::unordered_map<RelocationType, uint8_t> relocationSizeMap;
     static const std::unordered_map<RelocationType, DmaRelocationFunc> dmaRelocationMap;
+    static const std::unordered_map<RelocationType, uint8_t> dmaRelocationSizeMap;
 
 public:
     VPUXLoader(AccessManager* accessor, BufferManager* bufferManager);

@@ -304,6 +304,50 @@ std::vector<uint8_t> generateValidElfWithDmaRelocations(DmaSymbolEntry& symbolEn
     return elf;
 }
 
+std::vector<uint8_t> generateElfWithDmaRelocationsOverflow(DmaSymbolEntry& symbolEntry) {
+    Writer writer;
+
+    auto binDataSection = generateDataSection<DummyBinObject>(writer, ".binData");
+    auto symSection = generateSymbolSection(writer, ".symbols");
+    auto symRelocSection = generateRelocationSection(writer, ".reloc", binDataSection, symSection);
+    auto reloc = symRelocSection->addRelocationEntry();
+    auto relocSymbol =
+            symSection->getSymbols()[generateRandom(0, static_cast<uint32_t>(symSection->getSymbols().size()) - 1)]
+                    .get();
+    relocSymbol->setRelatedSection(binDataSection);
+    reloc->setSymbol(relocSymbol);
+    reloc->setOffset(sizeof(DummyBinObject::a));
+    reloc->setAddend(0);
+
+    auto dmaProgBitsSection = generateDataSection<DmaDescriptor>(writer, ".dmaTask");
+    auto dmaSymSection = writer.addDmaSymbolSection(".dmaSymbols");
+    dmaSymSection->setFlags(VPU_SHF_USERINPUT | VPU_SHF_JIT);
+    auto dmaSymbol = dmaSymSection->addDmaSymbolEntry();
+    dmaSymbol->setDmaSymbol(symbolEntry);
+
+    auto relocSection = writer.addRelocationSection(".dmaReloc");
+    relocSection->setSectionToPatch(dmaProgBitsSection);
+    relocSection->setSpecialSymbolTable(dmaSymSection->getIndex());
+    relocSection->setFlags(VPU_SHF_USERINPUT | VPU_SHF_JIT);
+    auto inputReloc = relocSection->addRelocationEntry();
+    inputReloc->setSpecialSymbol(dmaSymbol->getIndex());
+    inputReloc->setType(R_VPU_DMA_TASK_INPUT);
+    inputReloc->setOffset(0);
+    inputReloc->setAddend(0);
+
+    auto outputReloc = relocSection->addRelocationEntry();
+    outputReloc->setSpecialSymbol(dmaSymbol->getIndex());
+    outputReloc->setType(R_VPU_DMA_TASK_OUTPUT);
+    outputReloc->setOffset(dmaProgBitsSection->getSize() - sizeof(DmaDescriptor) + 1);
+    outputReloc->setAddend(0);
+
+    writer.prepareWriter();
+    std::vector<uint8_t> elf(writer.getTotalSize());
+    writer.generateELF(elf.data());
+    writer.setSectionsStartAddr(elf.data());
+    return elf;
+}
+
 const HardCodedSymtabToCluster0 gSymTab;
 
 TEST(ELFLoader, ThrowWhenAccessorPointerIsNull) {
@@ -438,6 +482,33 @@ TEST(ELFLoader, NoThrowForDmaRelocationsWithUserStrides) {
     input.set_user_strides({1, 12, 24, 96, 0});
     std::vector<elf::DeviceBuffer> inputs{input};
     OV_ASSERT_NO_THROW(loader.applyJitRelocations(inputs, inputs, inputs));
+}
+
+TEST(ELFLoader, ThrowForDmaRelocationsWritingOverflow) {
+    DummyBufferManager bufMgr;
+    std::vector<uint8_t> elf;
+
+    DmaSymbolEntry dmaSymbol{0,
+                             0,
+                             {6, 2, 4, 0, 0, 0},
+                             {1, 6, 12, 48, 0, 0},
+                             {0, 0, 0, 0, 0, 0},
+                             {6, 2, 4, 0, 0, 0},
+                             {1, 6, 12, 48, 0, 0},
+                             4};
+
+    OV_ASSERT_NO_THROW(elf = generateElfWithDmaRelocationsOverflow(dmaSymbol));
+
+    DDRAccessManager<elf::DDRAlwaysEmplace> accessor(reinterpret_cast<const uint8_t*>(elf.data()), elf.size());
+    OV_ASSERT_NO_THROW(VPUXLoader(&accessor, &bufMgr));
+    VPUXLoader loader(&accessor, &bufMgr);
+    OV_ASSERT_NO_THROW(loader.load(gSymTab.symTab(), false, {}));
+
+    uint8_t data = 0;
+
+    elf::DeviceBuffer input(&data, 0xB, 0xB);
+    std::vector<elf::DeviceBuffer> inputs{input};
+    ASSERT_THROW(loader.applyJitRelocations(inputs, inputs, inputs), RelocError);
 }
 
 }  // namespace
