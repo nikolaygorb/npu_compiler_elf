@@ -91,7 +91,7 @@ install(DIRECTORY "${LOADER_DIR_INC}/vpux_loader"
 # hpi_component | -> common/ -> 2 hpp
 #               | -> 3720/   -> 1 hpp
 #               | -> 4000/   -> 1 hpp
-#               | -> 5000/   -> 1 hpp # INTEL_EMBARGO_NPU5_Content
+#               | -> 5000/   -> 1 hpp
 
 install(DIRECTORY "${LOADER_DIR_HPI_INC}/common"
         DESTINATION cid/vpux_elf/loader/include/
@@ -105,11 +105,9 @@ install(DIRECTORY "${LOADER_DIR_HPI_INC}/4000"
         DESTINATION cid/vpux_elf/loader/include/
         COMPONENT ${CID_COMPONENT})
 
-# INTEL_EMBARGO_NPU5_Begin
 install(DIRECTORY "${LOADER_DIR_HPI_INC}/5000"
         DESTINATION cid/vpux_elf/loader/include/
         COMPONENT ${CID_COMPONENT})
-# INTEL_EMBARGO_NPU5_End
 
 #
 # loader folder | -> src/ | 1 cpp
@@ -122,7 +120,7 @@ install(DIRECTORY "${LOADER_DIR_SRC}/"
 # hpi_component | src | common -> 1 cpp
 #               |     |  3720  -> 1 cpp
 #               |     |  4000  -> 1 cpp
-#               |     |  5000  -> 1 cpp # INTEL_EMBARGO_NPU5_Content
+#               |     |  5000  -> 1 cpp
 
 
 install(DIRECTORY "${LOADER_DIR_HPI_SRC}/common"
@@ -137,11 +135,9 @@ install(DIRECTORY "${LOADER_DIR_HPI_SRC}/4000"
         DESTINATION cid/vpux_elf/loader/src/
         COMPONENT ${CID_COMPONENT})
 
-# INTEL_EMBARGO_NPU5_Begin
 install(DIRECTORY "${LOADER_DIR_HPI_SRC}/5000"
         DESTINATION cid/vpux_elf/loader/src/
         COMPONENT ${CID_COMPONENT})
-# INTEL_EMBARGO_NPU5_End
 
 # core folder | -> include/ -> vpux_elf/ | -> types/
 #             |                          | -> utils/

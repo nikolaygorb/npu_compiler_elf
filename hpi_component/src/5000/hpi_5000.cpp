@@ -13,7 +13,6 @@ namespace elf {
 
 namespace {
 
-#ifdef INTEL_EMBARGO_NPU5
 constexpr uint32_t VPUX50XX_VERSION_MAJOR = 2;
 constexpr uint32_t VPUX50XX_VERSION_MINOR = 2;
 constexpr uint32_t VPUX50XX_VERSION_PATCH = 0;
@@ -35,8 +34,6 @@ constexpr uint32_t VPUX50XX_VERSION_PATCH = 0;
 // - Add support for elf::DType::F8E8M0
 // - Rename elf::DType::FP8 -> elf::DType::F8EM5M2
 // - Rename elf::DType::HF8 -> elf::DType::F8E4M3FN
-
-#endif  // INTEL_EMBARGO_NPU5
 
 #ifdef INTEL_EMBARGO_NPU6
 constexpr uint32_t VPUX60XX_VERSION_MAJOR = 1;
@@ -77,11 +74,11 @@ HostParsedInference_5000::HostParsedInference_5000(elf::platform::ArchKind archK
 
 elf::Version HostParsedInference_5000::getELFLibABIVersion() const {
     switch (archKind_) {
-#ifdef INTEL_EMBARGO_NPU5
     case elf::platform::ArchKind::VPUX501X:
+#ifdef INTEL_EMBARGO_NPU5020
     case elf::platform::ArchKind::VPUX502X:
         return {VPUX50XX_VERSION_MAJOR, VPUX50XX_VERSION_MINOR, VPUX50XX_VERSION_PATCH};
-#endif  // INTEL_EMBARGO_NPU5
+#endif  // INTEL_EMBARGO_NPU5020
 #ifdef INTEL_EMBARGO_NPU6
     case elf::platform::ArchKind::VPUX60XX:
         return {VPUX60XX_VERSION_MAJOR, VPUX60XX_VERSION_MINOR, VPUX60XX_VERSION_PATCH};

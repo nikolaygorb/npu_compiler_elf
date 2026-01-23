@@ -27,11 +27,10 @@
 #include <hpi_4000.hpp>
 #endif
 
-#ifdef INTEL_EMBARGO_NPU5
 #if defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)
 #include <hpi_5000.hpp>
 #endif
-#endif  // INTEL_EMBARGO_NPU5
+
 #ifdef INTEL_EMBARGO_NPU6
 //to be removed with E#88139:
 //temporary fix to support NPU 6000 arch
@@ -60,14 +59,12 @@ elf::platform::ArchKind archFromDeviceId(uint32_t deviceId) {
         return elf::platform::ArchKind::VPUX37XX;
     case 0x643E:  // LunarLake (LNL)
         return elf::platform::ArchKind::VPUX40XX;
-#ifdef INTEL_EMBARGO_NPU5
     case 0xB03E:  // PantherLake Mobile (PTL-P)
         return elf::platform::ArchKind::VPUX501X;
 #ifdef INTEL_EMBARGO_NPU5020
     case 0xFD3E:  // Wildcatlake (WCL)
         return elf::platform::ArchKind::VPUX502X;
-#endif
-#endif  // INTEL_EMBARGO_NPU5
+#endif  // INTEL_EMBARGO_NPU5020
 #ifdef INTEL_EMBARGO_NPU6
     case 0xD71D:  // Novalake (NVL) device
         return elf::platform::ArchKind::VPUX60XX;
@@ -98,12 +95,12 @@ std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(elf::platform::Arc
         archSpecificHPI = std::make_unique<HostParsedInference_4000>(archKind);
         break;
 #endif
-#if (defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)) && defined(INTEL_EMBARGO_NPU5)
+#if (defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD))
     case elf::platform::ArchKind::VPUX501X:
     case elf::platform::ArchKind::VPUX502X:  // INTEL_EMBARGO_NPU5020_Content
         archSpecificHPI = std::make_unique<HostParsedInference_5000>(archKind);
         break;
-#endif  // INTEL_EMBARGO_NPU5
+#endif
 #if (defined(CONFIG_TARGET_SOC_6000) || defined(HOST_BUILD)) && defined(INTEL_EMBARGO_NPU6)
         // to be updated with E#88139: temporary fix to support NPU 6000 arch
     case elf::platform::ArchKind::VPUX60XX:
