@@ -77,8 +77,8 @@ elf::Version HostParsedInference_5000::getELFLibABIVersion() const {
     case elf::platform::ArchKind::VPUX501X:
 #ifdef INTEL_EMBARGO_NPU5020
     case elf::platform::ArchKind::VPUX502X:
-        return {VPUX50XX_VERSION_MAJOR, VPUX50XX_VERSION_MINOR, VPUX50XX_VERSION_PATCH};
 #endif  // INTEL_EMBARGO_NPU5020
+        return {VPUX50XX_VERSION_MAJOR, VPUX50XX_VERSION_MINOR, VPUX50XX_VERSION_PATCH};
 #ifdef INTEL_EMBARGO_NPU6
     case elf::platform::ArchKind::VPUX60XX:
         return {VPUX60XX_VERSION_MAJOR, VPUX60XX_VERSION_MINOR, VPUX60XX_VERSION_PATCH};

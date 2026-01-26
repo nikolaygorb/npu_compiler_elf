@@ -97,7 +97,9 @@ std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(elf::platform::Arc
 #endif
 #if (defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD))
     case elf::platform::ArchKind::VPUX501X:
-    case elf::platform::ArchKind::VPUX502X:  // INTEL_EMBARGO_NPU5020_Content
+#ifdef INTEL_EMBARGO_NPU5020
+    case elf::platform::ArchKind::VPUX502X:
+#endif  // INTEL_EMBARGO_NPU5020
         archSpecificHPI = std::make_unique<HostParsedInference_5000>(archKind);
         break;
 #endif
