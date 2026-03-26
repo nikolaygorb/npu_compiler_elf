@@ -125,7 +125,7 @@ void HostParsedInference_4000_Base::setHostParsedInference(DeviceBuffer& devBuff
 
     if (perf_metrics) {
         VPUX_ELF_THROW_UNLESS((perfSectionSize >= sizeof(VpuPerformanceMetrics)), ArgsError,
-                             "Performance metrics section size is smaller than expected!");
+                              "Performance metrics section size is smaller than expected!");
         memcpy(static_cast<void*>(&hpi->performance_metrics_), static_cast<const void*>(perf_metrics),
                sizeof(VpuPerformanceMetrics));
     } else {

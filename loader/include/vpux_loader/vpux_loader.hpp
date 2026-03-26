@@ -26,10 +26,10 @@
 #include <vpux_headers/device_buffer_container.hpp>
 #include <vpux_headers/managed_buffer.hpp>
 
+#include <vpux_elf/types/dma_symbol_entry.hpp>
 #include <vpux_elf/types/elf_structs.hpp>
 #include <vpux_elf/types/relocation_entry.hpp>
 #include <vpux_elf/types/symbol_entry.hpp>
-#include <vpux_elf/types/dma_symbol_entry.hpp>
 #include <vpux_elf/types/vpu_extensions.hpp>
 #include <vpux_elf/utils/error.hpp>
 #include <vpux_headers/metadata.hpp>
@@ -98,9 +98,9 @@ private:
     void applyScratchRelocations();
 
     template <typename SymbolType, typename SectionType, typename ResolveSymbolFunc, typename RelocateFunc>
-    void applyRelocations(SectionType& relocSection, SectionType& symbolSection,
-                                    std::vector<DeviceBuffer>& ioBuffers, uint8_t* targetSectionPtr,
-                                    size_t targetSectionSize, ResolveSymbolFunc resolveSymbol, RelocateFunc relocate);
+    void applyRelocations(SectionType& relocSection, SectionType& symbolSection, std::vector<DeviceBuffer>& ioBuffers,
+                          uint8_t* targetSectionPtr, size_t targetSectionSize, ResolveSymbolFunc resolveSymbol,
+                          RelocateFunc relocate);
 
     BufferManager* m_bufferManager;
     std::shared_ptr<Reader<ELF_Bitness::Elf64>> m_reader;

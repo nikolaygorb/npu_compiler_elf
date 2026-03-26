@@ -510,8 +510,7 @@ const std::unordered_map<VPUXLoader::RelocationType, VPUXLoader::DmaRelocationFu
         {R_VPU_DMA_TASK_OUTPUT, relocations::dmaTaskOutputRelocation}};
 
 const std::unordered_map<VPUXLoader::RelocationType, uint8_t> VPUXLoader::dmaRelocationSizeMap = {
-        {R_VPU_DMA_TASK_INPUT, 192},
-        {R_VPU_DMA_TASK_OUTPUT, 192}};
+        {R_VPU_DMA_TASK_INPUT, 192}, {R_VPU_DMA_TASK_OUTPUT, 192}};
 
 VPUXLoader::VPUXLoader(AccessManager* accessor, BufferManager* bufferManager)
         : m_inferBufferContainer(bufferManager),
