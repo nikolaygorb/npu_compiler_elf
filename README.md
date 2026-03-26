@@ -18,7 +18,3 @@ The ELF Library has 3 main components:
 ## **ELF Versioning System**
 
 For details on the versioning system, please consult [VERSIONING.md](VERSIONING.md).
-
-## **Contributing to the ELF Library**
-
-For informations on the contributing process please consult [CONTRIBUTING.md](../CONTRIBUTING.md).
