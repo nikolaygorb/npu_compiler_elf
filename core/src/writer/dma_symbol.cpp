@@ -14,14 +14,14 @@ void DmaSymbol::setIndex(size_t index) {
     m_symbol_index = index;
 }
 
-size_t DmaSymbol::getIndex() {
+size_t DmaSymbol::getIndex() const {
     return m_symbol_index;
 }
 
-void DmaSymbol::setDmaSymbol(DmaSymbolEntry& dmaSym) {
+void DmaSymbol::setDmaSymbol(const DmaSymbolEntry& dmaSym) {
     m_dmaSymbol = dmaSym;
 }
 
-DmaSymbolEntry DmaSymbol::getDmaSymbol() {
+DmaSymbolEntry DmaSymbol::getDmaSymbol() const {
     return m_dmaSymbol;
 }

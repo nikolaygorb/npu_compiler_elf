@@ -5,6 +5,7 @@
 //
 
 // clang-format off
+#include <cstdint>
 #include <vpux_elf/utils/utils.hpp>
 #include <vpux_elf/utils/log.hpp>
 #include <vpux_elf/utils/error.hpp>
@@ -18,11 +19,41 @@
 #include <array>
 #include <cstring>
 
-#include <api/vpu_nnrt_api_40xx.h>
-#include <api/vpu_cmx_info_40xx.h>
-#include <api/vpu_pwrmgr_api.h>
+#include <api/vpu_nnrt_api.h>
 
 // clang-format on
+
+namespace { // NNRT api defines. Must not be changed. Required for LNL PV
+            // compatibility.
+#ifdef INTEL_EMBARGO_COMMON
+/*
+    Metadata buffer starting address. It was taken from vpu_cmx_info_40xx.h.
+    The address is computed in the nnrt header as follows:
+    VPU_VIRTUAL_CMX0_BASE + VPU_METADATA_OFFSET
+    where:
+    VPU_VIRTUAL_CMX0_BASE = 0x40200000
+    VPU_METADATA_OFFSET = VPU_ACTSHV_SCRATCH_SIZE + VPU_ACTSHV_STACKS_SIZE
+    The address is aligned to 32 bytes (VpuDpuInvariant structure is placed first) as required by the contract.
+    The alignment is done in the header using align_storage function.
+*/
+#endif  // INTEL_EMBARGO_COMMON
+constexpr uint32_t VPU_METADATA_STORAGE_ADDR = 0x40203c00;
+#ifdef INTEL_EMBARGO_COMMON
+
+/*
+    Workspace buffer starting address. It was taken from vpu_cmx_info_40xx.h.
+    The address is computed in the nnrt header as follows:
+    VPU_VIRTUAL_CMX0_BASE + VPU_WORKSPACE_OFFSET
+    where:
+    VPU_VIRTUAL_CMX0_BASE = 0x40200000
+    VPU_WORKSPACE_OFFSET = VPU_METADATA_OFFSET + VPU_METADATA_SIZE
+*/
+#endif  // INTEL_EMBARGO_COMMON
+constexpr uint32_t VPU_WORKSPACE_ADDR = 0x40218000;
+constexpr uint32_t VPU_WORKSPACE_SIZE_IN_BYTES = 1440 * 1024;
+constexpr uint32_t VPU_MAX_TILES = 6;
+} // namespace
+
 
 namespace elf {
 #ifdef INTEL_EMBARGO_COMMON
@@ -147,7 +178,7 @@ elf::Version HostParsedInference_4000_Base::getStaticMIVersion() const {
 }
 
 uint32_t HostParsedInference_4000_Base::getArchTilesCount() const {
-    return nn_public::VPU_MAX_TILES;
+    return VPU_MAX_TILES;
 }
 
 HostParsedInference_4000::HostParsedInference_4000(elf::platform::ArchKind archKind)
@@ -155,14 +186,11 @@ HostParsedInference_4000::HostParsedInference_4000(elf::platform::ArchKind archK
     symTab_.reserve(2);
     secTypeContainers_.reserve(2);
     {
-        const auto metadataStart =
-                nn_public::align_storage(alignof(nn_public::VpuDPUInvariant), nn_public::VPU_METADATA_STORAGE_ADDR);
-
         SymbolEntry metadata;
         metadata.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
         metadata.st_other = STV_DEFAULT;
         metadata.st_shndx = 0;
-        metadata.st_value = static_cast<uint64_t>(metadataStart);
+        metadata.st_value = static_cast<uint64_t>(VPU_METADATA_STORAGE_ADDR);
 #ifdef INTEL_EMBARGO_COMMON
         // TODO: What to write as size if amount of task in metadata buffer is defined by compiler?
         // Supposed to be unused? Applies to other symbols below as well
@@ -179,8 +207,8 @@ HostParsedInference_4000::HostParsedInference_4000(elf::platform::ArchKind archK
         cmxWorkspace.st_info = static_cast<unsigned char>(elf64STInfo(elf::STB_GLOBAL, elf::STT_OBJECT));
         cmxWorkspace.st_other = STV_DEFAULT;
         cmxWorkspace.st_shndx = 0;
-        cmxWorkspace.st_value = nn_public::VPU_WORKSPACE_ADDR;
-        cmxWorkspace.st_size = nn_public::VPU_WORKSPACE_SIZE;
+        cmxWorkspace.st_value = VPU_WORKSPACE_ADDR;
+        cmxWorkspace.st_size = VPU_WORKSPACE_SIZE_IN_BYTES;
         cmxWorkspace.st_name = 0;
 
         symTab_.push_back(cmxWorkspace);

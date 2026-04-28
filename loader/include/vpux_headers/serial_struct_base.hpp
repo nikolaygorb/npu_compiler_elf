@@ -7,7 +7,7 @@
 
 #include <cstring>
 #include <memory>
-#include <string>
+#include <type_traits>
 #include <vector>
 
 #include <vpux_elf/utils/error.hpp>
@@ -216,8 +216,9 @@ public:
 
         for (auto& elem : mElements) {
             VPUX_ELF_THROW_WHEN(
-                currentDescriptor.mElementSize * currentDescriptor.mElementCount + currentDescriptor.mDataOffset > size,
-                RuntimeError, "element is out of bound");
+                    currentDescriptor.mElementSize * currentDescriptor.mElementCount + currentDescriptor.mDataOffset >
+                            size,
+                    RuntimeError, "element is out of bound");
             currentDescriptor = deserializeElement(serialBuffer, currentDescriptor, elem);
         }
     }
@@ -318,7 +319,9 @@ private:
 template <typename DataType, typename SerialDataType>
 class SerialAccess {
 public:
-    static std::vector<uint8_t> serialize(DataType& data) {
+    template <typename T>
+    static std::vector<uint8_t> serialize(T&& data) {
+        static_assert(std::is_same_v<std::remove_reference_t<DataType>, std::remove_reference_t<T>>);
         return SerialDataType(data).serialize();
     }
 

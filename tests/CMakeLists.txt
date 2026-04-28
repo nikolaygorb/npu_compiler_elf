@@ -4,7 +4,9 @@
 #
 
 add_subdirectory(example)
-add_subdirectory(writer)
-add_subdirectory(reader)
+add_subdirectory(helpers)
+add_subdirectory(hpi)
 add_subdirectory(loader)
+add_subdirectory(reader)
 add_subdirectory(relocations)
+add_subdirectory(writer)

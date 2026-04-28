@@ -10,6 +10,9 @@ include( ./cmake/compiler_linker_options.cmake )
 add_compile_definitions(INTEL_EMBARGO_NPU6)     # INTEL_EMBARGO_NPU6_Content
 add_compile_definitions(INTEL_EMBARGO_COMMON)   # INTEL_EMBARGO_COMMON_Content
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(LIB_NAME npu_elf)
 
 project(${LIB_NAME})
@@ -25,12 +28,8 @@ endif()
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "*.hpp" "*.cpp")
 list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/example/.*")
 list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/tests/.*")
-
-if(ENABLE_ELF_TESTS)
-    # Exclude HPI component from building library when tests are enabled.
-    # E#156226
-    list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/hpi_component/*.*")
-endif()
+list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/npu-loader/.*")
+list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/allocator_utils/.*")
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS} ${SOURCES})
 
@@ -107,7 +106,14 @@ if(ENABLE_LOCAL_NNRT_API OR ENABLE_ELF_TESTS)
     target_include_directories(${LIB_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/3rdparty/nnrt_api/")
 endif()
 
+if(ENABLE_NPU_LOADER)
+    include( ./cmake/gflags.cmake)
+    add_subdirectory(./npu-loader)
+endif()
+
 if(ENABLE_ELF_TESTS)
     include( ./cmake/gtest.cmake)
+
+    add_subdirectory(./allocator_utils)
     add_subdirectory(./tests)
 endif()

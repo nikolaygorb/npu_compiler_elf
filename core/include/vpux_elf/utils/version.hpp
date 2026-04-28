@@ -53,7 +53,7 @@ public:
      * Helper static function to check the compatibility between different versions
      *
      * @note
-     * Although it has no return, the function THROWS for incompatibilies and warns for unwanted differences.
+     * Although it has no return, the function THROWS for incompatibilities and warns for unwanted differences.
      * Behaviour:
      *  - if major versions differ => incompatibility => VersioningError is thrown
      *  - if expected minor version < received minor version => incompatibility => VersioningError is thrown

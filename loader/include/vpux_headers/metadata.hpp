@@ -26,6 +26,21 @@ struct NetworkMetadata {
     std::vector<PreprocessingInfo> mPreprocessingInfo;
     std::vector<OVNode> mOVParameters;
     std::vector<OVNode> mOVResults;
+
+    bool operator==(const NetworkMetadata& rhs) const {
+        if (this != &rhs) {
+            return (mIdentification == rhs.mIdentification && mResourceRequirements == rhs.mResourceRequirements &&
+                    mNetInputs == rhs.mNetInputs && mNetOutputs == rhs.mNetOutputs &&
+                    mInTensorDescriptors == rhs.mInTensorDescriptors &&
+                    mOutTensorDescriptors == rhs.mOutTensorDescriptors && mProfilingOutputs == rhs.mProfilingOutputs &&
+                    mPreprocessingInfo == rhs.mPreprocessingInfo && mOVParameters == rhs.mOVParameters &&
+                    mOVResults == rhs.mOVResults);
+        }
+        return true;
+    }
+    bool operator!=(const NetworkMetadata& rhs) const {
+        return (!(*this == rhs));
+    }
 };
 
 }  // namespace elf

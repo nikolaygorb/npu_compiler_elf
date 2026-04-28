@@ -77,51 +77,9 @@ elf::platform::ArchKind archFromDeviceId(uint32_t deviceId) {
     }
 }
 
-std::unique_ptr<HostParsedInferenceCommon> getArchSpecificHPI(elf::platform::ArchKind archKind) {
-    VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "Creating specialized HPI for arch %u", archKind);
-
-    std::unique_ptr<HostParsedInferenceCommon> archSpecificHPI;
-    switch (archKind) {
-#if defined(CONFIG_TARGET_SOC_3720) || defined(HOST_BUILD)
-    case elf::platform::ArchKind::VPUX37XX:
-        archSpecificHPI = std::make_unique<HostParsedInference_3720>();
-        break;
-#endif
-
-#if defined(CONFIG_TARGET_SOC_4000) || defined(HOST_BUILD)
-    case elf::platform::ArchKind::VPUX40XX:
-        archSpecificHPI = std::make_unique<HostParsedInference_4000>(archKind);
-        break;
-#endif
-#if (defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD))
-    case elf::platform::ArchKind::VPUX501X:
-    case elf::platform::ArchKind::VPUX502X:
-        archSpecificHPI = std::make_unique<HostParsedInference_5000>(archKind);
-        break;
-#endif
-#if (defined(CONFIG_TARGET_SOC_6000) || defined(HOST_BUILD)) && defined(INTEL_EMBARGO_NPU6)
-        // to be updated with E#88139: temporary fix to support NPU 6000 arch
-    case elf::platform::ArchKind::VPUX60XX:
-        archSpecificHPI = std::make_unique<HostParsedInference_5000>(archKind);
-        break;
-#endif  // INTEL_EMBARGO_NPU6
-#if (defined(CONFIG_TARGET_SOC_7000) || defined(HOST_BUILD)) && defined(INTEL_EMBARGO_NPU7)
-        // to be updated with E#88139: temporary fix to support NPU 7000 arch
-    case elf::platform::ArchKind::VPUX70XX:
-        archSpecificHPI = std::make_unique<HostParsedInference_5000>(archKind);
-        break;
-#endif  // INTEL_EMBARGO_NPU7
-    default:
-        VPUX_ELF_THROW(RangeError, (elf::platform::stringifyArchKind(archKind) + " arch is not supported").c_str());
-        break;
-    }
-
-    return archSpecificHPI;
-}
-
 }  // namespace
 
-VersionsProvider::VersionsProvider(platform::ArchKind architecture): impl(getArchSpecificHPI(architecture)) {
+VersionsProvider::VersionsProvider(platform::ArchKind architecture): impl(HostParsedInferenceCommon::getArchSpecificHPI(architecture)) {
 }
 VersionsProvider::~VersionsProvider() = default;
 Version VersionsProvider::getLibraryELFVersion() const {
@@ -194,15 +152,15 @@ elf::Version HostParsedInference::getMIVersion() const {
 }
 
 elf::Version HostParsedInference::getLibraryELFVersion() const {
-    return getArchSpecificHPI(archKind)->getELFLibABIVersion();
+    return HostParsedInferenceCommon::getArchSpecificHPI(archKind)->getELFLibABIVersion();
 }
 
 elf::Version HostParsedInference::getLibraryMIVersion() const {
-    return getArchSpecificHPI(archKind)->getStaticMIVersion();
+    return HostParsedInferenceCommon::getArchSpecificHPI(archKind)->getStaticMIVersion();
 }
 
 size_t HostParsedInference::getHPISize() const {
-    return getArchSpecificHPI(archKind)->getParsedInferenceBufferSpecs().size;
+    return HostParsedInferenceCommon::getArchSpecificHPI(archKind)->getParsedInferenceBufferSpecs().size;
 }
 
 void HostParsedInference::checkPlatformCompatibility() {
@@ -289,7 +247,7 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
 }
 
 void HostParsedInference::load() {
-    auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
+    auto archSpecificHpi = HostParsedInferenceCommon::getArchSpecificHPI(platformInfo->mArchKind);
 
     const auto symbolSectionTypes = archSpecificHpi->getSymbolSectionTypes();
     auto symTabOverrideMode = archSpecificHpi->getSymbolSectionTypes().size() == 0 ? false : true;
@@ -355,7 +313,7 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
 #ifdef INTEL_EMBARGO_COMMON
     // TODO: E#79344
 #endif  // INTEL_EMBARGO_COMMON
-    auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
+    auto archSpecificHpi = HostParsedInferenceCommon::getArchSpecificHPI(platformInfo->mArchKind);
     // Use clone semantics here by copy-constructing the loader object
     loaders.reserve(other.loaders.size());
     std::vector<uint64_t> entriesVct;
@@ -426,7 +384,7 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
 #ifdef INTEL_EMBARGO_COMMON
     // TODO: E#79344
 #endif  // INTEL_EMBARGO_COMMON
-    auto archSpecificHpi = getArchSpecificHPI(platformInfo->mArchKind);
+    auto archSpecificHpi = HostParsedInferenceCommon::getArchSpecificHPI(platformInfo->mArchKind);
     // Use clone semantics here by copy-constructing the loader object
     loaders.reserve(rhs.loaders.size());
     std::vector<uint64_t> entriesVct;
