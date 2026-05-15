@@ -65,6 +65,16 @@ constexpr uint32_t VPUX70XX_VERSION_PATCH = 0;
 
 #endif  // INTEL_EMBARGO_NPU7
 
+#ifdef INTEL_EMBARGO_NPU8
+constexpr uint32_t VPUX80XX_VERSION_MAJOR = 1;
+constexpr uint32_t VPUX80XX_VERSION_MINOR = 5;
+constexpr uint32_t VPUX80XX_VERSION_PATCH = 0;
+
+// 1.5.0
+// - Initial support for NPU8
+
+#endif  // INTEL_EMBARGO_NPU8
+
 }  // namespace
 
 // By building base HostParsedInference_4000 with default ctor we ensure special CMX symtabs are initialized empty
@@ -85,6 +95,10 @@ elf::Version HostParsedInference_5000::getELFLibABIVersion() const {
     case elf::platform::ArchKind::VPUX70XX:
         return {VPUX70XX_VERSION_MAJOR, VPUX70XX_VERSION_MINOR, VPUX70XX_VERSION_PATCH};
 #endif  // INTEL_EMBARGO_NPU7
+#ifdef INTEL_EMBARGO_NPU8
+    case elf::platform::ArchKind::VPUX80XX:
+        return {VPUX80XX_VERSION_MAJOR, VPUX80XX_VERSION_MINOR, VPUX80XX_VERSION_PATCH};
+#endif  // INTEL_EMBARGO_NPU8
     default:
         break;
     }

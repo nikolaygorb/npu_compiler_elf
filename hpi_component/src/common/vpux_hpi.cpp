@@ -30,21 +30,22 @@
 #if defined(CONFIG_TARGET_SOC_5000) || defined(HOST_BUILD)
 #include <hpi_5000.hpp>
 #endif
-
 #ifdef INTEL_EMBARGO_NPU6
-//to be removed with E#88139:
-//temporary fix to support NPU 6000 arch
+// to be removed with E#88139: NPU5000+ share a common HPI implementation
 #if defined(CONFIG_TARGET_SOC_6000) || defined(HOST_BUILD)
 #include <hpi_5000.hpp>
 #endif
 #endif  // INTEL_EMBARGO_NPU6
 #ifdef INTEL_EMBARGO_NPU7
-//to be removed with E#88139:
-//temporary fix to support NPU 6000 arch
 #if defined(CONFIG_TARGET_SOC_7000) || defined(HOST_BUILD)
 #include <hpi_5000.hpp>
 #endif
 #endif  // INTEL_EMBARGO_NPU7
+#ifdef INTEL_EMBARGO_NPU8
+#if defined(CONFIG_TARGET_SOC_8000) || defined(HOST_BUILD)
+#include <hpi_5000.hpp>
+#endif
+#endif  // INTEL_EMBARGO_NPU8
 
 #include <string.h>
 // clang-format on
@@ -71,6 +72,11 @@ elf::platform::ArchKind archFromDeviceId(uint32_t deviceId) {
     case 0xD79D:  // Novalake AX (NVL-AX)
         return elf::platform::ArchKind::VPUX70XX;
 #endif
+#ifdef INTEL_EMBARGO_NPU8
+    case 0xD51D:  // Titanlake (TTL)
+    case 0xD59D:  // Titanlake Beacon (TTL-BX)
+        return elf::platform::ArchKind::VPUX80XX;
+#endif
     default:
         VPUX_ELF_LOG(LogLevel::LOG_ERROR, "Unrecognized device ID");
         return elf::platform::ArchKind::UNKNOWN;
@@ -79,7 +85,8 @@ elf::platform::ArchKind archFromDeviceId(uint32_t deviceId) {
 
 }  // namespace
 
-VersionsProvider::VersionsProvider(platform::ArchKind architecture): impl(HostParsedInferenceCommon::getArchSpecificHPI(architecture)) {
+VersionsProvider::VersionsProvider(platform::ArchKind architecture)
+        : impl(HostParsedInferenceCommon::getArchSpecificHPI(architecture)) {
 }
 VersionsProvider::~VersionsProvider() = default;
 Version VersionsProvider::getLibraryELFVersion() const {

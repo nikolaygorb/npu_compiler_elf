@@ -128,7 +128,10 @@ TEST(HostParsedInference, MetadataOnlyBlobIsRejected) {
     ASSERT_THROW(elf::HostParsedInference(&bufferManager, &accessManager, HPIConfigs{}, nullptr), std::exception);
 }
 
-const auto MinimalConstructible40XX = ActionsSequence{{
+ActionsSequence makeMinimalConstructible(platform::ArchKind arch) {
+        const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(arch);
+
+        return ActionsSequence{{
 
         AddNoteBinarySection::build(
                 ".ELFVersion",
@@ -140,18 +143,10 @@ const auto MinimalConstructible40XX = ActionsSequence{{
                                  0,
                                  elf::elf_note::NT_GNU_ABI_TAG,
                                  {},
-                                 elf::HostParsedInferenceCommon::getArchSpecificHPI(elf::platform::ArchKind::VPUX40XX)
-                                         ->getELFLibABIVersion()
-                                         .getMIFormat(),
-                                 elf::HostParsedInferenceCommon::getArchSpecificHPI(elf::platform::ArchKind::VPUX40XX)
-                                         ->getELFLibABIVersion()
-                                         .getMajor(),
-                                 elf::HostParsedInferenceCommon::getArchSpecificHPI(elf::platform::ArchKind::VPUX40XX)
-                                         ->getELFLibABIVersion()
-                                         .getMinor(),
-                                 elf::HostParsedInferenceCommon::getArchSpecificHPI(elf::platform::ArchKind::VPUX40XX)
-                                         ->getELFLibABIVersion()
-                                         .getPatch()}}},
+                                 archSpecHpi->getELFLibABIVersion().getMIFormat(),
+                                 archSpecHpi->getELFLibABIVersion().getMajor(),
+                                 archSpecHpi->getELFLibABIVersion().getMinor(),
+                                 archSpecHpi->getELFLibABIVersion().getPatch()}}},
                 }),
 
         AddNoteBinarySection::build(
@@ -164,18 +159,10 @@ const auto MinimalConstructible40XX = ActionsSequence{{
                                  0,
                                  elf::elf_note::NT_NPU_MPI_VERSION,
                                  {},
-                                 elf::HostParsedInferenceCommon::getArchSpecificHPI(elf::platform::ArchKind::VPUX40XX)
-                                         ->getStaticMIVersion()
-                                         .getMIFormat(),
-                                 elf::HostParsedInferenceCommon::getArchSpecificHPI(elf::platform::ArchKind::VPUX40XX)
-                                         ->getStaticMIVersion()
-                                         .getMajor(),
-                                 elf::HostParsedInferenceCommon::getArchSpecificHPI(elf::platform::ArchKind::VPUX40XX)
-                                         ->getStaticMIVersion()
-                                         .getMinor(),
-                                 elf::HostParsedInferenceCommon::getArchSpecificHPI(elf::platform::ArchKind::VPUX40XX)
-                                         ->getStaticMIVersion()
-                                         .getPatch()}}},
+                                 archSpecHpi->getStaticMIVersion().getMIFormat(),
+                                 archSpecHpi->getStaticMIVersion().getMajor(),
+                                 archSpecHpi->getStaticMIVersion().getMinor(),
+                                 archSpecHpi->getStaticMIVersion().getPatch()}}},
                 }),
 
         AddRawBinarySection::build(
@@ -193,27 +180,44 @@ const auto MinimalConstructible40XX = ActionsSequence{{
                                            {
                                                    VPU_SHT_PLATFORM_INFO,
                                                    elf::platform::PlatformInfoSerialization::serialize(
-                                                           elf::platform::PlatformInfo{platform::ArchKind::VPUX40XX}),
+                                                           elf::platform::PlatformInfo{arch}),
                                            }}),
-}};
+    }};
+}
 
-const auto MinimalLoadable40XX =
-        MinimalConstructible40XX +
-        ActionsSequence{{AddRawBinarySection::build(
-                                 ".mappedInference",
-                                 AddRawBinarySection::Attributes{{elf::SHF_ALLOC | elf::SHF_EXECINSTR},
-                                                                 {elf::SHT_PROGBITS, std::vector<uint8_t>(64)}}),
+ActionsSequence makeMinimalLoadable(platform::ArchKind arch) {
+    return makeMinimalConstructible(arch) +
+           ActionsSequence{{AddRawBinarySection::build(
+                                    ".mappedInference",
+                                    AddRawBinarySection::Attributes{{elf::SHF_ALLOC | elf::SHF_EXECINSTR},
+                                                                    {elf::SHT_PROGBITS, std::vector<uint8_t>(64)}}),
 
-                         AddSymbolSection::build(
-                                 ".symtab", AddSymbolSection::Attributes{},
-                                 ActionsSequence{{AddSymbol::build(".entry", AddSymbol::Attributes{elf::VPU_STT_ENTRY},
-                                                                   AddSymbol::Operands{".mappedInference"})}})}};
+                            AddSymbolSection::build(
+                                    ".symtab", AddSymbolSection::Attributes{},
+                                    ActionsSequence{{AddSymbol::build(".entry",
+                                                                      AddSymbol::Attributes{elf::VPU_STT_ENTRY},
+                                                                      AddSymbol::Operands{".mappedInference"})}})}};
+}
+
+const auto MinimalLoadable37XX = makeMinimalLoadable(elf::platform::ArchKind::VPUX37XX);
+const auto MinimalLoadable40XX = makeMinimalLoadable(elf::platform::ArchKind::VPUX40XX);
+const auto MinimalLoadable501X = makeMinimalLoadable(elf::platform::ArchKind::VPUX501X);
+const auto MinimalLoadable502X = makeMinimalLoadable(elf::platform::ArchKind::VPUX502X);
+#ifdef INTEL_EMBARGO_NPU6
+const auto MinimalLoadable60XX = makeMinimalLoadable(elf::platform::ArchKind::VPUX60XX);
+#endif
+#ifdef INTEL_EMBARGO_NPU7
+const auto MinimalLoadable70XX = makeMinimalLoadable(elf::platform::ArchKind::VPUX70XX);
+#endif
+#ifdef INTEL_EMBARGO_NPU8
+const auto MinimalLoadable80XX = makeMinimalLoadable(elf::platform::ArchKind::VPUX80XX);
+#endif
 
 TEST(HostParsedInference, MinimalConstructible) {
     auto arch = elf::platform::ArchKind::VPUX40XX;
     auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(arch);
 
-    auto elf = TestBlob(MinimalConstructible40XX).getBinary();
+    auto elf = TestBlob(makeMinimalConstructible(arch)).getBinary();
 
     auto accessManager =
             DDRAccessManager<elf::DDRAlwaysEmplace>(reinterpret_cast<const uint8_t*>(elf.data()), elf.size());
@@ -227,7 +231,7 @@ TEST(HostParsedInference, MinimalLoadable) {
     auto arch = elf::platform::ArchKind::VPUX40XX;
     auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(arch);
 
-    auto elf = TestBlob(MinimalLoadable40XX).getBinary();
+    auto elf = TestBlob(makeMinimalLoadable(arch)).getBinary();
 
     auto bufferManager = HeapBufferManager();
     auto accessManager = DDRAccessManager<elf::DDRNeverEmplace, elf::AllocatedDeviceBufferFactory>(
@@ -239,11 +243,42 @@ TEST(HostParsedInference, MinimalLoadable) {
     ASSERT_NO_THROW(hpi.load());
 }
 
+TEST(HostParsedInference, MinimalLoadableEachArchKind) {
+        const std::vector<std::pair<elf::platform::ArchKind, const ActionsSequence*>> blobs = {
+                        {elf::platform::ArchKind::VPUX37XX, &MinimalLoadable37XX},
+                        {elf::platform::ArchKind::VPUX40XX, &MinimalLoadable40XX},
+                        {elf::platform::ArchKind::VPUX501X, &MinimalLoadable501X},
+                        {elf::platform::ArchKind::VPUX502X, &MinimalLoadable502X},
+#ifdef INTEL_EMBARGO_NPU6
+                        {elf::platform::ArchKind::VPUX60XX, &MinimalLoadable60XX},
+#endif
+#ifdef INTEL_EMBARGO_NPU7
+                        {elf::platform::ArchKind::VPUX70XX, &MinimalLoadable70XX},
+#endif
+#ifdef INTEL_EMBARGO_NPU8
+                        {elf::platform::ArchKind::VPUX80XX, &MinimalLoadable80XX},
+#endif
+        };
+
+        for (const auto& blob : blobs) {
+                auto elf = TestBlob(*blob.second).getBinary();
+
+                auto bufferManager = HeapBufferManager();
+                auto accessManager = DDRAccessManager<elf::DDRNeverEmplace, elf::AllocatedDeviceBufferFactory>(
+                                reinterpret_cast<const uint8_t*>(elf.data()), elf.size(),
+                                std::make_shared<elf::AllocatedDeviceBufferFactory>(&bufferManager));
+
+                auto hpi = elf::HostParsedInference(&bufferManager, &accessManager, HPIConfigs{{}, blob.first}, nullptr);
+
+                ASSERT_NO_THROW(hpi.load()) << "Failed for arch " << static_cast<uint64_t>(blob.first);
+        }
+}
+
 TEST(HostParsedInference, BaseMemoryCheck) {
     auto arch = elf::platform::ArchKind::VPUX40XX;
     auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(arch);
 
-    auto elf = TestBlob(MinimalLoadable40XX).getBinary();
+    auto elf = TestBlob(makeMinimalLoadable(arch)).getBinary();
 
     auto bufferManager = HeapBufferManager();
     auto accessManager = DDRAccessManager<elf::DDRNeverEmplace, elf::AllocatedDeviceBufferFactory>(
@@ -267,7 +302,7 @@ TEST(HostParsedInference, ScratchSectionHasNoImpactOnBlobSize) {
     auto arch = elf::platform::ArchKind::VPUX40XX;
     auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(arch);
 
-    auto seq0 = MinimalLoadable40XX +
+    auto seq0 = makeMinimalLoadable(arch) +
                 ActionsSequence{{
 
                         AddEmptySection::build(
@@ -276,7 +311,7 @@ TEST(HostParsedInference, ScratchSectionHasNoImpactOnBlobSize) {
 
                 }};
 
-    auto seq1 = MinimalLoadable40XX +
+    auto seq1 = makeMinimalLoadable(arch) +
                 ActionsSequence{{
 
                         AddEmptySection::build(
