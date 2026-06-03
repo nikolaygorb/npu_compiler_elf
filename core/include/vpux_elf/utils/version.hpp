@@ -36,8 +36,10 @@ public:
     uint32_t getMinor() const;
     uint32_t getPatch() const;
 
+    std::string toString() const;
+
     friend std::ostream& operator<< (std::ostream& stream, const Version& version) {
-        stream << version.major << "." << version.minor << "." << version.patch;
+        stream << version.toString();
         return stream;
     }
 

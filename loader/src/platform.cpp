@@ -52,7 +52,7 @@ std::string stringifyArchKind(const elf::platform::ArchKind& arch) {
     return std::string("UNKNOWN");
 }
 
-uint8_t getHardwareTileCount(const elf::platform::ArchKind& arch) {
+uint64_t getHardwareTileCount(const elf::platform::ArchKind& arch) {
     // map between archKind and maximum hardware tile count
     static const std::unordered_map<elf::platform::ArchKind, uint8_t> hardwareTileCountsMap = {
             {elf::platform::ArchKind::UNKNOWN, 0},

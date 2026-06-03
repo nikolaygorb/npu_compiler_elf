@@ -343,3 +343,358 @@ TEST(HostParsedInference, ScratchSectionHasNoImpactOnBlobSize) {
 
     ASSERT_GT(memUsage0, memUsage1);
 }
+
+TEST(HostParsedInference, CompatStringThrowIfEmpty) {
+    ASSERT_THROW(checkCompatibilityString(DeviceDescriptor{}, ""), std::exception);
+}
+
+TEST(HostParsedInference, CompatStringThrowIfNoBlobArchKind) {
+    ASSERT_THROW(checkCompatibilityString(DeviceDescriptor{}, "t=3;elf=2.0.0;mi=11.7.0"), std::exception);
+}
+
+TEST(HostParsedInference, CompatStringThrowIfNoBlobTileCount) {
+    ASSERT_THROW(checkCompatibilityString(DeviceDescriptor{}, "npu=5010;elf=2.0.0;mi=11.7.0"), std::exception);
+}
+
+TEST(HostParsedInference, CompatStringThrowIfNoBlobElfVersion) {
+    ASSERT_THROW(checkCompatibilityString(DeviceDescriptor{}, "npu=5010;t=3;mi=11.7.0"), std::exception);
+}
+
+TEST(HostParsedInference, CompatStringThrowIfNoBlobMiVersion) {
+    ASSERT_THROW(checkCompatibilityString(DeviceDescriptor{}, "npu=5010;t=3;elf=2.0.1"), std::exception);
+}
+
+TEST(HostParsedInference, CompatStringCompatible) {
+    const auto hwTileCount = 4;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0x643e,     // LNL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto compatibilityString =
+                std::string{"npu=4000;"} +
+                "t=" + std::to_string(hwTileCount) + ";" +
+                "elf=" + archSpecHpi->getELFLibABIVersion().toString() + ";" +
+                "mi=" + archSpecHpi->getStaticMIVersion().toString();
+
+    ASSERT_NO_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString));
+}
+
+TEST(HostParsedInference, CompatStringIncompatibleIfUnknownArchKind) {
+    const auto hwTileCount = 4;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0x643e,     // LNL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto compatibilityString =
+                std::string{"npu=9999;"} +
+                "t=" + std::to_string(hwTileCount) + ";" +
+                "elf=" + archSpecHpi->getELFLibABIVersion().toString() + ";" +
+                "mi=" + archSpecHpi->getStaticMIVersion().toString();
+
+    ASSERT_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString), elf::RuntimeError);
+}
+
+TEST(HostParsedInference, CompatStringIncompatibleIfOlderArchKind) {
+    const auto hwTileCount = 4;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0x643e,     // LNL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto compatibilityString =
+                std::string{"npu=3720;"} +
+                "t=" + std::to_string(hwTileCount) + ";" +
+                "elf=" + archSpecHpi->getELFLibABIVersion().toString() + ";" +
+                "mi=" + archSpecHpi->getStaticMIVersion().toString();
+
+    ASSERT_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString), elf::CompatibilityError);
+}
+
+TEST(HostParsedInference, CompatStringIncompatibleIfNewerArchKind) {
+    const auto hwTileCount = 3;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0x643e,     // LNL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto compatibilityString =
+                std::string{"npu=5010;"} +
+                "t=" + std::to_string(hwTileCount) + ";" +
+                "elf=" + archSpecHpi->getELFLibABIVersion().toString() + ";" +
+                "mi=" + archSpecHpi->getStaticMIVersion().toString();
+
+    ASSERT_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString), elf::CompatibilityError);
+}
+
+TEST(HostParsedInference, CompatStringIncompatibleIfSameArchDifferentSKU) {
+    const auto hwTileCount = 3;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0xFD3E,     // WCL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto compatibilityString =
+                std::string{"npu=5010;"} +
+                "t=" + std::to_string(hwTileCount) + ";" +
+                "elf=" + archSpecHpi->getELFLibABIVersion().toString() + ";" +
+                "mi=" + archSpecHpi->getStaticMIVersion().toString();
+
+    ASSERT_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString), elf::CompatibilityError);
+}
+
+TEST(HostParsedInference, CompatStringCompatibleIfLessTiles) {
+    const auto hwTileCount = 4;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0x643e,     // LNL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto compatibilityString =
+                std::string{"npu=4000;"} +
+                "t=" + std::to_string(hwTileCount - 1) + ";" +
+                "elf=" + archSpecHpi->getELFLibABIVersion().toString() + ";" +
+                "mi=" + archSpecHpi->getStaticMIVersion().toString();
+
+    ASSERT_NO_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString));
+}
+
+TEST(HostParsedInference, CompatStringIncompatibleIfTooManyTiles) {
+    const auto hwTileCount = 4;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0x643e,     // LNL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto compatibilityString =
+                std::string{"npu=4000;"} +
+                "t=" + std::to_string(hwTileCount + 1) + ";" +
+                "elf=" + archSpecHpi->getELFLibABIVersion().toString() + ";" +
+                "mi=" + archSpecHpi->getStaticMIVersion().toString();
+
+    ASSERT_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString), elf::CompatibilityError);
+}
+
+TEST(HostParsedInference, CompatStringCompatibleIfElfMinorLess) {
+    const auto hwTileCount = 4;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0x643e,     // LNL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto archElfVersion = archSpecHpi->getELFLibABIVersion();
+
+    ASSERT_NE(archElfVersion.getMinor(), 0); // Guard against underflow in next line
+    const auto elfVersion = elf::Version{archElfVersion.getMajor(), archElfVersion.getMinor() - 1,
+                                         archElfVersion.getPatch()};
+    const auto compatibilityString =
+                std::string{"npu=4000;"} +
+                "t=" + std::to_string(hwTileCount) + ";" +
+                "elf=" + elfVersion.toString() + ";" +
+                "mi=" + archSpecHpi->getStaticMIVersion().toString();
+
+    ASSERT_NO_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString));
+}
+
+TEST(HostParsedInference, CompatStringIncompatibleIfElfMajorLess) {
+    const auto hwTileCount = 4;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0x643e,     // LNL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto archElfVersion = archSpecHpi->getELFLibABIVersion();
+
+    ASSERT_NE(archElfVersion.getMajor(), 0); // Guard against underflow in next line
+    const auto elfVersion = elf::Version{archElfVersion.getMajor() - 1, archElfVersion.getMinor(),
+                                         archElfVersion.getPatch()};
+    const auto compatibilityString =
+                std::string{"npu=4000;"} +
+                "t=" + std::to_string(hwTileCount) + ";" +
+                "elf=" + elfVersion.toString() + ";" +
+                "mi=" + archSpecHpi->getStaticMIVersion().toString();
+
+    ASSERT_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString), elf::CompatibilityError);
+}
+
+TEST(HostParsedInference, CompatStringIncompatibleIfElfMajorGreater) {
+    const auto hwTileCount = 4;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0x643e,     // LNL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto archElfVersion = archSpecHpi->getELFLibABIVersion();
+
+    const auto elfVersion = elf::Version{archElfVersion.getMajor() + 1, archElfVersion.getMinor(),
+                                         archElfVersion.getPatch()};
+    const auto compatibilityString =
+                std::string{"npu=4000;"} +
+                "t=" + std::to_string(hwTileCount) + ";" +
+                "elf=" + elfVersion.toString() + ";" +
+                "mi=" + archSpecHpi->getStaticMIVersion().toString();
+
+    ASSERT_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString), elf::CompatibilityError);
+}
+
+TEST(HostParsedInference, CompatStringIncompatibleIfElfMinorGreater) {
+    const auto hwTileCount = 4;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0x643e,     // LNL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto archElfVersion = archSpecHpi->getELFLibABIVersion();
+
+    const auto elfVersion = elf::Version{archElfVersion.getMajor(), archElfVersion.getMinor() + 1,
+                                         archElfVersion.getPatch()};
+    const auto compatibilityString =
+                std::string{"npu=4000;"} +
+                "t=" + std::to_string(hwTileCount) + ";" +
+                "elf=" + elfVersion.toString() + ";" +
+                "mi=" + archSpecHpi->getStaticMIVersion().toString();
+
+    ASSERT_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString), elf::CompatibilityError);
+}
+
+TEST(HostParsedInference, CompatStringCompatibleIfMIMinorLess) {
+    const auto hwTileCount = 4;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0x643e,     // LNL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto archMIVersion = archSpecHpi->getStaticMIVersion();
+
+    ASSERT_NE(archMIVersion.getMinor(), 0); // Guard against underflow in next line
+    const auto miVersion = elf::Version{archMIVersion.getMajor(), archMIVersion.getMinor() - 1,
+                                        archMIVersion.getPatch()};
+    const auto compatibilityString =
+                std::string{"npu=4000;"} +
+                "t=" + std::to_string(hwTileCount) + ";" +
+                "elf=" + archSpecHpi->getELFLibABIVersion().toString() + ";" +
+                "mi=" + miVersion.toString();
+
+    ASSERT_NO_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString));
+}
+
+TEST(HostParsedInference, CompatStringIncompatibleIfMIMajorLess) {
+    const auto hwTileCount = 4;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0x643e,     // LNL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto archMIVersion = archSpecHpi->getStaticMIVersion();
+
+    ASSERT_NE(archMIVersion.getMajor(), 0); // Guard against underflow in next line
+    const auto miVersion = elf::Version{archMIVersion.getMajor() - 1, archMIVersion.getMinor(),
+                                        archMIVersion.getPatch()};
+    const auto compatibilityString =
+                std::string{"npu=4000;"} +
+                "t=" + std::to_string(hwTileCount) + ";" +
+                "elf=" + archSpecHpi->getELFLibABIVersion().toString() + ";" +
+                "mi=" + miVersion.toString();
+
+    ASSERT_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString), elf::CompatibilityError);
+}
+
+TEST(HostParsedInference, CompatStringIncompatibleIfMIMajorGreater) {
+    const auto hwTileCount = 4;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0x643e,     // LNL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto archMIVersion = archSpecHpi->getStaticMIVersion();
+
+    const auto miVersion = elf::Version{archMIVersion.getMajor() + 1, archMIVersion.getMinor(),
+                                        archMIVersion.getPatch()};
+    const auto compatibilityString =
+                std::string{"npu=4000;"} +
+                "t=" + std::to_string(hwTileCount) + ";" +
+                "elf=" + archSpecHpi->getELFLibABIVersion().toString() + ";" +
+                "mi=" + miVersion.toString();
+
+    ASSERT_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString), elf::CompatibilityError);
+}
+
+TEST(HostParsedInference, CompatStringIncompatibleIfMIMinorGreater) {
+    const auto hwTileCount = 4;
+    const auto deviceDescriptor = DeviceDescriptor{
+        sizeof(DeviceDescriptor),
+        0x643e,     // LNL
+        3,          // revision
+        hwTileCount
+    };
+    const auto hwArch = elf::archFromDeviceId(deviceDescriptor.deviceID);
+
+    const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(hwArch);
+    const auto archMIVersion = archSpecHpi->getStaticMIVersion();
+
+    const auto miVersion = elf::Version{archMIVersion.getMajor(), archMIVersion.getMinor() + 1,
+                                        archMIVersion.getPatch()};
+    const auto compatibilityString =
+                std::string{"npu=4000;"} +
+                "t=" + std::to_string(hwTileCount) + ";" +
+                "elf=" + archSpecHpi->getELFLibABIVersion().toString() + ";" +
+                "mi=" + miVersion.toString();
+
+    ASSERT_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString), elf::CompatibilityError);
+}

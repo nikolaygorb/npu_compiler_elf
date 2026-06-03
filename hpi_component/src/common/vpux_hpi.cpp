@@ -11,6 +11,8 @@
 #define VPUX_ELF_LOG_UNIT_NAME "VpuxHpi"
 #endif
 // clang-format off
+
+#include "compat_string_parser.hpp"
 #include <vpux_loader/vpux_loader.hpp>
 #include <vpux_elf/accessor.hpp>
 #include <vpux_elf/utils/log.hpp>
@@ -51,39 +53,130 @@
 // clang-format on
 
 namespace elf {
+
 namespace {
 
-elf::platform::ArchKind archFromDeviceId(uint32_t deviceId) {
+platform::ArchKind archFromPlatform(uint64_t platform) {
+    switch (platform) {
+    case 3720:
+        return platform::ArchKind::VPUX37XX;
+    case 4000:
+        return platform::ArchKind::VPUX40XX;
+    case 5010:
+        return platform::ArchKind::VPUX501X;
+    case 5020:
+        return platform::ArchKind::VPUX502X;
+#ifdef INTEL_EMBARGO_NPU6
+    case 6010:
+        return platform::ArchKind::VPUX60XX;
+#endif
+#ifdef INTEL_EMBARGO_NPU7
+    case 7010:
+        return platform::ArchKind::VPUX70XX;
+#endif
+#ifdef INTEL_EMBARGO_NPU8
+    case 8010:
+        return platform::ArchKind::VPUX80XX;
+#endif
+    }
+    VPUX_ELF_THROW(RuntimeError, "Invalid platform");
+}
+
+void checkTileCountCompatibility(uint64_t blobTileCount, uint64_t hwTileCount) {
+    // do not throw on blobTileCount being 0
+    // to allow blobs that don't use NPU tiles at all
+    // e.g. DMA-only blobs
+    if (blobTileCount > hwTileCount) {
+        std::stringstream tileCountLogBuffer;
+        tileCountLogBuffer << "Incorrect tile count. Requested tile count '" << blobTileCount
+                           << "' exceeds hardware tile count '" << hwTileCount << "'";
+        VPUX_ELF_THROW(CompatibilityError, tileCountLogBuffer.str().c_str());
+    }
+}
+
+void checkPlatformCompatibility(platform::ArchKind blobArchKind, platform::ArchKind hwArchKind) {
+    if (blobArchKind != hwArchKind) {
+        std::stringstream logBuffer;
+        logBuffer << "Incorrect arch. Expected: " << elf::platform::stringifyArchKind(hwArchKind)
+                  << " vs received: " << elf::platform::stringifyArchKind(blobArchKind);
+        VPUX_ELF_THROW(CompatibilityError, logBuffer.str().c_str());
+    }
+}
+
+uint64_t parseInt(const std::string& str) {
+    size_t pos = 0;
+    uint64_t value = std::stoull(str, &pos);
+    if (pos != str.size()) {
+        throw std::runtime_error("Invalid integer: " + str);
+    }
+    return value;
+}
+
+// parse X.Y.Z, where X, Y and Z are unsigned 4-byte integers
+Version parseVersion(const std::string& str) {
+    const auto consume = [&str](size_t offset) {
+        const auto substr = str.substr(offset);
+
+        size_t pos = 0;
+        const auto value = std::stoul(substr, &pos);
+
+        return std::pair(value, offset + pos);
+    };
+
+    const auto [major, majorEnd] = consume(0);
+    if (majorEnd >= str.size() || str[majorEnd] != '.') {
+        throw std::runtime_error("Invalid version format: " + str);
+    }
+
+    const auto [minor, minorEnd] = consume(majorEnd + 1);
+    if (minorEnd >= str.size() || str[minorEnd] != '.') {
+        throw std::runtime_error("Invalid version format: " + str);
+    }
+
+    const auto [patch, patchEnd] = consume(minorEnd + 1);
+    if (patchEnd != str.size()) {
+        throw std::runtime_error("Invalid version format: " + str);
+    }
+
+    const auto version = Version(major, minor, patch);
+    if (!version.checkValidity()) {
+        throw std::runtime_error("Invalid version: " + str);
+    }
+
+    return version;
+}
+
+}  // namespace
+
+platform::ArchKind archFromDeviceId(uint32_t deviceId) {
     switch (deviceId) {
     case 0x7D1D:  // MeteorLake (MTL-P, MTL-H)
     case 0xAD1D:  // ArrowLake (ARL)
-        return elf::platform::ArchKind::VPUX37XX;
+        return platform::ArchKind::VPUX37XX;
     case 0x643E:  // LunarLake (LNL)
-        return elf::platform::ArchKind::VPUX40XX;
+        return platform::ArchKind::VPUX40XX;
     case 0xB03E:  // PantherLake Mobile (PTL-P)
-        return elf::platform::ArchKind::VPUX501X;
+        return platform::ArchKind::VPUX501X;
     case 0xFD3E:  // Wildcatlake (WCL)
-        return elf::platform::ArchKind::VPUX502X;
+        return platform::ArchKind::VPUX502X;
 #ifdef INTEL_EMBARGO_NPU6
     case 0xD71D:  // Novalake (NVL) device
-        return elf::platform::ArchKind::VPUX60XX;
+        return platform::ArchKind::VPUX60XX;
 #endif
 #ifdef INTEL_EMBARGO_NPU7
     case 0xD79D:  // Novalake AX (NVL-AX)
-        return elf::platform::ArchKind::VPUX70XX;
+        return platform::ArchKind::VPUX70XX;
 #endif
 #ifdef INTEL_EMBARGO_NPU8
     case 0xD51D:  // Titanlake (TTL)
     case 0xD59D:  // Titanlake Beacon (TTL-BX)
-        return elf::platform::ArchKind::VPUX80XX;
+        return platform::ArchKind::VPUX80XX;
 #endif
     default:
         VPUX_ELF_LOG(LogLevel::LOG_ERROR, "Unrecognized device ID");
-        return elf::platform::ArchKind::UNKNOWN;
+        return platform::ArchKind::UNKNOWN;
     }
 }
-
-}  // namespace
 
 VersionsProvider::VersionsProvider(platform::ArchKind architecture)
         : impl(HostParsedInferenceCommon::getArchSpecificHPI(architecture)) {
@@ -170,19 +263,8 @@ size_t HostParsedInference::getHPISize() const {
     return HostParsedInferenceCommon::getArchSpecificHPI(archKind)->getParsedInferenceBufferSpecs().size;
 }
 
-void HostParsedInference::checkPlatformCompatibility() {
-    auto blobArchKind = platformInfo->mArchKind;
-    // Check if compiled ELF arch and HPI arch match
-    if (blobArchKind != archKind) {
-        std::stringstream logBuffer;
-        logBuffer << "Incorrect arch. Expected: " << elf::platform::stringifyArchKind(archKind)
-                  << " vs received: " << elf::platform::stringifyArchKind(blobArchKind);
-        VPUX_ELF_THROW(CompatibilityError, logBuffer.str().c_str());
-    }
-}
-
 HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs,
-                                         DeviceDescriptor* deviceDescriptor)
+                                         const DeviceDescriptor* deviceDescriptor)
         : bufferManager(bufferMgr), accessManager(accessMgr) {
 #ifdef NRELEASE
     static constexpr auto ELF_THROW_COMPATIBILITY_ERROR_NAME = "ELF_THROW_COMPATIBILITY_ERROR";
@@ -213,7 +295,7 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     // Check compiler hash compatibility
     checkCompilerHash();
 
-    checkPlatformCompatibility();
+    checkPlatformCompatibility(platformInfo->mArchKind, archKind);
 
     // Check Mapped Inference Compatibility
     auto& nnExpectedVersion = hpiConfigs.nnVersion;
@@ -227,27 +309,19 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
 
     elf::Version::checkVersionCompatibility(nnExpectedVersion, miVersion, elf::VersionType::MAPPED_INFERENCE_VERSION);
 
-    // Check ELF Library tile count Compatibility
-    auto tileCount = metadata->mResourceRequirements.nn_slice_count_;
+    auto blobTileCount = static_cast<uint64_t>(metadata->mResourceRequirements.nn_slice_count_);
+
     // get hardware tile count, archKind has already been checked above
 
     // tileCount from DeviceDescriptor is always present and "SKU-aware"
     // e.g. if we are running on 5T NPU4 SKU it will report 5 instead of 6
     // in contrast to getHardwareTileCount above
-    // cast to uint8_t even though DeviceDescriptor contains uint32_t because
-    // tileCount from the blob is uint8_t anyway, so no point in upcasting here
-    uint8_t hardwareTileCount = deviceDescriptor ? static_cast<uint8_t>(deviceDescriptor->tileCount)
-                                                 : elf::platform::getHardwareTileCount(archKind);
+    auto hwTileCount = deviceDescriptor ? static_cast<uint64_t>(deviceDescriptor->tileCount)
+                                   : elf::platform::getHardwareTileCount(archKind);
 
-    // throw exception if tile count is greater than hardware tile count
-    if (tileCount > hardwareTileCount) {
-        std::stringstream tileCountLogBuffer;
-        tileCountLogBuffer << "Incorrect tile count. Requested tile count '" << static_cast<int>(tileCount)
-                           << "' exceeds hardware tile count '" << static_cast<int>(hardwareTileCount) << "'";
-        VPUX_ELF_THROW(CompatibilityError, tileCountLogBuffer.str().c_str());
-    }
+    checkTileCountCompatibility(blobTileCount, hwTileCount);
 
-    if (tileCount > hardwareTileCount / 2 && archKind != elf::platform::ArchKind::VPUX30XX &&
+    if (blobTileCount > hwTileCount / 2 && archKind != elf::platform::ArchKind::VPUX30XX &&
         archKind != elf::platform::ArchKind::VPUX37XX) {
         loaders.front()->setInferencesMayBeRunInParallel(false);
     }
@@ -501,6 +575,28 @@ void HostParsedInference::applyInputOutput(std::vector<DeviceBuffer>& inputs, st
 void HostParsedInference::updateSharedScratchBuffers(const std::vector<DeviceBuffer>& buffers) {
     auto& loader = loaders.front();
     loader->updateSharedScratchBuffers(buffers);
+}
+
+void checkCompatibilityString(const DeviceDescriptor& deviceDescriptor, const std::string& compatibilityString) {
+    compat::Parser parser(compatibilityString, std::array{"compiler", "npu", "t", "elf", "mi"});
+
+    // compatibility string contains NPU Platform, which is a enum different from ArchKind
+    const auto blobPlatform = parseInt(parser.getAttribute("npu"));
+    const auto blobArchKind = archFromPlatform(blobPlatform);
+    const auto blobTileCount = parseInt(parser.getAttribute("t"));
+    const auto blobElfVersion = parseVersion(parser.getAttribute("elf"));
+    const auto blobMIVersion = parseVersion(parser.getAttribute("mi"));
+
+    const auto hwArchKind = archFromDeviceId(deviceDescriptor.deviceID);
+    const auto archHpi = HostParsedInferenceCommon::getArchSpecificHPI(hwArchKind);
+    const auto libElfVersion = archHpi->getELFLibABIVersion();
+    const auto libMIVersion = archHpi->getStaticMIVersion();
+
+    checkPlatformCompatibility(blobArchKind, hwArchKind);
+    checkTileCountCompatibility(blobTileCount, deviceDescriptor.tileCount);
+    Version::checkVersionCompatibility(libElfVersion, blobElfVersion,
+                                       VersionType::ELF_ABI_VERSION);
+    Version::checkVersionCompatibility(libMIVersion, blobMIVersion, VersionType::MAPPED_INFERENCE_VERSION);
 }
 
 }  // namespace elf

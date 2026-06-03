@@ -28,6 +28,8 @@ struct DeviceDescriptor {
     uint32_t tileCount;
 };
 
+platform::ArchKind archFromDeviceId(uint32_t deviceId);
+
 // Structure that gathers configuration options for HPI instances.
 // Subject to various additions/modifications in the future
 struct HPIConfigs {
@@ -49,7 +51,7 @@ private:
 class HostParsedInference final {
 public:
     HostParsedInference(BufferManager* bufferMgr, AccessManager* accessMgr, elf::HPIConfigs hpiConfigs,
-                        DeviceDescriptor* deviceDescriptor = nullptr);
+                        const DeviceDescriptor* deviceDescriptor = nullptr);
     HostParsedInference(const HostParsedInference& other);
     HostParsedInference(HostParsedInference&& other);
     ~HostParsedInference();
@@ -94,7 +96,8 @@ private:
     std::shared_ptr<ManagedBuffer> readPerfMetrics();
     elf::Version readVersioningInfo(uint32_t versionType) const;
     void checkCompilerHash();
-    void checkPlatformCompatibility();
 };
+
+void checkCompatibilityString(const DeviceDescriptor& deviceDescriptor, const std::string& compatibilityString);
 
 }  // namespace elf
