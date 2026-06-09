@@ -98,6 +98,9 @@ private:
     void checkCompilerHash();
 };
 
+void checkTileCountCompatibility(uint64_t blobTileCount, uint64_t hwTileCount);
+void checkPlatformCompatibility(platform::ArchKind blobArchKind, platform::ArchKind hwArchKind);
+
 void checkCompatibilityString(const DeviceDescriptor& deviceDescriptor, const std::string& compatibilityString);
 
 }  // namespace elf

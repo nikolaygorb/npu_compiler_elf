@@ -12,12 +12,10 @@
 #endif
 // clang-format off
 
-#include "compat_string_parser.hpp"
 #include <vpux_loader/vpux_loader.hpp>
 #include <vpux_elf/accessor.hpp>
 #include <vpux_elf/utils/log.hpp>
 #include <vpux_hpi.hpp>
-#include <sstream>
 #include <cstdlib>
 #include <cstring>
 
@@ -54,34 +52,6 @@
 
 namespace elf {
 
-namespace {
-
-platform::ArchKind archFromPlatform(uint64_t platform) {
-    switch (platform) {
-    case 3720:
-        return platform::ArchKind::VPUX37XX;
-    case 4000:
-        return platform::ArchKind::VPUX40XX;
-    case 5010:
-        return platform::ArchKind::VPUX501X;
-    case 5020:
-        return platform::ArchKind::VPUX502X;
-#ifdef INTEL_EMBARGO_NPU6
-    case 6010:
-        return platform::ArchKind::VPUX60XX;
-#endif
-#ifdef INTEL_EMBARGO_NPU7
-    case 7010:
-        return platform::ArchKind::VPUX70XX;
-#endif
-#ifdef INTEL_EMBARGO_NPU8
-    case 8010:
-        return platform::ArchKind::VPUX80XX;
-#endif
-    }
-    VPUX_ELF_THROW(RuntimeError, "Invalid platform");
-}
-
 void checkTileCountCompatibility(uint64_t blobTileCount, uint64_t hwTileCount) {
     // do not throw on blobTileCount being 0
     // to allow blobs that don't use NPU tiles at all
@@ -102,51 +72,6 @@ void checkPlatformCompatibility(platform::ArchKind blobArchKind, platform::ArchK
         VPUX_ELF_THROW(CompatibilityError, logBuffer.str().c_str());
     }
 }
-
-uint64_t parseInt(const std::string& str) {
-    size_t pos = 0;
-    uint64_t value = std::stoull(str, &pos);
-    if (pos != str.size()) {
-        throw std::runtime_error("Invalid integer: " + str);
-    }
-    return value;
-}
-
-// parse X.Y.Z, where X, Y and Z are unsigned 4-byte integers
-Version parseVersion(const std::string& str) {
-    const auto consume = [&str](size_t offset) {
-        const auto substr = str.substr(offset);
-
-        size_t pos = 0;
-        const auto value = std::stoul(substr, &pos);
-
-        return std::pair(value, offset + pos);
-    };
-
-    const auto [major, majorEnd] = consume(0);
-    if (majorEnd >= str.size() || str[majorEnd] != '.') {
-        throw std::runtime_error("Invalid version format: " + str);
-    }
-
-    const auto [minor, minorEnd] = consume(majorEnd + 1);
-    if (minorEnd >= str.size() || str[minorEnd] != '.') {
-        throw std::runtime_error("Invalid version format: " + str);
-    }
-
-    const auto [patch, patchEnd] = consume(minorEnd + 1);
-    if (patchEnd != str.size()) {
-        throw std::runtime_error("Invalid version format: " + str);
-    }
-
-    const auto version = Version(major, minor, patch);
-    if (!version.checkValidity()) {
-        throw std::runtime_error("Invalid version: " + str);
-    }
-
-    return version;
-}
-
-}  // namespace
 
 platform::ArchKind archFromDeviceId(uint32_t deviceId) {
     switch (deviceId) {
@@ -317,7 +242,7 @@ HostParsedInference::HostParsedInference(BufferManager* bufferMgr, AccessManager
     // e.g. if we are running on 5T NPU4 SKU it will report 5 instead of 6
     // in contrast to getHardwareTileCount above
     auto hwTileCount = deviceDescriptor ? static_cast<uint64_t>(deviceDescriptor->tileCount)
-                                   : elf::platform::getHardwareTileCount(archKind);
+                                        : elf::platform::getHardwareTileCount(archKind);
 
     checkTileCountCompatibility(blobTileCount, hwTileCount);
 
@@ -575,28 +500,6 @@ void HostParsedInference::applyInputOutput(std::vector<DeviceBuffer>& inputs, st
 void HostParsedInference::updateSharedScratchBuffers(const std::vector<DeviceBuffer>& buffers) {
     auto& loader = loaders.front();
     loader->updateSharedScratchBuffers(buffers);
-}
-
-void checkCompatibilityString(const DeviceDescriptor& deviceDescriptor, const std::string& compatibilityString) {
-    compat::Parser parser(compatibilityString, std::array{"compiler", "npu", "t", "elf", "mi"});
-
-    // compatibility string contains NPU Platform, which is a enum different from ArchKind
-    const auto blobPlatform = parseInt(parser.getAttribute("npu"));
-    const auto blobArchKind = archFromPlatform(blobPlatform);
-    const auto blobTileCount = parseInt(parser.getAttribute("t"));
-    const auto blobElfVersion = parseVersion(parser.getAttribute("elf"));
-    const auto blobMIVersion = parseVersion(parser.getAttribute("mi"));
-
-    const auto hwArchKind = archFromDeviceId(deviceDescriptor.deviceID);
-    const auto archHpi = HostParsedInferenceCommon::getArchSpecificHPI(hwArchKind);
-    const auto libElfVersion = archHpi->getELFLibABIVersion();
-    const auto libMIVersion = archHpi->getStaticMIVersion();
-
-    checkPlatformCompatibility(blobArchKind, hwArchKind);
-    checkTileCountCompatibility(blobTileCount, deviceDescriptor.tileCount);
-    Version::checkVersionCompatibility(libElfVersion, blobElfVersion,
-                                       VersionType::ELF_ABI_VERSION);
-    Version::checkVersionCompatibility(libMIVersion, blobMIVersion, VersionType::MAPPED_INFERENCE_VERSION);
 }
 
 }  // namespace elf
