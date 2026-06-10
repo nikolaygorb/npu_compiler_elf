@@ -4,6 +4,7 @@
 //
 
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -77,23 +78,33 @@ void AllocatedDeviceBuffer::load(const uint8_t* from, size_t count) {
 }
 
 DynamicBuffer::DynamicBuffer(BufferSpecs bSpecs): ManagedBuffer(bSpecs) {
+    // Reject unreasonable attacker-controlled alignment up front.
+    static constexpr size_t kMaxAlignment = 1u << 16;
+
     VPUX_ELF_THROW_UNLESS(utils::isPowerOfTwo(mDefaultSafeAlignment), RuntimeError,
                           "Default safe alignment is not a power of 2");
     VPUX_ELF_THROW_UNLESS(utils::isPowerOfTwo(bSpecs.alignment), RuntimeError,
                         "Requested alignment is not a power of 2");
+    VPUX_ELF_THROW_WHEN(bSpecs.alignment > kMaxAlignment, ArgsError, "Unreasonable alignment");
 
-    size_t bufferSize, bufferAlignment;
-    bSpecs.alignment < mDefaultSafeAlignment ? bufferAlignment = mDefaultSafeAlignment
-                                             : bufferAlignment = bSpecs.alignment;
-    bufferSize = utils::alignUp(bSpecs.size, mDefaultSafeAlignment);
+    const size_t bufferAlignment =
+            (bSpecs.alignment < mDefaultSafeAlignment) ? mDefaultSafeAlignment : static_cast<size_t>(bSpecs.alignment);
 
-    mData.reserve(bufferSize + bufferAlignment);
+    VPUX_ELF_THROW_WHEN(bSpecs.size > std::numeric_limits<size_t>::max() - mDefaultSafeAlignment, ArgsError,
+                        "size overflow");
+    const size_t bufferSize = utils::alignUp(static_cast<size_t>(bSpecs.size), mDefaultSafeAlignment);
 
-    size_t bufferBase = reinterpret_cast<uintptr_t>(mData.data());
-    size_t bufferBaseAligned = utils::alignUp(bufferBase, bufferAlignment);
+    VPUX_ELF_THROW_WHEN(bufferSize > std::numeric_limits<size_t>::max() - bufferAlignment, ArgsError,
+                        "size+align overflow");
+    mData.resize(bufferSize + bufferAlignment);
 
-    VPUX_ELF_THROW_WHEN(bufferBaseAligned < bufferBase, RuntimeError, "Invalid aligned buffer base address");
-    VPUX_ELF_THROW_WHEN((bufferBaseAligned - bufferBase + bSpecs.size) > mData.capacity(), RuntimeError,
+    const size_t bufferBase = reinterpret_cast<uintptr_t>(mData.data());
+    const size_t bufferBaseAligned = utils::alignUp(bufferBase, bufferAlignment);
+
+    VPUX_ELF_THROW_WHEN(bufferBaseAligned < bufferBase, RuntimeError, "Invalid aligned base");
+    const size_t pad = bufferBaseAligned - bufferBase;
+    VPUX_ELF_THROW_WHEN(static_cast<size_t>(bSpecs.size) > mData.size() ||
+                            pad > mData.size() - static_cast<size_t>(bSpecs.size), AllocError,
                         "Usable buffer range exceeds parent buffer");
 
     mDevBuffer = DeviceBuffer(reinterpret_cast<uint8_t*>(bufferBaseAligned), bufferBaseAligned, bSpecs.size);

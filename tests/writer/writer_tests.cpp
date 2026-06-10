@@ -270,7 +270,7 @@ TEST(ELFWriter, SymbolSectionStableSort) {
     ASSERT_EQ(symbolSection.getHeader()->sh_entsize, sizeof(elf::SymbolEntry));
     ASSERT_EQ(symbolSection.getHeader()->sh_size, sizeof(elf::SymbolEntry) * (sizes.size() + 1));
 
-    ASSERT_EQ(symbolSection.getEntriesNum(), sizes.size() + 1);
+    ASSERT_EQ(symbolSection.getEntriesNum<elf::SymbolEntry>(), sizes.size() + 1);
     const auto symbols = std::next(symbolSection.getData<elf::SymbolEntry>());
     for (size_t i = 0; i < sizes.size(); ++i) {
         const auto& symbol = symbols[i];

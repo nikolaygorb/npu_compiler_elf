@@ -11,6 +11,7 @@
 #include <new>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 #include "vpux_elf/utils/error.hpp"
 #include "vpux_elf/utils/utils.hpp"
@@ -69,4 +70,35 @@ private:
     std::string _name = {};
     AllocStats _allocStats = {};
     std::unordered_map<uint8_t*, uint64_t> _allocations = {};
+};
+
+class CountingBufferManager final : public elf::BufferManager {
+public:
+    elf::DeviceBuffer allocate(const elf::BufferSpecs& buffSpecs) override;
+    void deallocate(elf::DeviceBuffer& devAddress) override;
+    void lock(elf::DeviceBuffer& devAddress) override;
+    void unlock(elf::DeviceBuffer& devAddress) override;
+    size_t copy(elf::DeviceBuffer& to, const uint8_t* from, size_t count) override;
+
+    int allocateCalls = 0;
+    int deallocateCalls = 0;
+    int lockCalls = 0;
+    int unlockCalls = 0;
+    int copyCalls = 0;
+
+    elf::BufferSpecs lastRequestedSpecs = {};
+    uint8_t* deallocatedCpuAddr = nullptr;
+    std::vector<uint8_t> lastAllocation = {};
+};
+
+class BadAllocSizeBufferManager final : public elf::BufferManager {
+public:
+    elf::DeviceBuffer allocate(const elf::BufferSpecs& buffSpecs) override;
+    void deallocate(elf::DeviceBuffer& devAddress) override;
+    void lock(elf::DeviceBuffer& devAddress) override;
+    void unlock(elf::DeviceBuffer& devAddress) override;
+    size_t copy(elf::DeviceBuffer& to, const uint8_t* from, size_t count) override;
+
+    elf::BufferSpecs lastRequested = {};
+    std::vector<uint8_t> backing = {};
 };

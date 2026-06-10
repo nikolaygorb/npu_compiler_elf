@@ -15,8 +15,11 @@ namespace {
 
 constexpr uint32_t VPUX50XX_VERSION_MAJOR = 2;
 constexpr uint32_t VPUX50XX_VERSION_MINOR = 2;
-constexpr uint32_t VPUX50XX_VERSION_PATCH = 0;
+constexpr uint32_t VPUX50XX_VERSION_PATCH = 1;
 
+// 2.2.1
+// - Fix security vulnerabilities
+//
 // 2.2.0
 // - Enable direct MMI support
 //
@@ -38,8 +41,11 @@ constexpr uint32_t VPUX50XX_VERSION_PATCH = 0;
 #ifdef INTEL_EMBARGO_NPU6
 constexpr uint32_t VPUX60XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX60XX_VERSION_MINOR = 5;
-constexpr uint32_t VPUX60XX_VERSION_PATCH = 0;
+constexpr uint32_t VPUX60XX_VERSION_PATCH = 1;
 
+// 1.5.1
+// - Fix security vulnerabilities
+//
 // 1.5.0
 // - Enable direct MMI support
 //
@@ -53,8 +59,12 @@ constexpr uint32_t VPUX60XX_VERSION_PATCH = 0;
 #ifdef INTEL_EMBARGO_NPU7
 constexpr uint32_t VPUX70XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX70XX_VERSION_MINOR = 5;
-constexpr uint32_t VPUX70XX_VERSION_PATCH = 0;
+constexpr uint32_t VPUX70XX_VERSION_PATCH = 1;
 
+//
+// 1.5.1
+//  - Fix security vulnerabilities
+//
 // 1.5.0
 // - Enable direct MMI support
 //
@@ -68,8 +78,11 @@ constexpr uint32_t VPUX70XX_VERSION_PATCH = 0;
 #ifdef INTEL_EMBARGO_NPU8
 constexpr uint32_t VPUX80XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX80XX_VERSION_MINOR = 5;
-constexpr uint32_t VPUX80XX_VERSION_PATCH = 0;
+constexpr uint32_t VPUX80XX_VERSION_PATCH = 1;
 
+// 1.5.1
+// - Fix security vulnerabilities
+//
 // 1.5.0
 // - Initial support for NPU8
 

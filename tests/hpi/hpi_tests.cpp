@@ -186,17 +186,36 @@ ActionsSequence makeMinimalConstructible(platform::ArchKind arch) {
 }
 
 ActionsSequence makeMinimalLoadable(platform::ArchKind arch) {
+        const auto archSpecHpi = elf::HostParsedInferenceCommon::getArchSpecificHPI(arch);
+        const auto entrySectionSize = archSpecHpi->getEntryBufferSpecs(1).size;
+
     return makeMinimalConstructible(arch) +
            ActionsSequence{{AddRawBinarySection::build(
                                     ".mappedInference",
                                     AddRawBinarySection::Attributes{{elf::SHF_ALLOC | elf::SHF_EXECINSTR},
-                                                                    {elf::SHT_PROGBITS, std::vector<uint8_t>(64)}}),
+                                                                                                                                        {elf::SHT_PROGBITS,
+                                                                                                                                         std::vector<uint8_t>(entrySectionSize)}}),
 
                             AddSymbolSection::build(
                                     ".symtab", AddSymbolSection::Attributes{},
                                     ActionsSequence{{AddSymbol::build(".entry",
                                                                       AddSymbol::Attributes{elf::VPU_STT_ENTRY},
                                                                       AddSymbol::Operands{".mappedInference"})}})}};
+}
+
+ActionsSequence makeMinimalLoadableWithEntrySize(platform::ArchKind arch, size_t entrySectionSize) {
+        return makeMinimalConstructible(arch) +
+                   ActionsSequence{{AddRawBinarySection::build(
+                                                                        ".mappedInference",
+                                                                        AddRawBinarySection::Attributes{{elf::SHF_ALLOC | elf::SHF_EXECINSTR},
+                                                                                                                                        {elf::SHT_PROGBITS,
+                                                                                                                                         std::vector<uint8_t>(entrySectionSize)}}),
+
+                                                        AddSymbolSection::build(
+                                                                        ".symtab", AddSymbolSection::Attributes{},
+                                                                        ActionsSequence{{AddSymbol::build(".entry",
+                                                                                                                                          AddSymbol::Attributes{elf::VPU_STT_ENTRY},
+                                                                                                                                          AddSymbol::Operands{".mappedInference"})}})}};
 }
 
 const auto MinimalLoadable37XX = makeMinimalLoadable(elf::platform::ArchKind::VPUX37XX);
@@ -241,6 +260,21 @@ TEST(HostParsedInference, MinimalLoadable) {
     auto hpi = elf::HostParsedInference(&bufferManager, &accessManager, HPIConfigs{{}, arch}, nullptr);
 
     ASSERT_NO_THROW(hpi.load());
+}
+
+TEST(HostParsedInference, ThrowWhenEntrySectionIsTooSmallForVPUX37XXDualEntryCopy) {
+    auto arch = elf::platform::ArchKind::VPUX37XX;
+    // Deliberately smaller than nn_public::VpuMappedInference to exercise entry copy validation.
+    auto elf = TestBlob(makeMinimalLoadableWithEntrySize(arch, 1)).getBinary();
+
+    auto bufferManager = HeapBufferManager();
+    auto accessManager = DDRAccessManager<elf::DDRNeverEmplace, elf::AllocatedDeviceBufferFactory>(
+                    reinterpret_cast<const uint8_t*>(elf.data()), elf.size(),
+                    std::make_shared<elf::AllocatedDeviceBufferFactory>(&bufferManager));
+
+    auto hpi = elf::HostParsedInference(&bufferManager, &accessManager, HPIConfigs{{}, arch}, nullptr);
+
+    ASSERT_THROW(hpi.load(), elf::SectionError);
 }
 
 TEST(HostParsedInference, MinimalLoadableEachArchKind) {

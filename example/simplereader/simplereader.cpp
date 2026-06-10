@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
         const auto sectionHeader = section.getHeader();
 
         if (sectionHeader->sh_type == elf::SHT_SYMTAB) {
-            const auto entriesNum = section.getEntriesNum();
+            const auto entriesNum = section.getEntriesNum<elf::SymbolEntry>();
             std::cout << "Found a symbol table " << section.getName() << " with " << entriesNum << " entries" << '\n';
 
             const auto symbols = section.getData<elf::SymbolEntry>();

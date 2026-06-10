@@ -34,6 +34,10 @@ public:
         uint64_t mOffset;
     };
 
+    uint64_t getSize() const {
+        return mSize;
+    }
+
 protected:
     BufferDataType* mBuffer;
     const uint64_t mSize;
@@ -46,14 +50,15 @@ protected:
     }
 
     void checkDataPointer(BufferDataType* data, uint64_t size) {
-        auto dataStartAddress = reinterpret_cast<uint64_t>(data);
-        auto dataEndAddress = dataStartAddress + (size - 1);
-        auto bufferStartAddress = reinterpret_cast<uint64_t>(&mBuffer[0]);
-        auto bufferEndAddress = reinterpret_cast<uint64_t>(&mBuffer[mSize - 1]);
+        VPUX_ELF_THROW_UNLESS(size > 0, RuntimeError, "size is zero");
 
-        VPUX_ELF_THROW_WHEN((dataStartAddress < bufferStartAddress) || (dataStartAddress > bufferEndAddress) ||
-                                    (dataEndAddress > bufferEndAddress),
-                            RuntimeError, "pointer out of bounds");
+        auto dataStartAddress = reinterpret_cast<uint64_t>(data);
+        auto bufferStartAddress = reinterpret_cast<uint64_t>(&mBuffer[0]);
+        VPUX_ELF_THROW_WHEN(dataStartAddress < bufferStartAddress, RuntimeError, "pointer out of bounds");
+
+        const auto pointerOffset = dataStartAddress - bufferStartAddress;
+        VPUX_ELF_THROW_WHEN(pointerOffset > mSize || size > (mSize - pointerOffset), RuntimeError,
+                            "pointer out of bounds");
     }
 };
 
@@ -63,7 +68,8 @@ public:
     }
 
     BufferDataType* getAddressOfOffset(uint64_t offset, uint64_t size) {
-        VPUX_ELF_THROW_WHEN((offset + size) > mSize, RuntimeError, "read request out of bounds");
+        VPUX_ELF_THROW_UNLESS(size > 0, RuntimeError, "size is zero");
+        VPUX_ELF_THROW_WHEN(offset > mSize || size > (mSize - offset), RuntimeError, "read request out of bounds");
         checkDataPointer(&mBuffer[offset], size);
         return &mBuffer[offset];
     }
@@ -215,9 +221,13 @@ public:
                 sizeof(SerialDescriptor));
 
         for (auto& elem : mElements) {
+            VPUX_ELF_THROW_WHEN(currentDescriptor.mDataOffset > size, RuntimeError, "data offset out of bounds");
+            VPUX_ELF_THROW_WHEN(currentDescriptor.mElementSize == 0 && currentDescriptor.mElementCount != 0,
+                                RuntimeError, "element is out of bound");
             VPUX_ELF_THROW_WHEN(
-                    currentDescriptor.mElementSize * currentDescriptor.mElementCount + currentDescriptor.mDataOffset >
-                            size,
+                    currentDescriptor.mElementSize != 0 &&
+                            currentDescriptor.mElementCount >
+                                    (size - currentDescriptor.mDataOffset) / currentDescriptor.mElementSize,
                     RuntimeError, "element is out of bound");
             currentDescriptor = deserializeElement(serialBuffer, currentDescriptor, elem);
         }
@@ -288,10 +298,23 @@ private:
         auto elemNextDescOffset = currentDescriptor.mNextDescOffset;
         auto elemCount = currentDescriptor.mElementCount;
         auto elemSize = currentDescriptor.mElementSize;
+        const auto bufferSize = buffer.getSize();
+
+        VPUX_ELF_THROW_WHEN(elemDataOffset > bufferSize, RuntimeError, "data offset out of bounds");
+        VPUX_ELF_THROW_WHEN(elemSize == 0 && elemCount != 0, RuntimeError, "element is out of bound");
+
+        if (elemSize != 0) {
+            VPUX_ELF_THROW_WHEN(elemCount > (bufferSize - elemDataOffset) / elemSize, RuntimeError,
+                                "implausible element count");
+        }
 
         if (elemNextDescOffset != 0) {
-            VPUX_ELF_THROW_UNLESS(elemDataOffset + elemCount * elemSize <= elemNextDescOffset, RangeError,
-                                  "serial descriptor contains invalid data member values");
+            VPUX_ELF_THROW_WHEN(elemDataOffset > elemNextDescOffset, RangeError,
+                                "serial descriptor contains invalid data member values");
+            if (elemSize != 0) {
+                VPUX_ELF_THROW_WHEN(elemCount > (elemNextDescOffset - elemDataOffset) / elemSize, RangeError,
+                                    "serial descriptor contains invalid data member values");
+            }
         }
 
         if (elemCount) {

@@ -81,31 +81,16 @@ namespace {
 
 constexpr uint32_t VPUX40XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX40XX_VERSION_MINOR = 3;
-constexpr uint32_t VPUX40XX_VERSION_PATCH = 0;
+constexpr uint32_t VPUX40XX_VERSION_PATCH = 1;
 
+// 1.3.1
+// - Fix security vulnerabilities
+//
 // 1.3.0
 // - Add support for DMA symbol section for dynamic strides
 //
 // 1.2.6
 // - Adding FP8 data types
-
-#ifdef INTEL_EMBARGO_NPU6
-constexpr uint32_t VPUX60XX_VERSION_MAJOR = 1;
-constexpr uint32_t VPUX60XX_VERSION_MINOR = 3;
-constexpr uint32_t VPUX60XX_VERSION_PATCH = 2;
-
-// Patch version 1: Adding FP8 data types
-
-#endif  // INTEL_EMBARGO_NPU6
-
-#ifdef INTEL_EMBARGO_NPU7
-constexpr uint32_t VPUX70XX_VERSION_MAJOR = 1;
-constexpr uint32_t VPUX70XX_VERSION_MINOR = 3;
-constexpr uint32_t VPUX70XX_VERSION_PATCH = 2;
-
-// Patch version 2: Initial support for NPU7
-
-#endif  // INTEL_EMBARGO_NPU7
 
 }  // namespace
 

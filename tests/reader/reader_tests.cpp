@@ -84,7 +84,11 @@ TEST(ELFReaderTests, ReadingTheCorrectELFHeaderDoesntThrow) {
     fileHeader.e_shnum = headerTableSize;
     auto secHeaderStrIdx = headerTableSize - 1;
     fileHeader.e_shstrndx = secHeaderStrIdx;
+    const auto sectionTableBytes = sizeof(SectionHeader) * headerTableSize;
+    const auto sectionNamesOffset = sizeof(fileHeader) + sectionTableBytes;
     sectionHeaders[indexToCheck].sh_offset = sizeof(fileHeader);
+    sectionHeaders[secHeaderStrIdx].sh_type = SHT_STRTAB;
+    sectionHeaders[secHeaderStrIdx].sh_offset = sectionNamesOffset;
     sectionHeaders[secHeaderStrIdx].sh_size = secHeaderStrIdxSecSize;
 
     std::vector<uint8_t> buffer;
@@ -92,6 +96,7 @@ TEST(ELFReaderTests, ReadingTheCorrectELFHeaderDoesntThrow) {
                   reinterpret_cast<uint8_t*>(&fileHeader) + sizeof(fileHeader));
     buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(sectionHeaders.data()),
                   reinterpret_cast<uint8_t*>(sectionHeaders.data()) + sizeof(SectionHeader) * headerTableSize);
+    buffer.push_back('\0');
     auto accessor = DDRAccessManager<elf::DDRAlwaysEmplace>(buffer.data(), buffer.size());
 
     OV_ASSERT_NO_THROW(auto reader = Reader<ELF_Bitness::Elf64>(&accessor));
@@ -104,7 +109,11 @@ TEST(ELFReaderTests, ELFHeaderIsReadCorrectly) {
     fileHeader.e_shnum = headerTableSize;
     auto secHeaderStrIdx = headerTableSize - 1;
     fileHeader.e_shstrndx = secHeaderStrIdx;
+    const auto sectionTableBytes = sizeof(SectionHeader) * headerTableSize;
+    const auto sectionNamesOffset = sizeof(fileHeader) + sectionTableBytes;
     sectionHeaders[indexToCheck].sh_offset = sizeof(fileHeader);
+    sectionHeaders[secHeaderStrIdx].sh_type = SHT_STRTAB;
+    sectionHeaders[secHeaderStrIdx].sh_offset = sectionNamesOffset;
     sectionHeaders[secHeaderStrIdx].sh_size = secHeaderStrIdxSecSize;
 
     std::vector<uint8_t> buffer;
@@ -112,6 +121,7 @@ TEST(ELFReaderTests, ELFHeaderIsReadCorrectly) {
                   reinterpret_cast<uint8_t*>(&fileHeader) + sizeof(fileHeader));
     buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(sectionHeaders.data()),
                   reinterpret_cast<uint8_t*>(sectionHeaders.data()) + sizeof(SectionHeader) * headerTableSize);
+    buffer.push_back('\0');
     auto accessor = DDRAccessManager<elf::DDRAlwaysEmplace>(buffer.data(), buffer.size());
 
     const auto reader = Reader<ELF_Bitness::Elf64>(&accessor);
@@ -141,12 +151,18 @@ TEST(ELFReaderTests, SectionHeadersAreReadCorrectly) {
     auto fileHeader = createTemplateFileHeader();
     fileHeader.e_shnum = headerTableSize;
     fileHeader.e_shstrndx = headerTableSize - 1;
+    const auto sectionTableBytes = sizeof(SectionHeader) * headerTableSize;
+    const auto sectionNamesOffset = sizeof(fileHeader) + sectionTableBytes;
+    sectionHeaders[fileHeader.e_shstrndx].sh_type = SHT_STRTAB;
+    sectionHeaders[fileHeader.e_shstrndx].sh_offset = sectionNamesOffset;
+    sectionHeaders[fileHeader.e_shstrndx].sh_size = headerTableSize;
 
     std::vector<uint8_t> buffer;
     buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&fileHeader),
                   reinterpret_cast<uint8_t*>(&fileHeader) + sizeof(fileHeader));
     buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(sectionHeaders.data()),
                   reinterpret_cast<uint8_t*>(sectionHeaders.data()) + sizeof(SectionHeader) * headerTableSize);
+    buffer.insert(buffer.end(), headerTableSize, '\0');
 
     auto accessor = DDRAccessManager<elf::DDRAlwaysEmplace>(buffer.data(), buffer.size());
     auto reader = Reader<ELF_Bitness::Elf64>(&accessor);
@@ -169,13 +185,19 @@ TEST(ELFReaderTests, PointerToSectionDataIsResolvedCorrectly) {
     auto fileHeader = createTemplateFileHeader();
     fileHeader.e_shnum = headerTableSize;
     fileHeader.e_shstrndx = headerTableSize - 1;
+    const auto sectionTableBytes = sizeof(SectionHeader) * headerTableSize;
+    const auto sectionNamesOffset = sizeof(fileHeader) + sectionTableBytes;
     sectionHeaders[indexToCheck].sh_offset = sizeof(fileHeader);
+    sectionHeaders[fileHeader.e_shstrndx].sh_type = SHT_STRTAB;
+    sectionHeaders[fileHeader.e_shstrndx].sh_offset = sectionNamesOffset;
+    sectionHeaders[fileHeader.e_shstrndx].sh_size = headerTableSize;
 
     std::vector<uint8_t> buffer;
     buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&fileHeader),
                   reinterpret_cast<uint8_t*>(&fileHeader) + sizeof(fileHeader));
     buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(sectionHeaders.data()),
                   reinterpret_cast<uint8_t*>(sectionHeaders.data()) + sizeof(SectionHeader) * headerTableSize);
+    buffer.insert(buffer.end(), headerTableSize, '\0');
 
     auto accessor = DDRAccessManager<elf::DDRAlwaysEmplace>(buffer.data(), buffer.size());
     auto reader = Reader<ELF_Bitness::Elf64>(&accessor);
@@ -193,15 +215,133 @@ TEST(ELFReaderTests, PtrToSectionDataIsResolvedCorrectlyWithGetSectionNoData) {
     auto fileHeader = createTemplateFileHeader();
     fileHeader.e_shnum = headerTableSize;
     fileHeader.e_shstrndx = headerTableSize - 1;
+    const auto sectionTableBytes = sizeof(SectionHeader) * headerTableSize;
+    const auto sectionNamesOffset = sizeof(fileHeader) + sectionTableBytes;
     sectionHeaders[indexToCheck].sh_offset = sizeof(fileHeader);
+    sectionHeaders[fileHeader.e_shstrndx].sh_type = SHT_STRTAB;
+    sectionHeaders[fileHeader.e_shstrndx].sh_offset = sectionNamesOffset;
+    sectionHeaders[fileHeader.e_shstrndx].sh_size = headerTableSize;
 
     std::vector<uint8_t> buffer;
     buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&fileHeader),
                   reinterpret_cast<uint8_t*>(&fileHeader) + sizeof(fileHeader));
     buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(sectionHeaders.data()),
                   reinterpret_cast<uint8_t*>(sectionHeaders.data()) + sizeof(SectionHeader) * headerTableSize);
+    buffer.insert(buffer.end(), headerTableSize, '\0');
 
     auto accessor = DDRAccessManager<elf::DDRAlwaysEmplace>(buffer.data(), buffer.size());
     auto reader = Reader<ELF_Bitness::Elf64>(&accessor);
     ASSERT_EQ(reader.getSection(indexToCheck).getData<uint8_t>(), buffer.data() + sizeof(fileHeader));
+}
+
+TEST(ELFReaderTests, EntriesNumCanBeInflatedByMalformedSectionEntSize) {
+    std::vector<SectionHeader> sectionHeaders(headerTableSize);
+
+    constexpr size_t manipulatedSectionIdx = 1;
+    constexpr size_t manipulatedSectionSize = sizeof(SymbolEntry);
+
+    auto fileHeader = createTemplateFileHeader();
+    fileHeader.e_shnum = headerTableSize;
+    fileHeader.e_shstrndx = headerTableSize - 1;
+
+    const auto sectionTableBytes = sizeof(SectionHeader) * headerTableSize;
+    const auto manipulatedSectionOffset = sizeof(fileHeader) + sectionTableBytes;
+    const auto sectionNamesOffset = manipulatedSectionOffset + manipulatedSectionSize;
+
+    sectionHeaders[manipulatedSectionIdx].sh_name = 0;
+    sectionHeaders[manipulatedSectionIdx].sh_type = SHT_SYMTAB;
+    sectionHeaders[manipulatedSectionIdx].sh_offset = manipulatedSectionOffset;
+    sectionHeaders[manipulatedSectionIdx].sh_size = manipulatedSectionSize;
+    // Malformed value: table is interpreted as bytes instead of SymbolEntry-sized entries.
+    sectionHeaders[manipulatedSectionIdx].sh_entsize = 1;
+
+    sectionHeaders[fileHeader.e_shstrndx].sh_name = 0;
+    sectionHeaders[fileHeader.e_shstrndx].sh_type = SHT_STRTAB;
+    sectionHeaders[fileHeader.e_shstrndx].sh_offset = sectionNamesOffset;
+    sectionHeaders[fileHeader.e_shstrndx].sh_size = 1;
+
+    std::vector<uint8_t> buffer;
+    buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&fileHeader),
+                  reinterpret_cast<uint8_t*>(&fileHeader) + sizeof(fileHeader));
+    buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(sectionHeaders.data()),
+                  reinterpret_cast<uint8_t*>(sectionHeaders.data()) + sectionTableBytes);
+    buffer.insert(buffer.end(), manipulatedSectionSize, 0);
+    buffer.push_back('\0');
+
+    auto accessor = DDRAccessManager<elf::DDRAlwaysEmplace>(buffer.data(), buffer.size());
+    auto reader = Reader<ELF_Bitness::Elf64>(&accessor);
+
+    const auto& section = reader.getSection(manipulatedSectionIdx);
+    ASSERT_THROW(section.getEntriesNum<SymbolEntry>(), SectionError);
+}
+
+TEST(ELFReaderTests, ReaderThrowsWhenSectionNameOffsetExceedsStringTable) {
+    std::vector<SectionHeader> sectionHeaders(headerTableSize);
+
+    constexpr size_t manipulatedSectionIdx = 1;
+    constexpr Elf_Word outOfBoundsNameOffset = 2;
+
+    auto fileHeader = createTemplateFileHeader();
+    fileHeader.e_shnum = headerTableSize;
+    fileHeader.e_shstrndx = headerTableSize - 1;
+
+    const auto sectionTableBytes = sizeof(SectionHeader) * headerTableSize;
+    const auto sectionNamesOffset = sizeof(fileHeader) + sectionTableBytes;
+
+    // Corrupt one section header so its name points past the section-name string table.
+    sectionHeaders[manipulatedSectionIdx].sh_name = outOfBoundsNameOffset;
+
+    // Minimal .shstrtab: one-byte table containing only '\0'.
+    // Any non-zero name offset must therefore be treated as out of bounds.
+    sectionHeaders[fileHeader.e_shstrndx].sh_name = 0;
+    sectionHeaders[fileHeader.e_shstrndx].sh_type = SHT_STRTAB;
+    sectionHeaders[fileHeader.e_shstrndx].sh_offset = sectionNamesOffset;
+    sectionHeaders[fileHeader.e_shstrndx].sh_size = secHeaderStrIdxSecSize;
+
+    std::vector<uint8_t> buffer;
+    buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&fileHeader),
+                  reinterpret_cast<uint8_t*>(&fileHeader) + sizeof(fileHeader));
+    buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(sectionHeaders.data()),
+                  reinterpret_cast<uint8_t*>(sectionHeaders.data()) + sectionTableBytes);
+    // Backing storage for the one-byte section-name string table.
+    buffer.push_back('\0');
+
+    auto accessor = DDRAccessManager<elf::DDRAlwaysEmplace>(buffer.data(), buffer.size());
+
+    // Reader validates section-name offsets during construction and must reject this ELF.
+    ASSERT_ANY_THROW((Reader<ELF_Bitness::Elf64>(&accessor)));
+}
+
+TEST(ELFReaderTests, ReaderThrowsWhenSectionNameIsNotNullTerminatedInStringTable) {
+    std::vector<SectionHeader> sectionHeaders(headerTableSize);
+
+    constexpr size_t manipulatedSectionIdx = 1;
+
+    auto fileHeader = createTemplateFileHeader();
+    fileHeader.e_shnum = headerTableSize;
+    fileHeader.e_shstrndx = headerTableSize - 1;
+
+    const auto sectionTableBytes = sizeof(SectionHeader) * headerTableSize;
+    const auto sectionNamesOffset = sizeof(fileHeader) + sectionTableBytes;
+
+    // Offset is in-range, but points to a string that is not null-terminated in .shstrtab.
+    sectionHeaders[manipulatedSectionIdx].sh_name = 1;
+
+    sectionHeaders[fileHeader.e_shstrndx].sh_name = 0;
+    sectionHeaders[fileHeader.e_shstrndx].sh_type = SHT_STRTAB;
+    sectionHeaders[fileHeader.e_shstrndx].sh_offset = sectionNamesOffset;
+    sectionHeaders[fileHeader.e_shstrndx].sh_size = 2;
+
+    std::vector<uint8_t> buffer;
+    buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&fileHeader),
+                  reinterpret_cast<uint8_t*>(&fileHeader) + sizeof(fileHeader));
+    buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(sectionHeaders.data()),
+                  reinterpret_cast<uint8_t*>(sectionHeaders.data()) + sectionTableBytes);
+    // .shstrtab is valid at offset 0 ('\0'), but missing a terminator for the name at offset 1.
+    buffer.push_back('\0');
+    buffer.push_back('A');
+
+    auto accessor = DDRAccessManager<elf::DDRAlwaysEmplace>(buffer.data(), buffer.size());
+
+    ASSERT_ANY_THROW((Reader<ELF_Bitness::Elf64>(&accessor)));
 }
