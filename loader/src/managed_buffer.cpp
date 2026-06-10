@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2023-2025 Intel Corporation
+// Copyright (C) 2023-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -39,6 +39,10 @@ void ManagedBuffer::unlock() {
 }
 
 void ManagedBuffer::load(const uint8_t* from, size_t count) {
+    VPUX_ELF_THROW_UNLESS(from, ArgsError, "nullptr source buffer");
+    VPUX_ELF_THROW_UNLESS(mDevBuffer.cpu_addr(), RuntimeError, "DeviceBuffer not initialized");
+    VPUX_ELF_THROW_WHEN(count > mDevBuffer.size(), ArgsError, "copy size exceeds buffer size");
+
     std::memcpy(mDevBuffer.cpu_addr(), from, count);
 }
 

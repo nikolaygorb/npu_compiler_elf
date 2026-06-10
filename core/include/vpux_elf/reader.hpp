@@ -112,6 +112,11 @@ public:
                               "Section table overlaps ELF header");
         VPUX_ELF_THROW_UNLESS(mElfHeader.e_shnum, HeaderError,
                               "No sections detected, ELF blob without sections is unsupported!");
+        const auto fileSize = mAccessManager->getSize();
+        const auto shEntryBytes = sizeof(typename ElfTypes<B>::SectionHeader);
+        const auto shTableBytes = shEntryBytes * mElfHeader.e_shnum;
+        VPUX_ELF_THROW_UNLESS(mElfHeader.e_shoff <= fileSize && shTableBytes <= fileSize - mElfHeader.e_shoff,
+                              HeaderError, "Section table exceeds whole ELF file size");
         VPUX_ELF_THROW_UNLESS(mElfHeader.e_shstrndx != SHN_UNDEF, HeaderError,
                               "Section name string table index is undefined");
         VPUX_ELF_THROW_UNLESS(mElfHeader.e_shstrndx < mElfHeader.e_shnum, HeaderError,

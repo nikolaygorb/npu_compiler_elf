@@ -345,3 +345,30 @@ TEST(ELFReaderTests, ReaderThrowsWhenSectionNameIsNotNullTerminatedInStringTable
 
     ASSERT_ANY_THROW((Reader<ELF_Bitness::Elf64>(&accessor)));
 }
+
+TEST(ELFReaderTests, ReaderThrowsWhenSectionTableOffsetExceedsFileSize) {
+    auto fileHeader = createTemplateFileHeader();
+    fileHeader.e_shnum = 1;
+    // Keep earlier validations valid and fail exactly on e_shoff <= fileSize.
+    fileHeader.e_shoff = static_cast<uint64_t>(sizeof(ELFHeader) + 1);
+
+    auto accessor =
+            DDRAccessManager<elf::DDRAlwaysEmplace>(reinterpret_cast<uint8_t*>(&fileHeader), sizeof(fileHeader));
+
+    ASSERT_THROW(auto reader = Reader<ELF_Bitness::Elf64>(&accessor), HeaderError);
+}
+
+TEST(ELFReaderTests, ReaderThrowsWhenSectionTableBytesExceedFileTail) {
+    auto fileHeader = createTemplateFileHeader();
+    fileHeader.e_shnum = 2;
+    fileHeader.e_shoff = sizeof(ELFHeader);
+
+    // Buffer has room for only one section header after e_shoff.
+    // This makes shTableBytes > (fileSize - e_shoff).
+    std::vector<uint8_t> buffer(sizeof(fileHeader) + sizeof(SectionHeader), 0);
+    std::memcpy(buffer.data(), &fileHeader, sizeof(fileHeader));
+
+    auto accessor = DDRAccessManager<elf::DDRAlwaysEmplace>(buffer.data(), buffer.size());
+
+    ASSERT_THROW(auto reader = Reader<ELF_Bitness::Elf64>(&accessor), HeaderError);
+}

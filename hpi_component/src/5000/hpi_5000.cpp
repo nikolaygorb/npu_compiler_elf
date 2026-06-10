@@ -15,8 +15,11 @@ namespace {
 
 constexpr uint32_t VPUX50XX_VERSION_MAJOR = 2;
 constexpr uint32_t VPUX50XX_VERSION_MINOR = 2;
-constexpr uint32_t VPUX50XX_VERSION_PATCH = 1;
+constexpr uint32_t VPUX50XX_VERSION_PATCH = 2;
 
+// 2.2.2
+// - Fix header offset overflow in Reader when section table offset is close to file size limit
+//
 // 2.2.1
 // - Fix security vulnerabilities
 //
@@ -41,8 +44,11 @@ constexpr uint32_t VPUX50XX_VERSION_PATCH = 1;
 #ifdef INTEL_EMBARGO_NPU6
 constexpr uint32_t VPUX60XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX60XX_VERSION_MINOR = 5;
-constexpr uint32_t VPUX60XX_VERSION_PATCH = 1;
+constexpr uint32_t VPUX60XX_VERSION_PATCH = 2;
 
+// 1.5.2
+// - Fix header offset overflow in Reader when section table offset is close to file size limit
+//
 // 1.5.1
 // - Fix security vulnerabilities
 //
@@ -59,8 +65,10 @@ constexpr uint32_t VPUX60XX_VERSION_PATCH = 1;
 #ifdef INTEL_EMBARGO_NPU7
 constexpr uint32_t VPUX70XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX70XX_VERSION_MINOR = 5;
-constexpr uint32_t VPUX70XX_VERSION_PATCH = 1;
+constexpr uint32_t VPUX70XX_VERSION_PATCH = 2;
 
+// 1.5.2
+// - Fix header offset overflow in Reader when section table offset is close to file size limit
 //
 // 1.5.1
 //  - Fix security vulnerabilities
@@ -78,8 +86,12 @@ constexpr uint32_t VPUX70XX_VERSION_PATCH = 1;
 #ifdef INTEL_EMBARGO_NPU8
 constexpr uint32_t VPUX80XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX80XX_VERSION_MINOR = 5;
-constexpr uint32_t VPUX80XX_VERSION_PATCH = 1;
+constexpr uint32_t VPUX80XX_VERSION_PATCH = 2;
 
+//
+// 1.5.2
+// - Fix header offset overflow in Reader when section table offset is close to file size limit
+//
 // 1.5.1
 // - Fix security vulnerabilities
 //

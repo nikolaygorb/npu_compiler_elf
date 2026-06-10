@@ -81,8 +81,11 @@ namespace {
 
 constexpr uint32_t VPUX40XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX40XX_VERSION_MINOR = 3;
-constexpr uint32_t VPUX40XX_VERSION_PATCH = 1;
+constexpr uint32_t VPUX40XX_VERSION_PATCH = 2;
 
+// 1.3.2
+// - Fix header offset overflow in Reader when section table offset is close to file size limit
+//
 // 1.3.1
 // - Fix security vulnerabilities
 //
