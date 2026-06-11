@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstring>
 #include <limits>
@@ -128,26 +129,32 @@ public:
 
         if (mElfHeader.e_shstrndx) {
             const auto secNamesSection = mSectionHeaders[mElfHeader.e_shstrndx];
+            const auto secNameSize = secNamesSection.sh_size;
+            const auto secNamesOffset = secNamesSection.sh_offset;
 
             VPUX_ELF_THROW_UNLESS(secNamesSection.sh_type == SHT_STRTAB, HeaderError,
                                   "Section name table has invalid type");
-            VPUX_ELF_THROW_UNLESS(secNamesSection.sh_size >= 1, HeaderError,
+            VPUX_ELF_THROW_UNLESS(secNameSize >= 1, HeaderError,
                                   "Section name table must contain at least a null terminator");
 
-            VPUX_ELF_THROW_UNLESS(secNamesSection.sh_offset <= mAccessManager->getSize() &&
-                                      secNamesSection.sh_size <= mAccessManager->getSize() - secNamesSection.sh_offset,
+            VPUX_ELF_THROW_UNLESS(secNamesOffset <= mAccessManager->getSize() &&
+                                      secNameSize <= mAccessManager->getSize() - secNamesOffset,
                                   HeaderError, "Section name size exceeds buffer size");
 
-            mSectionNames.resize(secNamesSection.sh_size);
+            mSectionNames.resize(secNameSize);
             readBuffer = buildBufferFromMember(&mSectionNames[0], mSectionNames.size() * sizeof(mSectionNames[0]));
-            mAccessManager->readExternal(secNamesSection.sh_offset, readBuffer);
+            mAccessManager->readExternal(secNamesOffset, readBuffer);
             VPUX_ELF_THROW_UNLESS(mSectionNames.front() == '\0', HeaderError,
                                   "Section name table must start with a null terminator");
 
-            auto numberOfSections = mElfHeader.e_shnum;
+            const auto numberOfSections = static_cast<size_t>(mElfHeader.e_shnum);
             mSectionsCache.reserve(numberOfSections);
+
+            validateNoSectionsOverlap(numberOfSections, fileSize);
+
             for (size_t secIdx = 0; secIdx < numberOfSections; secIdx++) {
                 const auto& secHeader = mSectionHeaders[secIdx];
+
                 const auto nameOffset = static_cast<size_t>(secHeader.sh_name);
                 VPUX_ELF_THROW_UNLESS(nameOffset < mSectionNames.size(), HeaderError,
                                       "Section name offset exceeds section name table");
@@ -195,6 +202,43 @@ private:
     template <typename T>
     StaticBuffer buildBufferFromMember(T* member, size_t byteSize = sizeof(T)) {
         return StaticBuffer(reinterpret_cast<uint8_t*>(member), BufferSpecs(0, byteSize, 0));
+    }
+
+    void validateNoSectionsOverlap(size_t numberOfSections, size_t fileSize) {
+        // Collect valid sections for overlap checking
+        std::vector<std::pair<size_t, size_t>> sortedRanges;  // {endOffset, secIdx}
+        sortedRanges.reserve(numberOfSections);
+
+        for (size_t i = 0; i < numberOfSections; i++) {
+            const auto& secHeader = mSectionHeaders[i];
+
+            // TODO: E#220889
+            if (secHeader.sh_offset == 0 || secHeader.sh_size == 0) {
+                continue;
+            }
+
+            const auto sectionOffset = static_cast<size_t>(secHeader.sh_offset);
+            const auto sectionSize = static_cast<size_t>(secHeader.sh_size);
+            VPUX_ELF_THROW_UNLESS(sectionOffset <= fileSize && sectionSize <= (fileSize - sectionOffset), RangeError,
+                                  "Section range does not fit in file");
+
+            // Store end offset and index
+            sortedRanges.emplace_back(sectionOffset + sectionSize, i);
+        }
+
+        // Sort by end offset for efficient overlap detection
+        std::sort(sortedRanges.begin(), sortedRanges.end());
+
+        // Check consecutive pairs for overlaps (sorted by offset ensures all overlaps are detected)
+        for (size_t i = 0; i + 1 < sortedRanges.size(); i++) {
+            const auto endCurrent = sortedRanges[i].first;
+            const auto nextIdx = sortedRanges[i + 1].second;
+            const auto nextOffset = static_cast<size_t>(mSectionHeaders[nextIdx].sh_offset);
+
+            // If current section's end is beyond next section's start, they overlap
+            VPUX_ELF_THROW_UNLESS(endCurrent <= nextOffset, RangeError,
+                                  "Section overlaps next section");
+        }
     }
 };
 
