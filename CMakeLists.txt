@@ -118,8 +118,6 @@ if(ENABLE_LOCAL_NNRT_API OR ENABLE_ELF_TESTS OR ENABLE_NPU_LOADER)
             OUTPUT_VARIABLE NNRT_PATCH_OUTPUT
             ERROR_VARIABLE NNRT_PATCH_ERROR)
 
-        target_include_directories(${LIB_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/3rdparty/nnrt_api/")
-
         # Ensure `make clean` also drops restored test-only headers.
         set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
         "${PROJECT_SOURCE_DIR}/3rdparty")
@@ -128,6 +126,8 @@ if(ENABLE_LOCAL_NNRT_API OR ENABLE_ELF_TESTS OR ENABLE_NPU_LOADER)
             message(FATAL_ERROR "Failed to apply nnrt_api patch. patch stdout: ${NNRT_PATCH_OUTPUT}; patch stderr: ${NNRT_PATCH_ERROR}")
         endif()
     endif()
+    
+    target_include_directories(${LIB_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/3rdparty/nnrt_api/")
 endif()
 
 if(ENABLE_NPU_LOADER)
