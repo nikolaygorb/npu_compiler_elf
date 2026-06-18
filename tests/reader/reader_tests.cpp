@@ -124,6 +124,16 @@ void expectReaderThrowsRangeError(std::vector<uint8_t>& buffer, const char* expe
     }
 }
 
+void expectReaderThrowsRangeError(std::vector<uint8_t>& buffer, ErrorCode expectedErrorCode) {
+    auto accessor = DDRAccessManager<elf::DDRAlwaysEmplace>(buffer.data(), buffer.size());
+    try {
+        (void)Reader<ELF_Bitness::Elf64>(&accessor);
+        FAIL() << "Expected RangeError to be thrown";
+    } catch (const RangeError& err) {
+        ASSERT_EQ(err.error_code, expectedErrorCode);
+    }
+}
+
 void expectReaderNoThrow(std::vector<uint8_t>& buffer) {
     auto accessor = DDRAccessManager<elf::DDRAlwaysEmplace>(buffer.data(), buffer.size());
     OV_ASSERT_NO_THROW((Reader<ELF_Bitness::Elf64>(&accessor)));
@@ -457,7 +467,7 @@ TEST(ELFReaderTests, ReaderThrowsWhenPayloadSectionsOverlap) {
 
     const auto neededSize = payloadSectionOffset + 2 * payloadSectionSize;
     auto buffer = buildTestBuffer(scenario.fileHeader, scenario.sectionHeaders, neededSize);
-    expectReaderThrowsRangeError(buffer, "Section overlaps next section");
+    expectReaderThrowsRangeError(buffer, ErrorCode::ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION);
 }
 
 TEST(ELFReaderTests, ReaderThrowsWhenPayloadSectionRunsWayPastNextSection) {
@@ -477,7 +487,7 @@ TEST(ELFReaderTests, ReaderThrowsWhenPayloadSectionRunsWayPastNextSection) {
 
     const auto neededSize = payloadSectionOffset + longPayloadSectionSize;
     auto buffer = buildTestBuffer(scenario.fileHeader, scenario.sectionHeaders, neededSize);
-    expectReaderThrowsRangeError(buffer, "Section overlaps next section");
+    expectReaderThrowsRangeError(buffer, ErrorCode::ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION);
 }
 
 TEST(ELFReaderTests, ReaderDoesntThrowWhenPayloadSectionsAreUnorderedButNonOverlapping) {
@@ -526,7 +536,7 @@ TEST(ELFReaderTests, ReaderThrowsWhenPayloadSectionsAreUnorderedButOverlapping) 
 
     const auto neededSize = payloadBaseOffset + 35;
     auto buffer = buildTestBuffer(scenario.fileHeader, scenario.sectionHeaders, neededSize);
-    expectReaderThrowsRangeError(buffer, "Section overlaps next section");
+    expectReaderThrowsRangeError(buffer, ErrorCode::ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION);
 }
 
 TEST(ELFReaderTests, ReaderDoesntThrowForSpecialCaseSectionTypes) {
@@ -613,7 +623,7 @@ TEST(ELFReaderTests, ReaderThrowsWhenPayloadSectionCOverlapsWithASeparatedByZero
 
     const auto neededSize = offsetC + sizeC;
     auto buffer = buildTestBuffer(scenario.fileHeader, scenario.sectionHeaders, neededSize);
-    expectReaderThrowsRangeError(buffer, "Section overlaps next section");
+    expectReaderThrowsRangeError(buffer, ErrorCode::ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION);
 }
 
 TEST(ELFReaderTests, ReaderThrowsWhenPayloadSectionExtendsBeyondFileBounds) {
@@ -637,7 +647,7 @@ TEST(ELFReaderTests, ReaderThrowsWhenPayloadSectionExtendsBeyondFileBounds) {
     // Create buffer that's smaller than needed for the section
     const auto neededSize = offsetA + 50;  // Only 50 bytes, but section requests 100
     auto buffer = buildTestBuffer(scenario.fileHeader, scenario.sectionHeaders, neededSize);
-    expectReaderThrowsRangeError(buffer, "Section range does not fit in file");
+    expectReaderThrowsRangeError(buffer, ErrorCode::ERROR_RANGE_SECTION_READ_GOES_OVER_END_OF_FILE);
 }
 
 TEST(ELFReaderTests, ReaderThrowsWhenNoBitsSectionExtendsBeyondFileBounds) {
@@ -664,5 +674,5 @@ TEST(ELFReaderTests, ReaderThrowsWhenNoBitsSectionExtendsBeyondFileBounds) {
 
     const auto neededSize = offsetA + 50;
     auto buffer = buildTestBuffer(scenario.fileHeader, scenario.sectionHeaders, neededSize);
-    expectReaderThrowsRangeError(buffer, "Section range does not fit in file");
+    expectReaderThrowsRangeError(buffer, ErrorCode::ERROR_RANGE_SECTION_READ_GOES_OVER_END_OF_FILE);
 }

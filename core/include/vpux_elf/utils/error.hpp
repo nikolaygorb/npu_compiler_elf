@@ -11,39 +11,63 @@
 #include <cassert>
 #include <stdexcept>
 #include <vpux_elf/types/elf_structs.hpp>
+#include <stdint.h>
+
+enum class ErrorCode : uint32_t {
+    ERROR_SUCCESS = 0,
+    ERROR_UNKNOWN = 1,                                          // Generic error code for conditions, not covered by other error codes
+    ERROR_ACCESS = 20000,                                       // Error related to accessing the ELF file or its contents
+    ERROR_HEADER = 30000,                                       // Error related to the ELF header
+    ERROR_SECTION = 40000,                                      // Error related to ELF sections
+    ERROR_RELOCATION = 50000,                                   // Error related to ELF relocations
+    ERROR_ALLOCATION = 60000,                                   // Error related to memory allocation
+    ERROR_COMPATIBILITY = 70000,                                // Error related to compatibility issues
+    ERROR_RANGE = 80000,                                        // Error related to range issues (e.g., out of bounds)
+    ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION = 80001,    
+    ERROR_RANGE_SECTION_DOES_NOT_FIT_IN_FILE = 80002,    
+    ERROR_RANGE_SECTION_OFFSET_GREATER_THAN_FILE = 80003,    
+    ERROR_RANGE_SECTION_READ_GOES_OVER_END_OF_FILE = 80004,    
+    ERROR_SEQUENCE = 90000,                                     // Error related to sequence issues (e.g., unexpected order of operations)
+    ERROR_ARGUMENTS = 100000,                                   // Error related to invalid arguments or parameters
+    ERROR_IMPLAUSIBLE_STATE = 110000,                           // Error related to implausible or inconsistent state in the program
+};
+
 
 namespace elf {
 
-class RuntimeError : public std::runtime_error {
+// Template exception that just forwards to std::runtime_error or std::logic_error
+template<class T, ErrorCode DefaultError = ErrorCode::ERROR_UNKNOWN>
+class TypedException : public T {
 public:
-    explicit RuntimeError(const char* what): std::runtime_error(what) {
-    }
+    ErrorCode error_code = DefaultError;
+
+    // Constructor for macro usage: message first, then explicit ErrorCode.
+    explicit TypedException(const char* what, ErrorCode error_code)
+        : T(what)
+        , error_code(error_code)
+    {}
+
+    // Constructor for macro usage: just message, default ErrorCode is used.
+    explicit TypedException(const char* what)
+        : T(what)
+    {}
 };
 
-class LogicError : public std::logic_error {
-public:
-    explicit LogicError(const char* what): std::logic_error(what) {
-    }
-};
+// Short aliases using the actual exception types directly
+using RuntimeError = TypedException<std::runtime_error>;
+using LogicError   = TypedException<std::logic_error>;
 
-#define VPUX_ELF_DEFINE_EXCEPTION(type, name)         \
-    class name : public type {                        \
-    public:                                           \
-        explicit name(const char* what): type(what) { \
-        }                                             \
-    }
+using AccessError = TypedException<std::runtime_error, ErrorCode::ERROR_ACCESS>;
+using HeaderError = TypedException<std::runtime_error, ErrorCode::ERROR_HEADER>;
+using SectionError = TypedException<std::runtime_error, ErrorCode::ERROR_SECTION>;
+using RelocError = TypedException<std::runtime_error, ErrorCode::ERROR_RELOCATION>;
+using AllocError = TypedException<std::runtime_error, ErrorCode::ERROR_ALLOCATION>;
+using CompatibilityError = TypedException<std::runtime_error, ErrorCode::ERROR_COMPATIBILITY>;
 
-VPUX_ELF_DEFINE_EXCEPTION(RuntimeError, AccessError);
-VPUX_ELF_DEFINE_EXCEPTION(RuntimeError, HeaderError);
-VPUX_ELF_DEFINE_EXCEPTION(RuntimeError, SectionError);
-VPUX_ELF_DEFINE_EXCEPTION(RuntimeError, RelocError);
-VPUX_ELF_DEFINE_EXCEPTION(RuntimeError, AllocError);
-VPUX_ELF_DEFINE_EXCEPTION(RuntimeError, CompatibilityError);
-
-VPUX_ELF_DEFINE_EXCEPTION(LogicError, RangeError);
-VPUX_ELF_DEFINE_EXCEPTION(LogicError, SequenceError);
-VPUX_ELF_DEFINE_EXCEPTION(LogicError, ArgsError);
-VPUX_ELF_DEFINE_EXCEPTION(LogicError, ImplausibleState);
+using RangeError = TypedException<std::logic_error, ErrorCode::ERROR_RANGE>;
+using SequenceError = TypedException<std::logic_error, ErrorCode::ERROR_SEQUENCE>;
+using ArgsError = TypedException<std::logic_error, ErrorCode::ERROR_ARGUMENTS>;
+using ImplausibleState = TypedException<std::logic_error, ErrorCode::ERROR_IMPLAUSIBLE_STATE>;
 
 #ifdef VPUX_ELF_NOEXCEPT
 #define VPUX_ELF_THROW(exception, msg, ...) assert(!(msg))
