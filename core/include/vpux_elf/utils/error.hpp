@@ -14,29 +14,29 @@
 #include <stdint.h>
 
 enum class ErrorCode : uint32_t {
-    ERROR_SUCCESS = 0,
-    ERROR_UNKNOWN = 1,                                          // Generic error code for conditions, not covered by other error codes
-    ERROR_ACCESS = 20000,                                       // Error related to accessing the ELF file or its contents
-    ERROR_HEADER = 30000,                                       // Error related to the ELF header
-    ERROR_SECTION = 40000,                                      // Error related to ELF sections
-    ERROR_RELOCATION = 50000,                                   // Error related to ELF relocations
-    ERROR_ALLOCATION = 60000,                                   // Error related to memory allocation
-    ERROR_COMPATIBILITY = 70000,                                // Error related to compatibility issues
-    ERROR_RANGE = 80000,                                        // Error related to range issues (e.g., out of bounds)
-    ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION = 80001,    
-    ERROR_RANGE_SECTION_DOES_NOT_FIT_IN_FILE = 80002,    
-    ERROR_RANGE_SECTION_OFFSET_GREATER_THAN_FILE = 80003,    
-    ERROR_RANGE_SECTION_READ_GOES_OVER_END_OF_FILE = 80004,    
-    ERROR_SEQUENCE = 90000,                                     // Error related to sequence issues (e.g., unexpected order of operations)
-    ERROR_ARGUMENTS = 100000,                                   // Error related to invalid arguments or parameters
-    ERROR_IMPLAUSIBLE_STATE = 110000,                           // Error related to implausible or inconsistent state in the program
+    ELF_SUCCESS = 0,
+    ELF_ERROR_UNKNOWN = 1,                                          // Generic error code for conditions, not covered by other error codes
+    ELF_ERROR_ACCESS = 20000,                                       // Error related to accessing the ELF file or its contents
+    ELF_ERROR_HEADER = 30000,                                       // Error related to the ELF header
+    ELF_ERROR_SECTION = 40000,                                      // Error related to ELF sections
+    ELF_ERROR_RELOCATION = 50000,                                   // Error related to ELF relocations
+    ELF_ERROR_ALLOCATION = 60000,                                   // Error related to memory allocation
+    ELF_ERROR_COMPATIBILITY = 70000,                                // Error related to compatibility issues
+    ELF_ERROR_RANGE = 80000,                                        // Error related to range issues (e.g., out of bounds)
+    ELF_ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION = 80001,
+    ELF_ERROR_RANGE_SECTION_DOES_NOT_FIT_IN_FILE = 80002,
+    ELF_ERROR_RANGE_SECTION_OFFSET_GREATER_THAN_FILE = 80003,
+    ELF_ERROR_RANGE_SECTION_READ_GOES_OVER_END_OF_FILE = 80004,
+    ELF_ERROR_SEQUENCE = 90000,                                     // Error related to sequence issues (e.g., unexpected order of operations)
+    ELF_ERROR_ARGUMENTS = 100000,                                   // Error related to invalid arguments or parameters
+    ELF_ERROR_IMPLAUSIBLE_STATE = 110000,                           // Error related to implausible or inconsistent state in the program
 };
 
 
 namespace elf {
 
 // Template exception that just forwards to std::runtime_error or std::logic_error
-template<class T, ErrorCode DefaultError = ErrorCode::ERROR_UNKNOWN>
+template<class T, ErrorCode DefaultError = ErrorCode::ELF_ERROR_UNKNOWN>
 class TypedException : public T {
 public:
     ErrorCode error_code = DefaultError;
@@ -57,17 +57,17 @@ public:
 using RuntimeError = TypedException<std::runtime_error>;
 using LogicError   = TypedException<std::logic_error>;
 
-using AccessError = TypedException<std::runtime_error, ErrorCode::ERROR_ACCESS>;
-using HeaderError = TypedException<std::runtime_error, ErrorCode::ERROR_HEADER>;
-using SectionError = TypedException<std::runtime_error, ErrorCode::ERROR_SECTION>;
-using RelocError = TypedException<std::runtime_error, ErrorCode::ERROR_RELOCATION>;
-using AllocError = TypedException<std::runtime_error, ErrorCode::ERROR_ALLOCATION>;
-using CompatibilityError = TypedException<std::runtime_error, ErrorCode::ERROR_COMPATIBILITY>;
+using AccessError = TypedException<std::runtime_error, ErrorCode::ELF_ERROR_ACCESS>;
+using HeaderError = TypedException<std::runtime_error, ErrorCode::ELF_ERROR_HEADER>;
+using SectionError = TypedException<std::runtime_error, ErrorCode::ELF_ERROR_SECTION>;
+using RelocError = TypedException<std::runtime_error, ErrorCode::ELF_ERROR_RELOCATION>;
+using AllocError = TypedException<std::runtime_error, ErrorCode::ELF_ERROR_ALLOCATION>;
+using CompatibilityError = TypedException<std::runtime_error, ErrorCode::ELF_ERROR_COMPATIBILITY>;
 
-using RangeError = TypedException<std::logic_error, ErrorCode::ERROR_RANGE>;
-using SequenceError = TypedException<std::logic_error, ErrorCode::ERROR_SEQUENCE>;
-using ArgsError = TypedException<std::logic_error, ErrorCode::ERROR_ARGUMENTS>;
-using ImplausibleState = TypedException<std::logic_error, ErrorCode::ERROR_IMPLAUSIBLE_STATE>;
+using RangeError = TypedException<std::logic_error, ErrorCode::ELF_ERROR_RANGE>;
+using SequenceError = TypedException<std::logic_error, ErrorCode::ELF_ERROR_SEQUENCE>;
+using ArgsError = TypedException<std::logic_error, ErrorCode::ELF_ERROR_ARGUMENTS>;
+using ImplausibleState = TypedException<std::logic_error, ErrorCode::ELF_ERROR_IMPLAUSIBLE_STATE>;
 
 #ifdef VPUX_ELF_NOEXCEPT
 #define VPUX_ELF_THROW(exception, msg, ...) assert(!(msg))

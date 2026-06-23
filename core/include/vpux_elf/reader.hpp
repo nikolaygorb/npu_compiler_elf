@@ -221,10 +221,10 @@ private:
             const auto sectionSize = static_cast<size_t>(secHeader.sh_size);
             VPUX_ELF_THROW_UNLESS(sectionOffset <= fileSize, RangeError,
                                   "Section offset is greater than the file itself",
-                                  ErrorCode::ERROR_RANGE_SECTION_OFFSET_GREATER_THAN_FILE);
-            VPUX_ELF_THROW_UNLESS(sectionSize <= (fileSize - sectionOffset), RangeError, 
+                                  ErrorCode::ELF_ERROR_RANGE_SECTION_OFFSET_GREATER_THAN_FILE);
+            VPUX_ELF_THROW_UNLESS(sectionSize <= (fileSize - sectionOffset), RangeError,
                                   "Section read would go over end of file",
-                                  ErrorCode::ERROR_RANGE_SECTION_READ_GOES_OVER_END_OF_FILE);
+                                  ErrorCode::ELF_ERROR_RANGE_SECTION_READ_GOES_OVER_END_OF_FILE);
             // Store end offset and index
             sortedRanges.emplace_back(sectionOffset + sectionSize, i);
         }
@@ -240,7 +240,7 @@ private:
 
             // If current section's end is beyond next section's start, they overlap
             VPUX_ELF_THROW_UNLESS(endCurrent <= nextOffset, RangeError, "Section overlaps next section",
-                                  ErrorCode::ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION);
+                                  ErrorCode::ELF_ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION);
         }
     }
 };

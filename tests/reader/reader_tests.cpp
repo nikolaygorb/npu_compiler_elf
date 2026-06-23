@@ -467,7 +467,7 @@ TEST(ELFReaderTests, ReaderThrowsWhenPayloadSectionsOverlap) {
 
     const auto neededSize = payloadSectionOffset + 2 * payloadSectionSize;
     auto buffer = buildTestBuffer(scenario.fileHeader, scenario.sectionHeaders, neededSize);
-    expectReaderThrowsRangeError(buffer, ErrorCode::ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION);
+    expectReaderThrowsRangeError(buffer, ErrorCode::ELF_ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION);
 }
 
 TEST(ELFReaderTests, ReaderThrowsWhenPayloadSectionRunsWayPastNextSection) {
@@ -487,7 +487,7 @@ TEST(ELFReaderTests, ReaderThrowsWhenPayloadSectionRunsWayPastNextSection) {
 
     const auto neededSize = payloadSectionOffset + longPayloadSectionSize;
     auto buffer = buildTestBuffer(scenario.fileHeader, scenario.sectionHeaders, neededSize);
-    expectReaderThrowsRangeError(buffer, ErrorCode::ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION);
+    expectReaderThrowsRangeError(buffer, ErrorCode::ELF_ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION);
 }
 
 TEST(ELFReaderTests, ReaderDoesntThrowWhenPayloadSectionsAreUnorderedButNonOverlapping) {
@@ -536,7 +536,7 @@ TEST(ELFReaderTests, ReaderThrowsWhenPayloadSectionsAreUnorderedButOverlapping) 
 
     const auto neededSize = payloadBaseOffset + 35;
     auto buffer = buildTestBuffer(scenario.fileHeader, scenario.sectionHeaders, neededSize);
-    expectReaderThrowsRangeError(buffer, ErrorCode::ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION);
+    expectReaderThrowsRangeError(buffer, ErrorCode::ELF_ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION);
 }
 
 TEST(ELFReaderTests, ReaderDoesntThrowForSpecialCaseSectionTypes) {
@@ -623,7 +623,7 @@ TEST(ELFReaderTests, ReaderThrowsWhenPayloadSectionCOverlapsWithASeparatedByZero
 
     const auto neededSize = offsetC + sizeC;
     auto buffer = buildTestBuffer(scenario.fileHeader, scenario.sectionHeaders, neededSize);
-    expectReaderThrowsRangeError(buffer, ErrorCode::ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION);
+    expectReaderThrowsRangeError(buffer, ErrorCode::ELF_ERROR_RANGE_SECTION_OVERLAPS_NEXT_SECTION);
 }
 
 TEST(ELFReaderTests, ReaderThrowsWhenPayloadSectionExtendsBeyondFileBounds) {
@@ -647,7 +647,7 @@ TEST(ELFReaderTests, ReaderThrowsWhenPayloadSectionExtendsBeyondFileBounds) {
     // Create buffer that's smaller than needed for the section
     const auto neededSize = offsetA + 50;  // Only 50 bytes, but section requests 100
     auto buffer = buildTestBuffer(scenario.fileHeader, scenario.sectionHeaders, neededSize);
-    expectReaderThrowsRangeError(buffer, ErrorCode::ERROR_RANGE_SECTION_READ_GOES_OVER_END_OF_FILE);
+    expectReaderThrowsRangeError(buffer, ErrorCode::ELF_ERROR_RANGE_SECTION_READ_GOES_OVER_END_OF_FILE);
 }
 
 TEST(ELFReaderTests, ReaderThrowsWhenNoBitsSectionExtendsBeyondFileBounds) {
@@ -674,5 +674,5 @@ TEST(ELFReaderTests, ReaderThrowsWhenNoBitsSectionExtendsBeyondFileBounds) {
 
     const auto neededSize = offsetA + 50;
     auto buffer = buildTestBuffer(scenario.fileHeader, scenario.sectionHeaders, neededSize);
-    expectReaderThrowsRangeError(buffer, ErrorCode::ERROR_RANGE_SECTION_READ_GOES_OVER_END_OF_FILE);
+    expectReaderThrowsRangeError(buffer, ErrorCode::ELF_ERROR_RANGE_SECTION_READ_GOES_OVER_END_OF_FILE);
 }
