@@ -1,7 +1,8 @@
 # GitHub Actions workflow for ELF library testing
 # Builds and tests the NPU ELF library using a container image
 # This workflow runs automatically on pull requests to ensure code quality
-run-name: ELF Library Tests - ${{ github.ref }} by @${{ github.actor }}
+name: pre-merge-checks
+run-name: Pre-merge checks for ${{ github.ref }} by @${{ github.actor }}
 
 # Trigger this workflow on pull request events
 on:
@@ -12,45 +13,33 @@ on:
       - develop
       - releases/**  # Include all release branches
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Define the jobs to run in this workflow
 jobs:
-  test:
+  build_and_test_linux:
     name: Build and Test ELF Library
     runs-on: [self-hosted, Linux, gfx, small]  # Use self-hosted runner with specific tags
     container:
-      image: dockerv2-gfx-build.gfx-assets.fm.intel.com/common/ubuntu24.04:latest  # Use Ubuntu 24.04 build environment
+      image: ger-is-registry.caas.intel.com/vpu/npu_elf/npu_elf:2026ww26
 
     steps:
-    # Step 1: Get the source code
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # Step 2: Install required build tools and dependencies
-    - name: Install Dependencies
-      run: |
-        apt-get update
-        apt-get install -y build-essential cmake git
-        rm -rf /var/lib/apt/lists/*
-
-    # Step 3: Verify CMake installation
-    - name: cmake version
-      run: |
-        cmake --version
-
-    # Step 4: Configure the project with CMake (enable tests, set Release mode)
-    - name: Configure CMake
+    - name: Configure the project with CMake (enable tests, set Release mode)
       run: |
         cmake -B build \
           -DENABLE_ELF_TESTS=ON \
           -DCMAKE_BUILD_TYPE=Release
 
-    # Step 5: Compile the project using parallel jobs
-    - name: Build Project
+    - name: Compile the project using parallel jobs
       run: |
         cmake --build build --config Release -j$(($(nproc)-1))
 
-    # Step 6: Execute the test suite to verify functionality
-    - name: Run Tests
+    - name: Execute the test suite to verify functionality
       working-directory: build
       run: |
         ctest -C Release --output-on-failure -j$(($(nproc)-1))

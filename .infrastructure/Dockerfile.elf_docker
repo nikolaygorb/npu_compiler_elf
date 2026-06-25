@@ -1,0 +1,42 @@
+# image_info
+# docker image location: ger-is-registry.caas.intel.com/vpu/npu_elf/npu_elf:2026ww26
+
+# ubuntu_24_04_base_image
+FROM amr-registry.caas.intel.com/cache/ubuntu:24.04
+ENV SHELL /bin/bash
+
+# user_root
+USER root
+
+# intel_proxy
+ENV HTTP_PROXY="http://proxy-chain.intel.com:912"
+ENV http_proxy=$HTTP_PROXY
+ENV HTTPS_PROXY="http://proxy-chain.intel.com:912"
+ENV https_proxy=$HTTPS_PROXY
+
+# intel_no_proxy_3 (should work for Intel Jira also)
+ENV no_proxy="intel.com,.intel.com,10.0.0.0/8,192.168.0.0/16,localhost,127.0.0.0/8,134.134.0.0/16,/var/run/docker.sock"
+ENV NO_PROXY="$no_proxy"
+
+# npu_elf_packages
+RUN apt-get update && \
+    apt-get install -y  wget \
+                        build-essential \
+                        cmake \
+                        git \
+    && rm -rf /var/lib/apt/lists/*
+
+# install_miniforge_root
+RUN wget https://github.com/conda-forge/miniforge/releases/download/26.3.2-3/Miniforge3-26.3.2-3-Linux-x86_64.sh \
+  && bash Miniforge3-Linux-x86_64.sh -b -p /opt/miniforge \
+  && rm -f Miniforge3-Linux-x86_64.sh
+ENV PATH="/opt/miniforge/bin:${PATH}"
+
+# npu_elf_python_env
+RUN conda create -n npu-elf python=3.11 \
+    && conda init \
+    && conda clean -a -y
+SHELL ["conda", "run", "-n", "npu-elf", "/bin/bash", "-c"]
+RUN python -m pip install \
+    pre-commit 
+
