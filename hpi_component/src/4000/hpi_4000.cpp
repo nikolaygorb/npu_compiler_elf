@@ -81,8 +81,11 @@ namespace {
 
 constexpr uint32_t VPUX40XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX40XX_VERSION_MINOR = 3;
-constexpr uint32_t VPUX40XX_VERSION_PATCH = 2;
+constexpr uint32_t VPUX40XX_VERSION_PATCH = 3;
 
+// 1.3.3
+// - Add support for VPU_SHT_COMPATIBILITY_STRING section type
+//
 // 1.3.2
 // - Fix header offset overflow in Reader when section table offset is close to file size limit
 //

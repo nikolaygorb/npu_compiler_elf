@@ -17,6 +17,7 @@ enum class ErrorCode : uint32_t {
     ELF_SUCCESS = 0,
     ELF_ERROR_UNKNOWN = 1,                                          // Generic error code for conditions, not covered by other error codes
     ELF_ERROR_ACCESS = 20000,                                       // Error related to accessing the ELF file or its contents
+    ELF_ERROR_ACCESS_NULL_PTR = 20001,
     ELF_ERROR_HEADER = 30000,                                       // Error related to the ELF header
     ELF_ERROR_SECTION = 40000,                                      // Error related to ELF sections
     ELF_ERROR_RELOCATION = 50000,                                   // Error related to ELF relocations
@@ -27,6 +28,8 @@ enum class ErrorCode : uint32_t {
     ELF_ERROR_RANGE_SECTION_DOES_NOT_FIT_IN_FILE = 80002,
     ELF_ERROR_RANGE_SECTION_OFFSET_GREATER_THAN_FILE = 80003,
     ELF_ERROR_RANGE_SECTION_READ_GOES_OVER_END_OF_FILE = 80004,
+    ELF_ERROR_RANGE_SECTION_SIZE_IS_ZERO = 80005,
+    ELF_ERROR_RANGE_EXPECTED_AT_MOST_ONE_SECTION = 80006,
     ELF_ERROR_SEQUENCE = 90000,                                     // Error related to sequence issues (e.g., unexpected order of operations)
     ELF_ERROR_ARGUMENTS = 100000,                                   // Error related to invalid arguments or parameters
     ELF_ERROR_IMPLAUSIBLE_STATE = 110000,                           // Error related to implausible or inconsistent state in the program

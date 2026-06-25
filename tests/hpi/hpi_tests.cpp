@@ -40,6 +40,14 @@ enum class RunMode {
 
 using AddNoteBinarySection = AddBinarySectionAction<elf::elf_note::VersionNote>;
 
+std::vector<uint8_t> toBytes(const std::string& value, bool appendNullTerminator = true) {
+    std::vector<uint8_t> bytes(value.begin(), value.end());
+    if (appendNullTerminator) {
+        bytes.push_back('\0');
+    }
+    return bytes;
+}
+
 struct SimpleLoadRunner : public HPIRunner<SimpleLoadRunner> {
     SimpleLoadRunner(): HPIRunner("appArgArchName", "appArgBlobPathAndName", AccessManagerType::DDRAccessManager) {
     }
@@ -731,4 +739,35 @@ TEST(HostParsedInference, CompatStringIncompatibleIfMIMinorGreater) {
                 "mi=" + miVersion.toString();
 
     ASSERT_THROW(checkCompatibilityString(deviceDescriptor, compatibilityString), elf::CompatibilityError);
+}
+
+TEST(HostParsedInference, ReadCompatibilityStringEmptyIfSectionIsMissing) {
+    const auto arch = elf::platform::ArchKind::VPUX40XX;
+    auto blob = TestBlob(makeMinimalConstructible(arch)).getBinary();
+
+    auto accessManager =
+        DDRAccessManager<elf::DDRAlwaysEmplace>(reinterpret_cast<const uint8_t*>(blob.data()), blob.size());
+    auto bufferManager = DummyBufferManager();
+
+    auto hpi = elf::HostParsedInference(&bufferManager, &accessManager, HPIConfigs{{}, arch}, nullptr);
+    EXPECT_FALSE(hpi.readCompatibilityString().has_value());
+}
+
+TEST(HostParsedInference, ReadCompatibilityStringFromSection) {
+    const auto arch = elf::platform::ArchKind::VPUX40XX;
+    const auto expectedCompatString = std::string{"compiler=1.2;npu=4000;t=4;elf=2.0.0;mi=11.7.0"};
+    auto blob = TestBlob(makeMinimalConstructible(arch) +
+                ActionsSequence{{AddRawBinarySection::build(
+                    ".compatibility_string",
+                    AddRawBinarySection::Attributes{{},
+                                {elf::VPU_SHT_COMPATIBILITY_STRING,
+                                    toBytes(expectedCompatString)}})}})
+            .getBinary();
+
+    auto accessManager =
+        DDRAccessManager<elf::DDRAlwaysEmplace>(reinterpret_cast<const uint8_t*>(blob.data()), blob.size());
+    auto bufferManager = DummyBufferManager();
+
+    auto hpi = elf::HostParsedInference(&bufferManager, &accessManager, HPIConfigs{{}, arch}, nullptr);
+    EXPECT_EQ(hpi.readCompatibilityString(), std::optional<std::string>{expectedCompatString});
 }

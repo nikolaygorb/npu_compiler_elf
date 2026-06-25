@@ -6,6 +6,8 @@
 #pragma once
 
 #include <memory>
+#include <optional>
+#include <string>
 #include <vector>
 #include <vpux_elf/accessor.hpp>
 #include <vpux_elf/utils/version.hpp>
@@ -71,6 +73,10 @@ public:
     elf::Version getLibraryELFVersion() const;
     elf::Version getLibraryMIVersion() const;
     size_t getHPISize() const;
+
+    // Returns the compatibility string embedded in the blob's VPU_SHT_COMPATIBILITY_STRING
+    // section, or std::nullopt if the blob predates this section.
+    std::optional<std::string> readCompatibilityString() const;
 
     void applyInputOutput(std::vector<DeviceBuffer>& inputs, std::vector<DeviceBuffer>& outputs,
                           std::vector<DeviceBuffer>& profiling);
