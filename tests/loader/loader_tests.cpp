@@ -27,7 +27,7 @@
 #include "vpux_headers/serial_metadata.hpp"
 #include "vpux_loader/vpux_loader.hpp"
 
-#include <vpux_headers/dma_hw_npu4.hpp>
+#include <nnrt_headers_40xx.hpp>
 
 using namespace elf;
 using namespace writer;
@@ -130,7 +130,7 @@ static auto validElfDefault = ActionsSequence{{
 
 }};
 
-using AddDMADescriptorBinarySection = AddBinarySectionAction<dma_npu4::DmaDescriptor>;
+using AddDMADescriptorBinarySection = AddBinarySectionAction<elf::DmaDescriptor>;
 
 static const auto validElfWithDmaRelocations = ActionsSequence{{
 

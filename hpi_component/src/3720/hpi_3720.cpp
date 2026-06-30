@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2023-2025 Intel Corporation
+// Copyright (C) 2023-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -14,9 +14,7 @@
 #include <array>
 #include <cstring>
 
-#include <api/vpu_nnrt_api_37xx.h>
-#include <api/vpu_cmx_info_37xx.h>
-#include <api/vpu_pwrmgr_api.h>
+#include <nnrt_headers_37xx.hpp>
 
 // clang-format on
 

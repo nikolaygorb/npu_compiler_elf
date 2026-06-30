@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2025 Intel Corporation.
+# Copyright (C) 2025-2026 Intel Corporation.
 # SPDX-License-Identifier: Apache-2.0
 #
 
@@ -13,7 +13,7 @@ add_executable(
 target_include_directories(writer_tests PUBLIC
     ${PROJECT_SOURCE_DIR}/core/include/
     ${PROJECT_SOURCE_DIR}/loader/include/
-    ${PROJECT_SOURCE_DIR}/3rdparty/nnrt_api/
+    ${PROJECT_SOURCE_DIR}/3rdparty/nnrt/
 )
 
 target_link_libraries(
