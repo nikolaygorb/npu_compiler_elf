@@ -753,8 +753,7 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool,
             inferBufferInfo.mBufferDetails.mIsShared = sectionFlags & SHF_WRITE ? false : true;
             inferBufferInfo.mBufferDetails.mIsProcessed = false;
 
-            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tLoaded section %s (address: %p, size: %llu)", section.getName(),
-                         inferBufferInfo.mBuffer->getBuffer().cpu_addr(), inferBufferInfo.mBuffer->getBuffer().size());
+            VPUX_ELF_LOG(LogLevel::LOG_DEBUG, "\tRegistered section %s for deferred allocation", section.getName());
             break;
         }
 

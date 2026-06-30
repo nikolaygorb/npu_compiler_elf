@@ -110,6 +110,18 @@ public:
         }
 };
 
+// RAII guard to ensure ELF logger global level is always restored, even if assertions fail
+struct LogLevelGuard {
+    explicit LogLevelGuard(elf::LogLevel newLevel)
+        : savedLevel(elf::Logger::getGlobalLevel()) {
+        elf::Logger::setGlobalLevel(newLevel);
+    }
+    ~LogLevelGuard() {
+        elf::Logger::setGlobalLevel(savedLevel);
+    }
+    elf::LogLevel savedLevel;
+};
+
 static auto validElfDefault = ActionsSequence{{
 
         AddDummyBinarySection::build(
@@ -278,6 +290,26 @@ TEST(ELFLoader, NoThrowWhenValidElf) {
 
     DDRAccessManager<elf::DDRAlwaysEmplace> accessor(reinterpret_cast<const uint8_t*>(elf.data()), elf.size());
     OV_ASSERT_NO_THROW(VPUXLoader(&accessor, &bufMgr));
+    VPUXLoader loader(&accessor, &bufMgr);
+    OV_ASSERT_NO_THROW(loader.load(gSymTab.symTab(), false, {}, false));
+}
+
+TEST(ELFLoader, NoNullDerefInAllocateAndLoadLogPathAtDebugLevel) {
+    // Regression test: in VPUXLoader::load(), the Action::AllocateAndLoad branch called
+    // VPUX_ELF_LOG(LOG_DEBUG, ..., inferBufferInfo.mBuffer->getBuffer().cpu_addr(), ...)
+    // immediately after safeInitBufferInfoAtIndex(), while mBuffer was still null.
+    // The actual allocation happens later in loadBuffers(). When VPUX_ELF_LOG_ENABLED != 0
+    // and the runtime level >= LOG_DEBUG the null shared_ptr dereference is UB (crash).
+    // This test is built with VPUX_ELF_LOG_ENABLED=1 (see tests/CMakeLists.txt) to ensure
+    // the log statements in the library are compiled in and the dereference is exercised.
+    LogLevelGuard logGuard(elf::LogLevel::LOG_DEBUG);
+
+    DummyBufferManager bufMgr;
+    std::vector<uint8_t> elf;
+
+    OV_ASSERT_NO_THROW(elf = TestBlob(validElfDefault).getBinary());
+
+    DDRAccessManager<elf::DDRAlwaysEmplace> accessor(reinterpret_cast<const uint8_t*>(elf.data()), elf.size());
     VPUXLoader loader(&accessor, &bufMgr);
     OV_ASSERT_NO_THROW(loader.load(gSymTab.symTab(), false, {}, false));
 }
