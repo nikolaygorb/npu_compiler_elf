@@ -156,13 +156,16 @@ std::optional<std::string> HostParsedInference::readCompatibilityString() const 
     if (sections.empty()) {
         return std::nullopt;
     }
-    VPUX_ELF_THROW_WHEN(sections.size() > 1, RangeError, "Expected at most one compatibility string section", ErrorCode::ELF_ERROR_RANGE_EXPECTED_AT_MOST_ONE_SECTION);
+    VPUX_ELF_THROW_WHEN(sections.size() > 1, RangeError, "Expected at most one compatibility string section",
+                        ErrorCode::ELF_ERROR_RANGE_EXPECTED_AT_MOST_ONE_SECTION);
 
     auto sectionLock = ElfBufferLockGuard(sections[0].get());
     const auto size = sections[0]->getBuffer().size();
     const auto* ptr = reinterpret_cast<const char*>(sections[0]->getBuffer().cpu_addr());
-    VPUX_ELF_THROW_WHEN(ptr == nullptr, AccessError, "Compatibility string section is nullptr", ErrorCode::ELF_ERROR_ACCESS_NULL_PTR); 
-    VPUX_ELF_THROW_WHEN(size == 0, RangeError, "Compatibility string section size is zero", ErrorCode::ELF_ERROR_RANGE_SECTION_SIZE_IS_ZERO);
+    VPUX_ELF_THROW_WHEN(ptr == nullptr, AccessError, "Compatibility string section is nullptr",
+                        ErrorCode::ELF_ERROR_ACCESS_NULL_PTR);
+    VPUX_ELF_THROW_WHEN(size == 0, RangeError, "Compatibility string section size is zero",
+                        ErrorCode::ELF_ERROR_RANGE_SECTION_SIZE_IS_ZERO);
 
     return std::string(ptr, std::find(ptr, ptr + size, '\0'));
 }
@@ -300,8 +303,8 @@ void HostParsedInference::load() {
             }
             auto entryDeviceBuffer = loaders[idx]->getEntry();
             auto entryLock = ElfBufferLockGuard(entryDeviceBuffer.get());
-            VPUX_ELF_THROW_UNLESS(entryDeviceBuffer && entryDeviceBuffer->getBuffer().size() >= entrySize,
-                                  SectionError, "Entry section is smaller than VpuMappedInference");
+            VPUX_ELF_THROW_UNLESS(entryDeviceBuffer && entryDeviceBuffer->getBuffer().size() >= entrySize, SectionError,
+                                  "Entry section is smaller than VpuMappedInference");
 
             std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize,
                         (void*)entryDeviceBuffer->getBuffer().cpu_addr(), entrySize);
@@ -355,8 +358,8 @@ HostParsedInference::HostParsedInference(const HostParsedInference& other)
 
             auto entryDeviceBuffer = loaders[idx]->getEntry();
             auto entryLock = ElfBufferLockGuard(entryDeviceBuffer.get());
-            VPUX_ELF_THROW_UNLESS(entryDeviceBuffer && entryDeviceBuffer->getBuffer().size() >= entrySize,
-                                  SectionError, "Entry section is smaller than VpuMappedInference");
+            VPUX_ELF_THROW_UNLESS(entryDeviceBuffer && entryDeviceBuffer->getBuffer().size() >= entrySize, SectionError,
+                                  "Entry section is smaller than VpuMappedInference");
 
             std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize,
                         (void*)entryDeviceBuffer->getBuffer().cpu_addr(), entrySize);
@@ -428,8 +431,8 @@ HostParsedInference& HostParsedInference::operator=(const HostParsedInference& r
 
             auto entryDeviceBuffer = loaders[idx]->getEntry();
             auto entryLock = ElfBufferLockGuard(entryDeviceBuffer.get());
-            VPUX_ELF_THROW_UNLESS(entryDeviceBuffer && entryDeviceBuffer->getBuffer().size() >= entrySize,
-                                  SectionError, "Entry section is smaller than VpuMappedInference");
+            VPUX_ELF_THROW_UNLESS(entryDeviceBuffer && entryDeviceBuffer->getBuffer().size() >= entrySize, SectionError,
+                                  "Entry section is smaller than VpuMappedInference");
 
             std::memcpy(entries->getBuffer().cpu_addr() + idx * entrySize,
                         (void*)entryDeviceBuffer->getBuffer().cpu_addr(), entrySize);

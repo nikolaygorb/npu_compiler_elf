@@ -6,8 +6,8 @@
 //
 
 #include <array>
-#include <vpux_headers/relocations.hpp>
 #include <nnrt_headers_40xx.hpp>
+#include <vpux_headers/relocations.hpp>
 
 namespace elf::relocations {
 

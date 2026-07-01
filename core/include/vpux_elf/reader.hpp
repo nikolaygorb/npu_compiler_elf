@@ -138,7 +138,7 @@ public:
                                   "Section name table must contain at least a null terminator");
 
             VPUX_ELF_THROW_UNLESS(secNamesOffset <= mAccessManager->getSize() &&
-                                      secNameSize <= mAccessManager->getSize() - secNamesOffset,
+                                          secNameSize <= mAccessManager->getSize() - secNamesOffset,
                                   HeaderError, "Section name size exceeds buffer size");
 
             mSectionNames.resize(secNameSize);

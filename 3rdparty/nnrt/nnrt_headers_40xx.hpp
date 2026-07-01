@@ -5,6 +5,9 @@
 
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+
 namespace elf {
 
 #include "details/api/vpu_pwrmgr_api.h"
