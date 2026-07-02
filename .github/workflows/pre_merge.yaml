@@ -53,4 +53,16 @@ jobs:
         fetch-depth: 0
     - name: Run clang-format to check code style
       run: |
+        # Make sure that CI shell does not stop as soon as non-zero return code is received from a command.
+        set +e
         conda run --no-capture-output -n npu-elf pre-commit run clang-format --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.sha }}
+        # Save the previous status.
+        status=$?
+        set -e
+        if [ "$status" -ne 0 ]; then
+          # Check the diff of which file has been touched.
+          echo "Files that need clang-format:"
+          # Print list of file names to be easy to identify.
+          git --no-pager diff --name-only
+        fi
+        exit "$status"

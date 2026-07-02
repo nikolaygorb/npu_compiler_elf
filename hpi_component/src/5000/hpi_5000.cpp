@@ -15,8 +15,11 @@ namespace {
 
 constexpr uint32_t VPUX50XX_VERSION_MAJOR = 2;
 constexpr uint32_t VPUX50XX_VERSION_MINOR = 2;
-constexpr uint32_t VPUX50XX_VERSION_PATCH = 3;
+constexpr uint32_t VPUX50XX_VERSION_PATCH = 4;
 
+// 2.2.4
+// - Fix DMA JIT user-stride copy size to avoid out-of-bounds read
+//
 // 2.2.3
 // - Add support for VPU_SHT_COMPATIBILITY_STRING section type
 //
@@ -47,8 +50,11 @@ constexpr uint32_t VPUX50XX_VERSION_PATCH = 3;
 #ifdef INTEL_EMBARGO_NPU6
 constexpr uint32_t VPUX60XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX60XX_VERSION_MINOR = 5;
-constexpr uint32_t VPUX60XX_VERSION_PATCH = 3;
+constexpr uint32_t VPUX60XX_VERSION_PATCH = 4;
 
+// 1.5.4
+// - Fix DMA JIT user-stride copy size to avoid out-of-bounds read
+//
 // 1.5.3
 // - Add support for VPU_SHT_COMPATIBILITY_STRING section type
 //
@@ -71,8 +77,11 @@ constexpr uint32_t VPUX60XX_VERSION_PATCH = 3;
 #ifdef INTEL_EMBARGO_NPU7
 constexpr uint32_t VPUX70XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX70XX_VERSION_MINOR = 5;
-constexpr uint32_t VPUX70XX_VERSION_PATCH = 3;
+constexpr uint32_t VPUX70XX_VERSION_PATCH = 4;
 
+// 1.5.4
+// - Fix DMA JIT user-stride copy size to avoid out-of-bounds read
+//
 // 1.5.3
 // - Add support for VPU_SHT_COMPATIBILITY_STRING section type
 //
@@ -95,8 +104,11 @@ constexpr uint32_t VPUX70XX_VERSION_PATCH = 3;
 #ifdef INTEL_EMBARGO_NPU8
 constexpr uint32_t VPUX80XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX80XX_VERSION_MINOR = 5;
-constexpr uint32_t VPUX80XX_VERSION_PATCH = 3;
+constexpr uint32_t VPUX80XX_VERSION_PATCH = 4;
 
+// 1.5.4
+// - Fix DMA JIT user-stride copy size to avoid out-of-bounds read
+//
 // 1.5.3
 // - Add support for VPU_SHT_COMPATIBILITY_STRING section type
 //

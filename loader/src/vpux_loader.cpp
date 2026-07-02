@@ -1539,12 +1539,15 @@ void VPUXLoader::applyJitRelocations(std::vector<DeviceBuffer>& inputs, std::vec
                 symbol.address = ioBuffers[bufferIdx].vpu_addr();
                 auto ioBufferUserStrides = ioBuffers[bufferIdx].get_user_stride();
                 if (ioBufferUserStrides.has_value()) {
-                    VPUX_ELF_THROW_UNLESS(sizeof(ioBufferUserStrides.value()) <= sizeof(symbol.dmaStrides), RelocError,
-                                          "Mismatch between symbol DMA strides and user strides");
-                    VPUX_ELF_THROW_UNLESS(sizeof(ioBufferUserStrides.value()) <= sizeof(symbol.strides), RelocError,
-                                          "Mismatch between symbol strides and user strides");
-                    std::memcpy(symbol.dmaStrides, ioBufferUserStrides.value().data(), sizeof(symbol.dmaStrides));
-                    std::memcpy(symbol.strides, ioBufferUserStrides.value().data(), sizeof(symbol.strides));
+                    const auto userStridesSize = sizeof(ioBufferUserStrides.value());
+                    VPUX_ELF_THROW_UNLESS(userStridesSize <= sizeof(symbol.dmaStrides), RelocError,
+                                          "Mismatch between symbol DMA strides and user strides",
+                                          ErrorCode::ELF_ERROR_RELOCATION_DMA_USER_STRIDES_TO_DMASTRIDES_SIZE_MISMATCH);
+                    VPUX_ELF_THROW_UNLESS(userStridesSize <= sizeof(symbol.strides), RelocError,
+                                          "Mismatch between symbol strides and user strides",
+                                          ErrorCode::ELF_ERROR_RELOCATION_DMA_USER_STRIDES_TO_STRIDES_SIZE_MISMATCH);
+                    std::memcpy(symbol.dmaStrides, ioBufferUserStrides.value().data(), userStridesSize);
+                    std::memcpy(symbol.strides, ioBufferUserStrides.value().data(), userStridesSize);
                 }
             };
 

@@ -18,9 +18,11 @@ enum class ErrorCode : uint32_t {
     ELF_ERROR_UNKNOWN = 1,     // Generic error code for conditions, not covered by other error codes
     ELF_ERROR_ACCESS = 20000,  // Error related to accessing the ELF file or its contents
     ELF_ERROR_ACCESS_NULL_PTR = 20001,
-    ELF_ERROR_HEADER = 30000,         // Error related to the ELF header
-    ELF_ERROR_SECTION = 40000,        // Error related to ELF sections
-    ELF_ERROR_RELOCATION = 50000,     // Error related to ELF relocations
+    ELF_ERROR_HEADER = 30000,      // Error related to the ELF header
+    ELF_ERROR_SECTION = 40000,     // Error related to ELF sections
+    ELF_ERROR_RELOCATION = 50000,  // Error related to ELF relocations
+    ELF_ERROR_RELOCATION_DMA_USER_STRIDES_TO_DMASTRIDES_SIZE_MISMATCH = 50001,
+    ELF_ERROR_RELOCATION_DMA_USER_STRIDES_TO_STRIDES_SIZE_MISMATCH = 50002,
     ELF_ERROR_ALLOCATION = 60000,     // Error related to memory allocation
     ELF_ERROR_COMPATIBILITY = 70000,  // Error related to compatibility issues
     ELF_ERROR_RANGE = 80000,          // Error related to range issues (e.g., out of bounds)

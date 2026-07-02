@@ -431,6 +431,92 @@ TEST(ELFLoader, NoThrowForDmaRelocationsWithUserStrides) {
     OV_ASSERT_NO_THROW(loader.applyJitRelocations(inputs, inputs, inputs));
 }
 
+TEST(ELFLoader, DmaRelocationsWithUserStridesPreserveSixthSymbolStrideElement) {
+    // Sentinel values for element [5] in 6-element DmaSymbolEntry stride arrays.
+    // They should remain intact because user-provided strides carry only 5 elements.
+    constexpr uint32_t kSentinelDmaStrideIdx5 = 16;
+    constexpr uint32_t kSentinelAddressStrideIdx5 = 17;
+    constexpr uint32_t kDmaSize = 4;
+
+    auto elf =
+            TestBlob(ActionsSequence{{
+
+                             AddDMADescriptorBinarySection::build(
+                                     ".binSection_0",
+                                     AddDMADescriptorBinarySection::Attributes{
+                                             {},
+                                             // Single DmaDescriptor
+                                             {elf::SHT_PROGBITS, AddDMADescriptorBinarySection::Vector(1)}}),
+
+                             AddDMASymbolSection::build(
+                                     ".symtab_0", AddDMASymbolSection::Attributes{VPU_SHF_USERINPUT | VPU_SHF_JIT},
+                                     ActionsSequence{{
+
+                                             AddDMASymbol::build("symtab_0_sym0",
+                                                                 AddDMASymbol::Attributes{DmaSymbolEntry{
+                                                                         0,
+                                                                         0,
+                                                                         {1, 1, 1, 1, 1, 1},
+                                                                         {0, 0, 0, 0, 0, kSentinelAddressStrideIdx5},
+                                                                         {0, 0, 0, 0, 0, 1},
+                                                                         {2, 2, 2, 2, 2, 2},
+                                                                         {1, 1, 1, 1, 1, kSentinelDmaStrideIdx5},
+                                                                         kDmaSize}},
+                                                                 AddDMASymbol::Operands{}),
+                                     }}),
+
+                             AddDMARelocationSection::build(
+                                     ".relocSection_0",
+                                     AddDMARelocationSection::Attributes{VPU_SHF_USERINPUT | VPU_SHF_JIT},
+                                     AddDMARelocationSection::Operands{".symtab_0", ".binSection_0"},
+                                     ActionsSequence{{
+
+                                             AddDMARelocation::build(
+                                                     "reloc0", AddDMARelocation::Attributes{R_VPU_DMA_TASK_INPUT, 0, 0},
+                                                     AddDMARelocation::Operands{"symtab_0_sym0"})
+
+                                     }}),
+
+                     }})
+                    .getBinary();
+
+    auto accessor = DDRAccessManager<elf::DDRAlwaysEmplace>(reinterpret_cast<const uint8_t*>(elf.data()), elf.size());
+    auto bufferManager = DummyBufferManager();
+    auto loader = VPUXLoader(&accessor, &bufferManager);
+
+    OV_ASSERT_NO_THROW(loader.load(gSymTab.symTab(), false, {}));
+
+    uint8_t data = 0;
+    elf::DeviceBuffer input(&data, 0x1000, 0xB);
+    // DeviceBufferStrides has 5 entries. This is the source payload used by resolveDmaSymbol.
+    input.set_user_strides({1, 3, 7, 11, 13});
+    std::vector<elf::DeviceBuffer> inputs{input};
+
+    OV_ASSERT_NO_THROW(loader.applyJitRelocations(inputs, inputs, inputs));
+
+    // Guard the test precondition that triggered the original bug shape: source is smaller than destination arrays.
+    const auto sourceStrideBytes = sizeof(elf::DeviceBuffer::DeviceBufferStrides);
+    const elf::DmaSymbolEntry symbolLayoutProbe{};
+    ASSERT_LT(sourceStrideBytes, sizeof(symbolLayoutProbe.dmaStrides));
+    ASSERT_LT(sourceStrideBytes, sizeof(symbolLayoutProbe.strides));
+
+    const auto allocatedBuffers = loader.getAllocatedBuffers();
+    auto descriptorIt =
+            std::find_if(allocatedBuffers.begin(), allocatedBuffers.end(), [](const elf::DeviceBuffer& buffer) {
+                return buffer.size() == sizeof(elf::DmaDescriptor);
+            });
+    ASSERT_NE(descriptorIt, allocatedBuffers.end());
+    ASSERT_NE(descriptorIt->cpu_addr(), nullptr);
+
+    const auto* dmaTask = reinterpret_cast<const elf::DmaDescriptor*>(descriptorIt->cpu_addr());
+    ASSERT_NE(dmaTask, nullptr);
+
+    // These descriptor fields depend on DmaSymbolEntry element [5].
+    // If resolveDmaSymbol over-reads past the 5-element source, these checks become unstable/fail.
+    EXPECT_EQ(dmaTask->stride_src_5, kSentinelDmaStrideIdx5 * kDmaSize);
+    EXPECT_EQ(dmaTask->src_offsetof, input.vpu_addr() + static_cast<uint64_t>(kSentinelAddressStrideIdx5) * kDmaSize);
+}
+
 TEST(ELFLoader, SimpleMetadata) {
     // Metadata built sequentially
     auto metadata0 = elf::NetworkMetadata{{"Test identification", "Test blob"}};
