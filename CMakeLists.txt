@@ -33,6 +33,12 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS} ${SOURCES})
 
 add_library(${LIB_NAME} STATIC ${SOURCES})
 
+# Use CMake's toolchain-agnostic PIC property instead of a compiler-specific flag (-fPIC).
+# This ensures correct behavior on all platforms (GCC, Clang, etc.) without hardcoding flags.
+if(NOT MSVC)
+    set_target_properties(${LIB_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+
 if(MSVC AND BUILD_COMPILER_FOR_DRIVER)
     # For compiler in driver build, npu_elf static lib needs to build with /MT to avoid mismatch with level zero targets.
     # From cmake >= 3.15, the default CMAKE_MSVC_RUNTIME_LIBRARY is /MD, thus causing always overriding /MT with /MD.
@@ -68,12 +74,6 @@ target_link_options(${LIB_NAME} PRIVATE
 if(EXTERNAL_DEPS)
     target_link_libraries(${LIB_NAME} PUBLIC ${EXTERNAL_DEPS})
     add_subdirectory(loader)
-    if (UNIX)
-        # we need for fPIC flags because `npu_elf` is used for dynamic libraries linkage.
-        # it seems that this option is set implicitly somewhere due to compile flags overriding...
-        # Since `vpux-elf` is expected to be a standalone submodule, we add this option by a purpose
-        set_property(TARGET ${LIB_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
-    endif()
 endif(EXTERNAL_DEPS)
 
 if(NOT BUILD_SHARED_LIBS)
