@@ -25,8 +25,11 @@ public:
 private:
     static constexpr uint32_t VERSION_MAJOR = 1;
     static constexpr uint32_t VERSION_MINOR = 3;
-    static constexpr uint32_t VERSION_PATCH = 9;
+    static constexpr uint32_t VERSION_PATCH = 10;
 
+    // 1.3.10
+    // - allow normalized 0 alignment
+    //
     // 1.3.9
     // - Fix DMA JIT user-stride copy size to avoid out-of-bounds read
     //

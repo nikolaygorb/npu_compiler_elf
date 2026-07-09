@@ -15,8 +15,11 @@ namespace {
 
 constexpr uint32_t VPUX50XX_VERSION_MAJOR = 2;
 constexpr uint32_t VPUX50XX_VERSION_MINOR = 2;
-constexpr uint32_t VPUX50XX_VERSION_PATCH = 4;
+constexpr uint32_t VPUX50XX_VERSION_PATCH = 5;
 
+// 2.2.5
+// - allow normalized 0 alignment
+//
 // 2.2.4
 // - Fix DMA JIT user-stride copy size to avoid out-of-bounds read
 //
@@ -50,8 +53,11 @@ constexpr uint32_t VPUX50XX_VERSION_PATCH = 4;
 #ifdef INTEL_EMBARGO_NPU6
 constexpr uint32_t VPUX60XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX60XX_VERSION_MINOR = 5;
-constexpr uint32_t VPUX60XX_VERSION_PATCH = 4;
+constexpr uint32_t VPUX60XX_VERSION_PATCH = 5;
 
+// 1.5.5
+// - allow normalized 0 alignment
+//
 // 1.5.4
 // - Fix DMA JIT user-stride copy size to avoid out-of-bounds read
 //
@@ -77,8 +83,11 @@ constexpr uint32_t VPUX60XX_VERSION_PATCH = 4;
 #ifdef INTEL_EMBARGO_NPU7
 constexpr uint32_t VPUX70XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX70XX_VERSION_MINOR = 5;
-constexpr uint32_t VPUX70XX_VERSION_PATCH = 4;
+constexpr uint32_t VPUX70XX_VERSION_PATCH = 5;
 
+// 1.5.5
+// - allow normalized 0 alignment
+//
 // 1.5.4
 // - Fix DMA JIT user-stride copy size to avoid out-of-bounds read
 //
@@ -104,8 +113,11 @@ constexpr uint32_t VPUX70XX_VERSION_PATCH = 4;
 #ifdef INTEL_EMBARGO_NPU8
 constexpr uint32_t VPUX80XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX80XX_VERSION_MINOR = 5;
-constexpr uint32_t VPUX80XX_VERSION_PATCH = 4;
+constexpr uint32_t VPUX80XX_VERSION_PATCH = 5;
 
+// 1.5.5
+// - allow normalized 0 alignment
+//
 // 1.5.4
 // - Fix DMA JIT user-stride copy size to avoid out-of-bounds read
 //

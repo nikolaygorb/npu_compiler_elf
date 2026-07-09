@@ -23,6 +23,15 @@ TEST(ManagedBuffer, DynamicBufferRejectsNonPowerOfTwoAlignment) {
     ASSERT_THROW((void)DynamicBuffer(BufferSpecs{3, 16, 0}), RuntimeError);
 }
 
+TEST(ManagedBuffer, DynamicBufferAcceptsZeroAlignment) {
+    const BufferSpecs specs{0, 16, 0};
+    DynamicBuffer buffer(specs);
+
+    auto devBuffer = buffer.getBuffer();
+    ASSERT_NE(devBuffer.cpu_addr(), nullptr);
+    ASSERT_EQ(devBuffer.size(), specs.size);
+}
+
 TEST(ManagedBuffer, DynamicBufferRespectsRequestedAlignmentAndSize) {
     const BufferSpecs specs{128, 37, 0};
     DynamicBuffer buffer(specs);

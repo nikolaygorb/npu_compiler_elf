@@ -764,7 +764,7 @@ void VPUXLoader::load(const std::vector<SymbolEntry>& runtimeSymTabs, bool,
             VPUX_ELF_LOG(LogLevel::LOG_TRACE, "Allocating %zu", sectionCtr);
 
             auto sectionSize = sectionHeader->sh_size;
-            auto sectionAlignment = sectionHeader->sh_addralign;
+            const auto sectionAlignment = utils::normalizeAlignment(sectionHeader->sh_addralign);
 
             // Based on the SHF_WRITE definition (see details in section_header.hpp) in the ELF format and since the
             // format does not impose restrictions on using (i.e. setting) the flag together with different section

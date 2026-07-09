@@ -49,8 +49,11 @@ namespace {
 
 constexpr uint32_t VPUX40XX_VERSION_MAJOR = 1;
 constexpr uint32_t VPUX40XX_VERSION_MINOR = 3;
-constexpr uint32_t VPUX40XX_VERSION_PATCH = 4;
+constexpr uint32_t VPUX40XX_VERSION_PATCH = 5;
 
+// 1.3.5
+// - allow normalized 0 alignment
+//
 // 1.3.4
 // - Fix DMA JIT user-stride copy size to avoid out-of-bounds read
 //

@@ -80,9 +80,10 @@ public:
         // VPU_SHT_CMX_WORKSPACE - does not contain data in the binary file, so avoid reading
             if (!((mHeader->sh_type == SHT_NOBITS) || (mHeader->sh_type == VPU_SHT_CMX_METADATA) ||
                   mHeader->sh_type == VPU_SHT_CMX_WORKSPACE)) {
+                const auto sectionAlignment = utils::normalizeAlignment(mHeader->sh_addralign);
                 buffer = mAccessManager->readInternal(
                         mHeader->sh_offset,
-                        BufferSpecs(mHeader->sh_addralign, mHeader->sh_size, cpuOnlyAccess ? 0 : mHeader->sh_flags));
+                        BufferSpecs(sectionAlignment, mHeader->sh_size, cpuOnlyAccess ? 0 : mHeader->sh_flags));
             }
 
             return buffer;
@@ -211,6 +212,10 @@ private:
 
         for (size_t i = 0; i < numberOfSections; i++) {
             const auto& secHeader = mSectionHeaders[i];
+
+            const auto sectionAlignment = utils::normalizeAlignment(secHeader.sh_addralign);
+            VPUX_ELF_THROW_UNLESS(utils::isPowerOfTwo(sectionAlignment), SectionError,
+                                  "Section alignment is not a power of 2");
 
             // TODO: E#220889
             if (secHeader.sh_offset == 0 || secHeader.sh_size == 0) {

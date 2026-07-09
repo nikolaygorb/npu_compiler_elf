@@ -676,3 +676,42 @@ TEST(ELFReaderTests, ReaderThrowsWhenNoBitsSectionExtendsBeyondFileBounds) {
     auto buffer = buildTestBuffer(scenario.fileHeader, scenario.sectionHeaders, neededSize);
     expectReaderThrowsRangeError(buffer, ErrorCode::ELF_ERROR_RANGE_SECTION_READ_GOES_OVER_END_OF_FILE);
 }
+
+namespace {
+// Parameterized test for section alignment validation
+struct AlignmentCase {
+    Elf_Word alignment;
+    bool shouldThrow;
+};
+
+class ELFReaderAlignmentTests : public ::testing::TestWithParam<AlignmentCase> {};
+
+TEST_P(ELFReaderAlignmentTests, ReaderHandlesSectionAlignmentZeroOneAndInvalidThree) {
+    const auto testCase = GetParam();
+    SCOPED_TRACE(::testing::Message() << "alignment=" << testCase.alignment);
+
+    auto scenario = createReaderTestScenario(3, 2);
+
+    constexpr Elf_Word payloadSectionSize = 16;
+    setPayloadSection(scenario.sectionHeaders, indexToCheck, scenario.sectionNamesOffset + secHeaderStrIdxSecSize,
+                      payloadSectionSize);
+    scenario.sectionHeaders[indexToCheck].sh_addralign = testCase.alignment;
+
+    const auto neededSize = scenario.sectionHeaders[indexToCheck].sh_offset + payloadSectionSize;
+    auto buffer = buildTestBuffer(scenario.fileHeader, scenario.sectionHeaders, neededSize);
+
+    auto accessor = DDRAccessManager<elf::DDRStandardEmplace, elf::DynamicBufferFactory>(buffer.data(), buffer.size());
+    const auto constructReader = [&]() {
+        return Reader<ELF_Bitness::Elf64>(&accessor);
+    };
+
+    if (testCase.shouldThrow) {
+        ASSERT_THROW((void)constructReader(), SectionError);
+    } else {
+        OV_ASSERT_NO_THROW((void)constructReader());
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(SectionAlignmentValidation, ELFReaderAlignmentTests,
+                         ::testing::Values(AlignmentCase{0, false}, AlignmentCase{1, false}, AlignmentCase{3, true}));
+}  // namespace

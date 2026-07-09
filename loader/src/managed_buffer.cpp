@@ -84,15 +84,16 @@ void AllocatedDeviceBuffer::load(const uint8_t* from, size_t count) {
 DynamicBuffer::DynamicBuffer(BufferSpecs bSpecs): ManagedBuffer(bSpecs) {
     // Reject unreasonable attacker-controlled alignment up front.
     static constexpr size_t kMaxAlignment = 1u << 16;
+    const auto requestedAlignment = utils::normalizeAlignment(bSpecs.alignment);
 
     VPUX_ELF_THROW_UNLESS(utils::isPowerOfTwo(mDefaultSafeAlignment), RuntimeError,
                           "Default safe alignment is not a power of 2");
-    VPUX_ELF_THROW_UNLESS(utils::isPowerOfTwo(bSpecs.alignment), RuntimeError,
+    VPUX_ELF_THROW_UNLESS(utils::isPowerOfTwo(requestedAlignment), RuntimeError,
                           "Requested alignment is not a power of 2");
-    VPUX_ELF_THROW_WHEN(bSpecs.alignment > kMaxAlignment, ArgsError, "Unreasonable alignment");
+    VPUX_ELF_THROW_WHEN(requestedAlignment > kMaxAlignment, ArgsError, "Unreasonable alignment");
 
     const size_t bufferAlignment =
-            (bSpecs.alignment < mDefaultSafeAlignment) ? mDefaultSafeAlignment : static_cast<size_t>(bSpecs.alignment);
+            (requestedAlignment < mDefaultSafeAlignment) ? mDefaultSafeAlignment : requestedAlignment;
 
     VPUX_ELF_THROW_WHEN(bSpecs.size > std::numeric_limits<size_t>::max() - mDefaultSafeAlignment, ArgsError,
                         "size overflow");
