@@ -58,17 +58,27 @@ public:
 using RuntimeError = TypedException<std::runtime_error>;
 using LogicError = TypedException<std::logic_error>;
 
-using AccessError = TypedException<std::runtime_error, ErrorCode::ELF_ERROR_ACCESS>;
-using HeaderError = TypedException<std::runtime_error, ErrorCode::ELF_ERROR_HEADER>;
-using SectionError = TypedException<std::runtime_error, ErrorCode::ELF_ERROR_SECTION>;
-using RelocError = TypedException<std::runtime_error, ErrorCode::ELF_ERROR_RELOCATION>;
-using AllocError = TypedException<std::runtime_error, ErrorCode::ELF_ERROR_ALLOCATION>;
-using CompatibilityError = TypedException<std::runtime_error, ErrorCode::ELF_ERROR_COMPATIBILITY>;
+// Template exception for associating an ErrorCode with a specific exception type
+template <class T, ErrorCode DefaultError = ErrorCode::ELF_ERROR_UNKNOWN>
+class SpecificTypedException : public T {
+public:
+    explicit SpecificTypedException(const char* what, ErrorCode error_code): T(what, error_code) {
+    }
+    explicit SpecificTypedException(const char* what): T(what, DefaultError) {
+    }
+};
 
-using RangeError = TypedException<std::logic_error, ErrorCode::ELF_ERROR_RANGE>;
-using SequenceError = TypedException<std::logic_error, ErrorCode::ELF_ERROR_SEQUENCE>;
-using ArgsError = TypedException<std::logic_error, ErrorCode::ELF_ERROR_ARGUMENTS>;
-using ImplausibleState = TypedException<std::logic_error, ErrorCode::ELF_ERROR_IMPLAUSIBLE_STATE>;
+using AccessError = SpecificTypedException<RuntimeError, ErrorCode::ELF_ERROR_ACCESS>;
+using HeaderError = SpecificTypedException<RuntimeError, ErrorCode::ELF_ERROR_HEADER>;
+using SectionError = SpecificTypedException<RuntimeError, ErrorCode::ELF_ERROR_SECTION>;
+using RelocError = SpecificTypedException<RuntimeError, ErrorCode::ELF_ERROR_RELOCATION>;
+using AllocError = SpecificTypedException<RuntimeError, ErrorCode::ELF_ERROR_ALLOCATION>;
+using CompatibilityError = SpecificTypedException<RuntimeError, ErrorCode::ELF_ERROR_COMPATIBILITY>;
+
+using RangeError = SpecificTypedException<LogicError, ErrorCode::ELF_ERROR_RANGE>;
+using SequenceError = SpecificTypedException<LogicError, ErrorCode::ELF_ERROR_SEQUENCE>;
+using ArgsError = SpecificTypedException<LogicError, ErrorCode::ELF_ERROR_ARGUMENTS>;
+using ImplausibleState = SpecificTypedException<LogicError, ErrorCode::ELF_ERROR_IMPLAUSIBLE_STATE>;
 
 #ifdef VPUX_ELF_NOEXCEPT
 #define VPUX_ELF_THROW(exception, msg, ...) assert(!(msg))
