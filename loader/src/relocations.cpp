@@ -57,7 +57,7 @@ void reduceDmaDims(const uint32_t (&dmaShapes)[DMA_SYMBOL_MAX_TENSOR_DIMENSIONS]
 uint64_t calculateDmaAddress(uint64_t address, const uint32_t (&tileOffsets)[DMA_SYMBOL_MAX_TENSOR_DIMENSIONS],
                              const uint32_t (&strides)[DMA_SYMBOL_MAX_TENSOR_DIMENSIONS], const uint32_t dmaSize) {
     for (size_t idx = 0; idx < DMA_SYMBOL_MAX_TENSOR_DIMENSIONS; idx++) {
-        address += tileOffsets[idx] * strides[idx] * dmaSize;
+        address += static_cast<uint64_t>(tileOffsets[idx]) * strides[idx] * dmaSize;
     }
 
     return address;
